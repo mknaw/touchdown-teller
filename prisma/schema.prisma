@@ -1,0 +1,16 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DB_PATH")
+}
+
+model Player {
+  id       Int    @id @default(autoincrement())
+  adp      Int
+  team     String
+  position String
+  name     String
+}
