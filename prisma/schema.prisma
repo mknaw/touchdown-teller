@@ -7,6 +7,13 @@ datasource db {
   url      = env("DB_PATH")
 }
 
+model Game {
+  id   Int    @id @default(autoincrement())
+  week Int
+  home String
+  away String
+}
+
 model Player {
   id       Int    @id @default(autoincrement())
   adp      Int

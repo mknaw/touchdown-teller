@@ -53,36 +53,32 @@ export default function TeamPanel({
     };
 
     return (
-        <Stack sx={{ border: '1px solid white' }}>
-            <Stack direction="row" sx={{ height: 300 }} spacing={2}>
-                <Stack alignItems="center" spacing={2}>
-                    <Typography>Plays per game</Typography>
-                    <Slider
-                        orientation="vertical"
-                        value={localData.playsPerGame}
-                        min={minPlaysPerGame}
-                        max={maxPlaysPerGame}
-                        aria-label="Default"
-                        valueLabelDisplay="auto"
-                        name="playsPerGame"
-                        onChange={handleInputChange}
-                        onChangeCommitted={onChangeCommitted}
-                    />
-                </Stack>
-                <Stack alignItems="center" spacing={2}>
-                    <Typography>Pass-to-Run Ratio</Typography>
-                    <Slider
-                        orientation="vertical"
-                        value={localData.passRunRatio}
-                        min={1}
-                        max={99}
-                        aria-label="Default"
-                        valueLabelDisplay="auto"
-                        name="passRunRatio"
-                        onChange={handleInputChange}
-                        onChangeCommitted={onChangeCommitted}
-                    />
-                </Stack>
+        <Stack sx={{ height: 1 }} spacing={2}>
+            <Stack alignItems="center" spacing={2}>
+                <Typography>Plays per game</Typography>
+                <Slider
+                    value={localData.playsPerGame}
+                    min={minPlaysPerGame}
+                    max={maxPlaysPerGame}
+                    aria-label="Default"
+                    valueLabelDisplay="auto"
+                    name="playsPerGame"
+                    onChange={handleInputChange}
+                    onChangeCommitted={onChangeCommitted}
+                />
+            </Stack>
+            <Stack alignItems="center" spacing={2}>
+                <Typography>Pass-to-Run Ratio</Typography>
+                <Slider
+                    value={localData.passRunRatio}
+                    min={1}
+                    max={99}
+                    aria-label="Default"
+                    valueLabelDisplay="auto"
+                    name="passRunRatio"
+                    onChange={handleInputChange}
+                    onChangeCommitted={onChangeCommitted}
+                />
             </Stack>
         </Stack>
     );

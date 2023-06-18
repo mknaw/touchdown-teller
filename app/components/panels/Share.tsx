@@ -199,9 +199,8 @@ export default function SharePanel({
         .sort(sortPlayers);
 
     return (
-        <Stack sx={{ border: '1px solid white' }}>
-            <Typography>{`Projected ${label} Attempts`}</Typography>
-            <Typography>{attempts}</Typography>
+        <Stack sx={{ height: 1 }}>
+            <Typography>{`Projected ${label} Attempts: ${attempts}`}</Typography>
             {shares.size > 0 && (
                 <Stack sx={{ width: 1 }}>
                     {[...shares.entries()]
