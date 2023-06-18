@@ -3,7 +3,10 @@ import setupIndexedDB from 'use-indexeddb';
 export const teamStoreKey = 'team';
 export const passShareKey = 'passing';
 export const rushShareKey = 'rushing';
-export const recShareKey = 'receiving';
+export const recvShareKey = 'receiving';
+export const passProjectionKey = 'pass-projection';
+export const rushProjectionKey = 'rush-projection';
+export const recvProjectionKey = 'recv-projection';
 
 const indexedDbConfig = {
     databaseName: 'projection-app',
@@ -32,13 +35,28 @@ const indexedDbConfig = {
             ],
         },
         {
-            name: recShareKey,
+            name: recvShareKey,
             id: { autoIncrement: false },
             indices: [
                 { name: "id", keyPath: "id", options: { unique: true } },
                 { name: "team", keyPath: "team", options: { unique: false } },
             ],
         },
+        {
+            name: passProjectionKey,
+            id: { autoIncrement: false },
+            indices: [],
+        },
+        {
+            name: rushProjectionKey,
+            id: { autoIncrement: false },
+            indices: [],
+        },
+        {
+            name: recvProjectionKey,
+            id: { autoIncrement: false },
+            indices: [],
+        }
     ],
 };
 

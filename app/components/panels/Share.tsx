@@ -63,6 +63,7 @@ interface ShareSliderProps {
     onChange: (value: number) => void;
     onChangeCommitted: (value: number) => void;
     onRemove: () => void;
+    setPlayerId: (playerId: number | null) => void;
 }
 
 const ShareSlider = ({
@@ -72,11 +73,15 @@ const ShareSlider = ({
     onChange,
     onChangeCommitted,
     onRemove,
+    setPlayerId,
 }: ShareSliderProps) => {
     const playerAttempts = Math.floor(attempts * (share / 100));
     return (
         <Stack justifyContent="center" sx={{ width: 1 }}>
-            <Typography>
+            <Typography
+                onClick={() => setPlayerId(player.id)}
+                sx={{ cursor: 'pointer' }}
+            >
                 {`${player.name} (${player.position}): ${playerAttempts}`}
             </Typography>
             <Stack direction="row" alignItems="center" sx={{ width: 1 }}>
@@ -110,6 +115,7 @@ interface SharePanelProps {
     players: Map<number, Player>;
     positions: Position[];
     storageKey: string; // TODO should be a type or enum.
+    setPlayerId: (playerId: number | null) => void;
 }
 
 export default function SharePanel({
@@ -119,6 +125,7 @@ export default function SharePanel({
     players,
     positions,
     storageKey,
+    setPlayerId,
 }: SharePanelProps) {
     const playerStore = useIndexedDBStore<Share>(storageKey);
 
@@ -198,9 +205,16 @@ export default function SharePanel({
         )
         .sort(sortPlayers);
 
+    const remaining = 100 - sumValues(shares);
+    const remainingAttempts = Math.floor(attempts * (remaining / 100));
+
     return (
         <Stack sx={{ height: 1 }}>
-            <Typography>{`Projected ${label} Attempts: ${attempts}`}</Typography>
+            <Box className={'mb-4'}>
+                <Typography className={'text-xl font-semibold'}>
+                    {`Projected ${label} Attempts: ${attempts}`}
+                </Typography>
+            </Box>
             {shares.size > 0 && (
                 <Stack sx={{ width: 1 }}>
                     {[...shares.entries()]
@@ -220,14 +234,14 @@ export default function SharePanel({
                                     persistPlayerShare(id, value)
                                 }
                                 onRemove={() => removePlayerShare(id)}
+                                setPlayerId={setPlayerId}
                             />
                         ))}
                 </Stack>
             )}
             <Box>
-                <Typography>Remaining</Typography>
-                {/* TODO probably also should be adjustable... */}
-                <Slider value={100 - sumValues(shares)} />
+                <Typography>{`Remaining: ${remainingAttempts}`}</Typography>
+                <Slider value={remaining} />
             </Box>
             {selectablePlayers.length > 0 && (
                 <AddPlayerButton

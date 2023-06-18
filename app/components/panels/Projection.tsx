@@ -8,6 +8,7 @@ import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 
+import PlayerModal from 'app/components/PlayerModal';
 import Schedule from 'app/components/Schedule';
 import {
     Position,
@@ -17,7 +18,7 @@ import {
 } from 'app/types';
 import {
     passShareKey,
-    recShareKey,
+    recvShareKey,
     rushShareKey,
     setupPersistence,
     teamStoreKey,
@@ -26,7 +27,7 @@ import SharePanel from './Share';
 import TeamPanel from './Team';
 
 const ProjectionPaper = ({ children }: { children: React.ReactNode }) => (
-    <Paper variant="outlined" elevation={3} sx={{ p: 2, height: 1 }}>
+    <Paper variant="outlined" sx={{ p: 2, height: 1 }}>
         {children}
     </Paper>
 );
@@ -70,6 +71,8 @@ export default function ProjectionPanel({
         setTeamProjection(teamProjection);
     };
 
+    const [playerId, setPlayerId] = useState<number | null>(null);
+
     return (
         teamProjection && (
             <Container maxWidth={false} sx={{ height: 1 }}>
@@ -91,7 +94,9 @@ export default function ProjectionPanel({
                                 <ProjectionPaper>
                                     <TeamPanel
                                         teamProjection={teamProjection}
-                                        persistTeamProjection={persistTeamProjection}
+                                        persistTeamProjection={
+                                            persistTeamProjection
+                                        }
                                     />
                                 </ProjectionPaper>
                             </Grid>
@@ -106,6 +111,7 @@ export default function ProjectionPanel({
                                 players={playerMap}
                                 positions={[Position.QB]}
                                 storageKey={passShareKey}
+                                setPlayerId={setPlayerId}
                             />
                         </ProjectionPaper>
                     </Grid>
@@ -123,6 +129,7 @@ export default function ProjectionPanel({
                                     Position.TE,
                                 ]}
                                 storageKey={rushShareKey}
+                                setPlayerId={setPlayerId}
                             />
                         </ProjectionPaper>
                     </Grid>
@@ -138,11 +145,18 @@ export default function ProjectionPanel({
                                     Position.TE,
                                     Position.RB,
                                 ]}
-                                storageKey={recShareKey}
+                                storageKey={recvShareKey}
+                                setPlayerId={setPlayerId}
                             />
                         </ProjectionPaper>
                     </Grid>
                 </Grid>
+                {playerId && (
+                    <PlayerModal
+                        player={playerMap.get(playerId)!}
+                        onClose={() => setPlayerId(null)}
+                    />
+                )}
             </Container>
         )
     );

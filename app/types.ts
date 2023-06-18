@@ -42,7 +42,10 @@ export enum Position {
 
 export const gameCount = 17;
 
-export type TeamProjectionData = Pick<TeamProjection, 'playsPerGame' | 'passRunRatio'>;
+export type TeamProjectionData = Pick<
+    TeamProjection,
+    'playsPerGame' | 'passRunRatio'
+>;
 
 export class TeamProjection {
     playsPerGame: number;
@@ -73,9 +76,54 @@ export class TeamProjection {
     }
 }
 
-// TODO might want to rename to Share or something
 export interface Share {
-    id: number,
-    team: TeamKey,
-    share: number,
+    id: number;
+    team: TeamKey;
+    share: number;
+}
+
+export interface PassProjection {
+    id: number;
+    cmp: number; // Completion percentage
+    ypa: number; // Yards per attempt
+    tdp: number; // Touchdown percentage
+}
+
+export function defaultPassProjection(id: number): PassProjection {
+    return {
+        id,
+        cmp: 65,
+        ypa: 7.5,
+        tdp: 5,
+    }
+}
+
+export interface RushProjection {
+    id: number;
+    ypc: number; // Yards per carry
+    tdp: number; // Touchdown percentage
+}
+
+export function defaultRushProjection(id: number): RushProjection {
+    return {
+        id,
+        ypc: 3.5,
+        tdp: 5,
+    }
+}
+
+export interface RecvProjection {
+    id: number;
+    cmp: number; // Completion percentage
+    ypr: number; // Yards per reception
+    tdp: number; // Touchdown percentage
+}
+
+export function defaultRecvProjection(id: number): RecvProjection {
+    return {
+        id,
+        cmp: 65,
+        ypr: 9,
+        tdp: 5,
+    }
 }

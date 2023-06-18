@@ -3,11 +3,10 @@
 @tailwind utilities;
 
 :root {
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 5, 5, 5;
-    --background-end-rgb: 255, 255, 255;
+    --background: #17181d;
+    --background-start: #0d0e10;
 }
 
 body {
-    background: linear-gradient(to right, #0d0d0d, #1b1b1b);
+    background: linear-gradient(to bottom, var(--background-start), var(--background));
 }

@@ -52,6 +52,7 @@ export default function TeamPanel({
         }
     };
 
+    // TODO instead of total and ratio maybe just do total passing / running?
     return (
         <Stack sx={{ height: 1 }} spacing={2}>
             <Stack alignItems="center" spacing={2}>

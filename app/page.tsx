@@ -1,6 +1,6 @@
 export default async function Home() {
     return (
-        <div>
+        <div className="min-h-screen">
             Incredible content here!
         </div>
     );
