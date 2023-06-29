@@ -1,7 +1,11 @@
 root: true
 extends:
     - eslint:recommended
+plugins:
+    - simple-import-sort
 rules:
     indent:
         - error
         - 4
+    quotes: [error, single]
+    jsx-quotes: [error, prefer-single]
