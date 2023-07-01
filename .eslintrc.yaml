@@ -1,8 +1,6 @@
 root: true
 extends:
     - eslint:recommended
-plugins:
-    - simple-import-sort
 rules:
     indent:
         - error

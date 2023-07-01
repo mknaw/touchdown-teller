@@ -32,7 +32,7 @@ const PlayerPool = ({ players, addPlayerShare }: PlayerPoolProps) => {
   };
 
   return (
-    <Select sx={{ width: 1 }} value={undefined} onChange={handleChange}>
+    <Select sx={{ width: 1 }} value={''} onChange={handleChange}>
       {players.map((player) => (
         <MenuItem
           key={player.id}

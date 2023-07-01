@@ -12,12 +12,72 @@ model Game {
   week Int
   home String
   away String
+
+  @@map("game")
+}
+
+model PassingSeason {
+  id        Int     @id @default(autoincrement())
+  player_id Int?
+  team      String?
+  season    Int?
+  games     Int?
+  att       Int?
+  cmp       Int?
+  yds       Int?
+  td        Int?
+  icpt      Int?
+  player    Player? @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("passing_season")
 }
 
 model Player {
-  id       Int    @id @default(autoincrement())
-  adp      Int
-  team     String
-  position String
-  name     String
+  id               Int               @id @default(autoincrement())
+  adp              Int
+  team             String
+  position         String
+  name             String
+  passing_season   PassingSeason[]
+  receiving_season ReceivingSeason[]
+  rushing_season   RushingSeason[]
+
+  @@map("player")
+}
+
+model ReceivingSeason {
+  id        Int     @id @default(autoincrement())
+  player_id Int?
+  team      String?
+  season    Int?
+  games     Int?
+  tgt       Int?
+  rec       Int?
+  yds       Int?
+  td        Int?
+  player    Player? @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("receiving_season")
+}
+
+model RushingSeason {
+  id        Int     @id @default(autoincrement())
+  player_id Int?
+  team      String?
+  season    Int?
+  games     Int?
+  att       Int?
+  yds       Int?
+  td        Int?
+  fum       Int?
+  player    Player? @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("rushing_season")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model schema_migrations {
+  version String? @id
+
+  @@ignore
 }
