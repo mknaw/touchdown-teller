@@ -1,28 +1,29 @@
 'use client';
 
 import { TeamKey, gameCount } from '../types';
+
 import { Game } from '@prisma/client';
 
 import Box from '@mui/material/Box';
 
 interface GameCellProps {
-  team: TeamKey;
+  teamKey: TeamKey;
   game: Game;
 }
 
-function GameCell({ team, game }: GameCellProps) {
-  const isAway = game.away == team;
+function GameCell({ teamKey, game }: GameCellProps) {
+  const isAway = game.awayName == teamKey;
   const prefix = isAway ? '@' : '';
-  const opponent = isAway ? game.home : game.away;
+  const opponent = isAway ? game.homeName : game.awayName;
   return <td>{`${prefix}${opponent}`}</td>;
 }
 
 interface ScheduleProps {
-  team: TeamKey;
+  teamKey: TeamKey;
   games: Game[];
 }
 
-export default function Schedule({ team, games }: ScheduleProps) {
+export default function Schedule({ teamKey, games }: ScheduleProps) {
   const gameMap = new Map(games.map((g) => [g.week, g]));
   const weeks = [...Array(gameCount).keys()].map((i) => i + 1);
   return (
@@ -40,7 +41,7 @@ export default function Schedule({ team, games }: ScheduleProps) {
             {weeks.map((week) => {
               const game = gameMap.get(week);
               if (game) {
-                return <GameCell key={week} team={team} game={game} />;
+                return <GameCell key={week} teamKey={teamKey} game={game} />;
               } else {
                 return <td key={week}>BYE</td>;
               }

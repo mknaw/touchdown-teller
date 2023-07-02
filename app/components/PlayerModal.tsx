@@ -202,8 +202,6 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
   const receivingSeason =
     hasReceiving && player.receiving_season ? player.receiving_season[0] : null;
 
-  console.log(player);
-
   return (
     <Modal
       open={true}

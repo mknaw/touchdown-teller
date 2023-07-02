@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 import SharePanel from './Share';
 import TeamPanel from './Team';
-import { Game, Player } from '@prisma/client';
+import { Game, Player, Team } from '@prisma/client';
 import { useIndexedDBStore } from 'use-indexeddb';
 
 import Container from '@mui/material/Container';
@@ -34,7 +34,7 @@ const ProjectionPaper = ({ children }: { children: React.ReactNode }) => (
 );
 
 export interface ProjectionPanelProps {
-  team: TeamKey;
+  team: Team;
   games: Game[]; // Would prefer a `Map` but I think RSC doesn't like it!
   players: Player[]; // Would prefer a `Map` but I think RSC doesn't like it!
 }
@@ -50,13 +50,13 @@ export default function ProjectionPanel({
   useEffect(() => {
     async function fetch() {
       await setupPersistence();
-      const teamProjectionData = await teamStore.getByID(team);
+      const teamProjectionData = await teamStore.getByID(team.key);
       if (teamProjectionData) {
         setTeamProjection(new TeamProjection(teamProjectionData));
       } else {
         const newTeamProjection = TeamProjection.default();
         setTeamProjection(newTeamProjection);
-        teamStore.add(newTeamProjection, team);
+        teamStore.add(newTeamProjection, team.key);
       }
     }
     fetch();
@@ -68,7 +68,7 @@ export default function ProjectionPanel({
   const persistTeamProjection = (data: TeamProjectionData) => {
     // Update the team projection in the persistence layer
     const teamProjection = new TeamProjection(data);
-    teamStore.update(teamProjection, team);
+    teamStore.update(teamProjection, team.key);
     setTeamProjection(teamProjection);
   };
 
@@ -88,7 +88,7 @@ export default function ProjectionPanel({
             <Grid container spacing={5}>
               <Grid item xs={12}>
                 <ProjectionPaper>
-                  <Schedule team={team} games={games} />
+                  <Schedule teamKey={team.key as TeamKey} games={games} />
                 </ProjectionPaper>
               </Grid>
               <Grid item xs={12}>

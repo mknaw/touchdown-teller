@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { Player } from '@prisma/client';
+import { Player, Team } from '@prisma/client';
 import classNames from 'classnames';
 import { useIndexedDBStore } from 'use-indexeddb';
 
@@ -15,7 +15,7 @@ import Typography from '@mui/material/Typography';
 
 import { setupPersistence } from 'app/data/persistence';
 import { poppins_400 } from 'app/theme/fonts';
-import { Position, Share, TeamKey } from 'app/types';
+import { Position, Share } from 'app/types';
 
 interface PlayerPoolProps {
   players: Player[];
@@ -111,7 +111,7 @@ const ShareSlider = ({
 };
 
 interface SharePanelProps {
-  team: TeamKey;
+  team: Team;
   label: string;
   attempts: number;
   players: Map<number, Player>;
@@ -133,7 +133,7 @@ export default function SharePanel({
 
   useEffect(() => {
     setupPersistence().then(() => {
-      playerStore.getManyByKey('team', team).then((data) => {
+      playerStore.getManyByKey('team', team.key).then((data) => {
         let shares = new Map(data.map((p) => [p.id, p.share]));
         shares = balance(shares);
         setShares(shares);
@@ -161,7 +161,7 @@ export default function SharePanel({
     const newShares = new Map(shares);
     newShares.set(id, 0);
     setShares(newShares);
-    playerStore.add({ id, team, share: 0 }, id).catch((_) => {});
+    playerStore.add({ id, team: team.key, share: 0 }, id).catch((_) => {});
   };
 
   const setPlayerShare = (id: number, share: number) => {
@@ -183,7 +183,7 @@ export default function SharePanel({
     const newShares = new Map(shares);
     newShares.set(id, share);
     setShares(newShares);
-    playerStore.update({ id, team, share }, id);
+    playerStore.update({ id, team: team.key, share }, id);
   };
 
   const removePlayerShare = (id: number) => {
