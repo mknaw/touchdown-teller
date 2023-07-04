@@ -28,11 +28,29 @@ async function getTeam(teamKey: string): Promise<Team> {
     },
     // The `lastSeason` filters are tentative...
     include: {
-      players: true,
+      players: {
+        include: {
+          passingSeasons: {
+            where: {
+              season: lastSeason,
+            },
+          },
+          rushingSeasons: {
+            where: {
+              season: lastSeason,
+            },
+          },
+          receivingSeasons: {
+            where: {
+              season: lastSeason,
+            },
+          },
+        },
+      },
       seasons: {
         where: {
           season: lastSeason,
-        }
+        },
       },
       passingSeasons: {
         where: {

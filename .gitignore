@@ -1,6 +1,8 @@
 .env
 **/*.sqlite3
 
+.eslintcache
+
 # dependencies
 /node_modules
 /.pnp

@@ -1,6 +1,8 @@
 // TODO could get this from some sort of cfg + calculation.
 export const lastSeason = 2022;
 
+export type SliderMarks = Array<{ label?: string; value: number }>;
+
 export enum TeamKey {
   ARI = 'ARI',
   ATL = 'ATL',

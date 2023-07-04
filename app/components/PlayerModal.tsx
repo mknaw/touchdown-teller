@@ -25,6 +25,7 @@ import {
   RecvProjection,
   RushProjection,
   Share,
+  SliderMarks,
   defaultPassProjection,
   defaultRecvProjection,
   defaultRushProjection,
@@ -133,13 +134,11 @@ function PlayerStatPanel<T>({
   );
 }
 
-type Marks = Array<{ label?: string; value: number }>;
-
 function getMarks<T>(
   season: T,
   valueFn: (season: T) => number,
   labelFn: (value: number) => string
-): Marks {
+): SliderMarks {
   if (!season) {
     return [];
   }
@@ -153,7 +152,10 @@ function getMarks<T>(
   ];
 }
 
-function getPctMarks<T>(season: T, valueFn: (season: T) => number): Marks {
+function getPctMarks<T>(
+  season: T,
+  valueFn: (season: T) => number
+): SliderMarks {
   return getMarks(
     season,
     valueFn,
@@ -161,7 +163,10 @@ function getPctMarks<T>(season: T, valueFn: (season: T) => number): Marks {
   );
 }
 
-function getScalarMarks<T>(season: T, valueFn: (season: T) => number): Marks {
+function getScalarMarks<T>(
+  season: T,
+  valueFn: (season: T) => number
+): SliderMarks {
   return getMarks(
     season,
     valueFn,
@@ -194,13 +199,13 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
   const [hasReceiving, setHasReceiving] = useState(false);
 
   const passingSeason =
-    hasPassing && player.passing_season ? player.passing_season[0] : null;
+    hasPassing && player.passingSeasons ? player.passingSeasons[0] : null;
 
   const rushingSeason =
-    hasRushing && player.rushing_season ? player.rushing_season[0] : null;
+    hasRushing && player.rushingSeasons ? player.rushingSeasons[0] : null;
 
   const receivingSeason =
-    hasReceiving && player.receiving_season ? player.receiving_season[0] : null;
+    hasReceiving && player.receivingSeasons ? player.receivingSeasons[0] : null;
 
   return (
     <Modal

@@ -1,4 +1,9 @@
-import { PassingSeason, ReceivingSeason, RushingSeason } from '@prisma/client';
+import {
+  PassingSeason,
+  ReceivingSeason,
+  RushingSeason,
+  TeamSeason,
+} from '@prisma/client';
 
 export const getPassCmp = (season: PassingSeason) =>
   (100 * season.cmp!) / season.att!;
@@ -21,3 +26,30 @@ export const getRecvYpr = (season: ReceivingSeason) =>
 
 export const getRecvTdp = (season: ReceivingSeason) =>
   (100 * season.td!) / season.rec!;
+
+export const getLastSeasonPassShare = (
+  passingSeason: PassingSeason[],
+  teamSeason: TeamSeason
+): Map<number, number> =>
+  passingSeason.reduce((map, season) => {
+    map.set(season.playerId, season.att! / teamSeason.passAtt!);
+    return map;
+  }, new Map());
+
+export const getLastSeasonRushShare = (
+  passingSeason: RushingSeason[],
+  teamSeason: TeamSeason
+): Map<number, number> =>
+  passingSeason.reduce((map, season) => {
+    map.set(season.playerId, season.att! / teamSeason.rushAtt!);
+    return map;
+  }, new Map());
+
+export const getLastSeasonRecvShare = (
+  passingSeason: ReceivingSeason[],
+  teamSeason: TeamSeason
+): Map<number, number> =>
+  passingSeason.reduce((map, season) => {
+    map.set(season.playerId, season.rec! / teamSeason.passAtt!);
+    return map;
+  }, new Map());

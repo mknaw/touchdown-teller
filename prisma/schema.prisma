@@ -19,18 +19,18 @@ model Game {
 }
 
 model PassingSeason {
-  id        Int    @id @default(autoincrement())
-  player_id Int
-  teamName  String @map("team")
-  season    Int
-  games     Int
-  att       Int
-  cmp       Int
-  yds       Int
-  td        Int
-  icpt      Int
-  player    Player @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  team      Team   @relation("passing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  id       Int    @id @default(autoincrement())
+  playerId Int    @map("player_id")
+  teamName String @map("team")
+  season   Int
+  games    Int
+  att      Int
+  cmp      Int
+  yds      Int
+  td       Int
+  icpt     Int
+  player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team     Team   @relation("passing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("passing_season")
 }
@@ -50,33 +50,33 @@ model Player {
 }
 
 model ReceivingSeason {
-  id        Int    @id @default(autoincrement())
-  player_id Int
-  teamName  String @map("team")
-  season    Int
-  games     Int
-  tgt       Int
-  rec       Int
-  yds       Int
-  td        Int
-  player    Player @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  team      Team   @relation("receiving_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  id       Int    @id @default(autoincrement())
+  playerId Int    @map("player_id")
+  teamName String @map("team")
+  season   Int
+  games    Int
+  tgt      Int
+  rec      Int
+  yds      Int
+  td       Int
+  player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team     Team   @relation("receiving_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("receiving_season")
 }
 
 model RushingSeason {
-  id        Int    @id @default(autoincrement())
-  player_id Int
-  teamName  String @map("team")
-  season    Int
-  games     Int
-  att       Int
-  yds       Int
-  td        Int
-  fum       Int
-  player    Player @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  team      Team   @relation("rushing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  id       Int    @id @default(autoincrement())
+  playerId Int    @map("player_id")
+  teamName String @map("team")
+  season   Int
+  games    Int
+  att      Int
+  yds      Int
+  td       Int
+  fum      Int
+  player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team     Team   @relation("rushing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("rushing_season")
 }

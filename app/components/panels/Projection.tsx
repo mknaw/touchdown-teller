@@ -4,13 +4,19 @@ import React, { useEffect, useState } from 'react';
 
 import SharePanel from './Share';
 import TeamPanel from './Team';
-import { Game, Player, Team } from '@prisma/client';
 import { useIndexedDBStore } from 'use-indexeddb';
+
+import { Game, Player, Team } from '@prisma/client';
 
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
 import Paper from '@mui/material/Paper';
 
+import {
+  getLastSeasonPassShare,
+  getLastSeasonRecvShare,
+  getLastSeasonRushShare,
+} from '@/app/utils/stats';
 import PlayerModal from 'app/components/PlayerModal';
 import Schedule from 'app/components/Schedule';
 import {
@@ -28,7 +34,7 @@ import {
 } from 'app/types';
 
 const ProjectionPaper = ({ children }: { children: React.ReactNode }) => (
-  <Paper variant="outlined" sx={{ p: 2, height: 1 }}>
+  <Paper variant='outlined' sx={{ p: 2, height: 1 }}>
     {children}
   </Paper>
 );
@@ -79,8 +85,8 @@ export default function ProjectionPanel({
       <Container maxWidth={false} sx={{ height: 1 }}>
         <Grid
           container
-          alignItems="stretch"
-          justifyContent="stretch"
+          alignItems='stretch'
+          justifyContent='stretch'
           spacing={5}
           sx={{ height: 1, p: 3 }}
         >
@@ -94,6 +100,7 @@ export default function ProjectionPanel({
               <Grid item xs={12}>
                 <ProjectionPaper>
                   <TeamPanel
+                    team={team}
                     teamProjection={teamProjection}
                     persistTeamProjection={persistTeamProjection}
                   />
@@ -105,11 +112,15 @@ export default function ProjectionPanel({
             <ProjectionPaper>
               <SharePanel
                 team={team}
-                label="Passing"
+                label='Passing'
                 attempts={teamProjection.passAttempts()}
                 players={playerMap}
                 positions={[Position.QB]}
                 storageKey={passShareKey}
+                lastSeasonShares={getLastSeasonPassShare(
+                  team.passingSeasons,
+                  team.seasons[0]
+                )}
                 setPlayerId={setPlayerId}
               />
             </ProjectionPaper>
@@ -118,11 +129,15 @@ export default function ProjectionPanel({
             <ProjectionPaper>
               <SharePanel
                 team={team}
-                label="Rushing"
+                label='Rushing'
                 attempts={teamProjection.rushAttempts()}
                 players={playerMap}
                 positions={[Position.RB, Position.QB, Position.WR, Position.TE]}
                 storageKey={rushShareKey}
+                lastSeasonShares={getLastSeasonRushShare(
+                  team.rushingSeasons,
+                  team.seasons[0]
+                )}
                 setPlayerId={setPlayerId}
               />
             </ProjectionPaper>
@@ -131,11 +146,15 @@ export default function ProjectionPanel({
             <ProjectionPaper>
               <SharePanel
                 team={team}
-                label="Receiving"
+                label='Receiving'
                 attempts={teamProjection.passAttempts()}
                 players={playerMap}
                 positions={[Position.WR, Position.TE, Position.RB]}
                 storageKey={recvShareKey}
+                lastSeasonShares={getLastSeasonRecvShare(
+                  team.receivingSeasons,
+                  team.seasons[0]
+                )}
                 setPlayerId={setPlayerId}
               />
             </ProjectionPaper>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { Player, Team } from '@prisma/client';
 import classNames from 'classnames';
 import { useIndexedDBStore } from 'use-indexeddb';
+
+import { Player, Team } from '@prisma/client';
 
 import RemoveCircleIcon from '@mui/icons-material/RemoveCircle';
 import Box from '@mui/material/Box';
@@ -15,7 +16,7 @@ import Typography from '@mui/material/Typography';
 
 import { setupPersistence } from 'app/data/persistence';
 import { poppins_400 } from 'app/theme/fonts';
-import { Position, Share } from 'app/types';
+import { Position, Share, TeamKey, lastSeason } from 'app/types';
 
 interface PlayerPoolProps {
   players: Player[];
@@ -55,6 +56,7 @@ interface ShareSliderProps {
   onChangeCommitted: (value: number) => void;
   onRemove: () => void;
   setPlayerId: (playerId: number | null) => void;
+  lastSeasonShare: number | undefined;
 }
 
 const ShareSlider = ({
@@ -65,23 +67,33 @@ const ShareSlider = ({
   onChangeCommitted,
   onRemove,
   setPlayerId,
+  lastSeasonShare,
 }: ShareSliderProps) => {
   const playerAttempts = Math.floor(attempts * (share / 100));
+  const marks = lastSeasonShare
+    ? [
+      {
+        label: `${lastSeason}: ${(100 * lastSeasonShare).toFixed(1)}%`,
+        value: 100 * lastSeasonShare,
+      },
+    ]
+    : undefined;
   return (
-    <Stack justifyContent="center" sx={{ width: 1 }}>
+    <Stack justifyContent='center' className={'w-full pb-5'}>
       <Typography
         onClick={() => setPlayerId(player.id)}
         sx={{ cursor: 'pointer' }}
       >
         {`${player.name} (${player.position}): ${playerAttempts}`}
       </Typography>
-      <Stack direction="row" alignItems="center" sx={{ width: 1 }}>
+      <Stack direction='row' alignItems='center' sx={{ width: 1 }}>
         <Slider
           value={share || 0}
+          marks={marks}
           step={1}
           onChange={(_, value) => onChange(value as number)}
           onChangeCommitted={(_, value) => onChangeCommitted(value as number)}
-          valueLabelDisplay="auto"
+          valueLabelDisplay='auto'
           getAriaValueText={shareValueText}
           valueLabelFormat={shareValueText}
           sx={{
@@ -102,7 +114,7 @@ const ShareSlider = ({
             },
           }}
         />
-        <IconButton aria-label="delete" color="primary" onClick={onRemove}>
+        <IconButton aria-label='delete' color='primary' onClick={onRemove}>
           <RemoveCircleIcon />
         </IconButton>
       </Stack>
@@ -117,6 +129,7 @@ interface SharePanelProps {
   players: Map<number, Player>;
   positions: Position[];
   storageKey: string; // TODO should be a type or enum.
+  lastSeasonShares: Map<number, number>;
   setPlayerId: (playerId: number | null) => void;
 }
 
@@ -127,6 +140,7 @@ export default function SharePanel({
   players,
   positions,
   storageKey,
+  lastSeasonShares,
   setPlayerId,
 }: SharePanelProps) {
   const playerStore = useIndexedDBStore<Share>(storageKey);
@@ -147,7 +161,7 @@ export default function SharePanel({
     const valueSum = sumValues(s);
     if (valueSum > 100) {
       const scale = 100 / valueSum;
-      for (let [key, value] of s) {
+      for (const [key, value] of s) {
         s.set(key, value * scale);
       }
     }
@@ -161,7 +175,7 @@ export default function SharePanel({
     const newShares = new Map(shares);
     newShares.set(id, 0);
     setShares(newShares);
-    playerStore.add({ id, team: team.key, share: 0 }, id).catch((_) => {});
+    playerStore.add({ id, team: team.key as TeamKey, share: 0 }, id);
   };
 
   const setPlayerShare = (id: number, share: number) => {
@@ -170,7 +184,7 @@ export default function SharePanel({
     const valueSum = sumValues(newShares);
     if (valueSum > 100) {
       const scale = (100 - share) / (valueSum - share);
-      for (let [key, value] of newShares) {
+      for (const [key, value] of newShares) {
         if (key != id) {
           newShares.set(key, value * scale);
         }
@@ -183,7 +197,7 @@ export default function SharePanel({
     const newShares = new Map(shares);
     newShares.set(id, share);
     setShares(newShares);
-    playerStore.update({ id, team: team.key, share }, id);
+    playerStore.update({ id, team: team.key as TeamKey, share }, id);
   };
 
   const removePlayerShare = (id: number) => {
@@ -214,7 +228,7 @@ export default function SharePanel({
     <Stack sx={{ height: 1 }}>
       <Box className={'mb-4'}>
         <Typography className={classNames('text-xl', poppins_400.className)}>
-          {`Projected ${label} Attempts: ${attempts}`}
+          {`Projected ${label} Attempts: ${attempts.toFixed()}`}
         </Typography>
       </Box>
       {shares.size > 0 && (
@@ -235,6 +249,7 @@ export default function SharePanel({
                 onChangeCommitted={(value) => persistPlayerShare(id, value)}
                 onRemove={() => removePlayerShare(id)}
                 setPlayerId={setPlayerId}
+                lastSeasonShare={lastSeasonShares.get(id)}
               />
             ))}
         </Stack>

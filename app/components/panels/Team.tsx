@@ -1,20 +1,24 @@
 import React, { useEffect, useState } from 'react';
 
+import { Team } from '@prisma/client';
+
 import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { TeamProjection, TeamProjectionData } from 'app/types';
+import { TeamProjection, TeamProjectionData, lastSeason } from 'app/types';
 
 const minPlaysPerGame = 45;
-const maxPlaysPerGame = 85;
+const maxPlaysPerGame = 75;
 
 interface TeamStatsPanelProps {
+  team: Team;
   teamProjection: TeamProjection;
   persistTeamProjection: (data: TeamProjectionData) => void;
 }
 
 export default function TeamPanel({
+  team,
   teamProjection,
   persistTeamProjection,
 }: TeamStatsPanelProps) {
@@ -26,6 +30,11 @@ export default function TeamPanel({
   if (!localData) {
     return null;
   }
+
+  const season = team.seasons[0]!;
+  const ppg = (season.passAtt + season.rushAtt) / 17;
+  const passRunRatio =
+    100 * (season.passAtt / (season.passAtt + season.rushAtt));
 
   const handleInputChange = (event: Event) => {
     const { target } = event;
@@ -55,28 +64,42 @@ export default function TeamPanel({
   // TODO instead of total and ratio maybe just do total passing / running?
   return (
     <Stack className={'h-full'} spacing={2}>
-      <Stack alignItems="center" spacing={2}>
+      <Stack alignItems='center' spacing={2}>
         <Typography>Plays per game</Typography>
         <Slider
           value={localData.playsPerGame}
           min={minPlaysPerGame}
           max={maxPlaysPerGame}
-          aria-label="Default"
-          valueLabelDisplay="auto"
-          name="playsPerGame"
+          step={0.1}
+          marks={[
+            {
+              label: `${lastSeason}: ${ppg.toFixed(1)}`,
+              value: ppg,
+            },
+          ]}
+          aria-label='Default'
+          valueLabelDisplay='auto'
+          name='playsPerGame'
           onChange={handleInputChange}
           onChangeCommitted={onChangeCommitted}
         />
       </Stack>
-      <Stack alignItems="center" spacing={2}>
+      <Stack alignItems='center' spacing={2}>
         <Typography>Pass-to-Run Ratio</Typography>
         <Slider
           value={localData.passRunRatio}
           min={1}
           max={99}
-          aria-label="Default"
-          valueLabelDisplay="auto"
-          name="passRunRatio"
+          step={0.1}
+          marks={[
+            {
+              label: `${lastSeason}: ${passRunRatio.toFixed(1)}%`,
+              value: passRunRatio,
+            },
+          ]}
+          aria-label='Default'
+          valueLabelDisplay='auto'
+          name='passRunRatio'
           onChange={handleInputChange}
           onChangeCommitted={onChangeCommitted}
         />
