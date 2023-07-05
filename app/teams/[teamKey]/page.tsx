@@ -78,8 +78,9 @@ export default async function Page({ params: { teamKey } }: Props) {
   const players = team.players;
   const games = [...team.homeGames, ...team.awayGames];
 
+  // TODO believe this `main` should just be in the `layout`
   return (
-    <main className="w-full flex min-h-screen flex-col justify-stretch">
+    <main className='w-full flex min-h-screen flex-col justify-stretch'>
       <Header team={teamKey} />
       <ProjectionPanel team={team} games={games} players={players} />
     </main>
