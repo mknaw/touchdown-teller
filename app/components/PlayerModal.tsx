@@ -19,7 +19,7 @@ import {
   rushShareKey,
   setupPersistence,
 } from 'app/data/persistence';
-import { poppins_400 } from 'app/theme/fonts';
+import { titleFont } from 'app/theme/fonts';
 import {
   PassProjection,
   RecvProjection,
@@ -43,7 +43,7 @@ import {
 } from 'app/utils/stats';
 
 const style = {
-  position: 'absolute' as 'absolute',
+  position: 'absolute' as const,
   top: '33%',
   left: '50%',
   transform: 'translate(-50%, -40%)',
@@ -106,7 +106,7 @@ function PlayerStatPanel<T>({
     };
 
   const persist = () => {
-    if (!!projection) {
+    if (projection) {
       projectionStore.update(projection, playerId);
     }
   };
@@ -211,15 +211,15 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
     <Modal
       open={true}
       onClose={onClose}
-      aria-labelledby="modal-modal-title"
-      aria-describedby="modal-modal-description"
+      aria-labelledby='modal-modal-title'
+      aria-describedby='modal-modal-description'
     >
       <Box sx={style}>
         <Typography
-          id="modal-modal-title"
-          variant="h6"
-          component="h2"
-          className={classNames('text-3xl mb-5', poppins_400.className)}
+          id='modal-modal-title'
+          variant='h6'
+          component='h2'
+          className={classNames('text-3xl mb-5', titleFont.className)}
         >
           {`${player.name} (${player.position})`}
         </Typography>

@@ -15,7 +15,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import { setupPersistence } from 'app/data/persistence';
-import { poppins_400 } from 'app/theme/fonts';
+import { titleFont } from 'app/theme/fonts';
 import { Position, Share, TeamKey, lastSeason } from 'app/types';
 
 interface PlayerPoolProps {
@@ -227,7 +227,7 @@ export default function SharePanel({
   return (
     <Stack sx={{ height: 1 }}>
       <Box className={'mb-4'}>
-        <Typography className={classNames('text-xl', poppins_400.className)}>
+        <Typography className={classNames('text-xl', titleFont.className)}>
           {`Projected ${label} Attempts: ${attempts.toFixed()}`}
         </Typography>
       </Box>

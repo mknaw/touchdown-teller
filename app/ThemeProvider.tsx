@@ -2,15 +2,9 @@
 
 import * as React from 'react';
 
-import { Poppins } from 'next/font/google';
-
 import { ThemeOptions, ThemeProvider, createTheme } from '@mui/material/styles';
 
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: '200',
-  display: 'swap',
-});
+import { mainFont } from 'app/theme/fonts';
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const theme: ThemeOptions = createTheme({
@@ -28,7 +22,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
       },
     },
     typography: {
-      fontFamily: poppins.style.fontFamily,
+      fontFamily: mainFont.style.fontFamily,
       fontSize: 15,
     },
   });

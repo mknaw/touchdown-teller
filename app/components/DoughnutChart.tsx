@@ -2,12 +2,12 @@
 
 import { Doughnut } from 'react-chartjs-2';
 
-import { ArcElement, Chart as ChartJS, Tooltip } from 'chart.js';
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 
 // TODO customize this code, prolly
 const plugins = [
   {
-    afterUpdate: function (chart) {
+    afterUpdate: function (chart: ChartJS) {
       let a = chart.config.data.datasets.length - 1;
       for (const i in chart.config.data.datasets) {
         for (
@@ -69,42 +69,34 @@ const plugins = [
   },
 ];
 
+const options = {
+  aspectRatio: 2,
+  rotation: -90,
+  circumference: 180,
+  autoPadding: false,
+  plugins: {
+    legend: {
+      position: 'left' as const,
+    },
+  },
+};
+
 export default function DoughnutChart() {
-  ChartJS.register(ArcElement, Tooltip);
+  ChartJS.register(ArcElement, Tooltip, Legend);
 
   return (
     <Doughnut
-      redraw={true}
+      //redraw={true}
       // updateMode ?
-      legend={{ display: false }}
       plugins={plugins}
-      options={{
-        elements: {
-          center: {
-            // the longest text that could appear in the center
-            maxText: '100%',
-            text: '67%',
-            fontColor: '#FF6684',
-            fontFamily: '\'Helvetica Neue\', \'Helvetica\', \'Arial\', sans-serif',
-            fontStyle: 'normal',
-            // fontSize: 12,
-            // if a fontSize is NOT specified, we will scale (within the below limits) maxText to take up the maximum space in the center
-            // if these are not specified either, we default to 1 and 256
-            minFontSize: 1,
-            maxFontSize: 256,
-          },
-        },
-        legend: false,
-        rotation: -90,
-        circumference: 180,
-      }}
+      options={options}
       data={{
         labels: ['Steve Foo', 'Joe Bar', 'Don Baz'],
         datasets: [
           {
             data: [90, 15, 10, 10],
-            backgroundColor: ['green', 'yellow', 'orange', '#ccc'],
-            hoverBackgroundColor: ['green', 'yellow', 'orange', '#ccc'],
+            backgroundColor: ['#716b90', 'yellow', 'orange', '#ccc'],
+            hoverBackgroundColor: ['#716b90', 'yellow', 'orange', '#ccc'],
           },
         ],
       }}

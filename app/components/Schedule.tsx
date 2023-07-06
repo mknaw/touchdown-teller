@@ -27,7 +27,7 @@ export default function Schedule({ teamKey, games }: ScheduleProps) {
   const gameMap = new Map(games.map((g) => [g.week, g]));
   const weeks = [...Array(gameCount).keys()].map((i) => i + 1);
   return (
-    <Box justifyContent="center" sx={{ display: 'flex', width: 1 }}>
+    <Box justifyContent='center' sx={{ display: 'flex', width: 1 }}>
       <table>
         <thead>
           <tr>

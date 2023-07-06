@@ -1,5 +1,5 @@
 {
-  "name": "projector",
+  "name": "touchdown-teller",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -47,7 +47,7 @@
     "typescript": "^5.1.6"
   },
   "lint-staged": {
-    "*.{js,ts,tsx}": "eslint --cache --fix",
-    "*.{js,css,md,ts,tsx}": "prettier --write"
+    "*.{ts,tsx}": "eslint --cache --fix",
+    "*.{css,md,ts,tsx}": "prettier --write"
   }
 }

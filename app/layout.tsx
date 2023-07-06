@@ -4,10 +4,10 @@ import ThemeProvider from './ThemeProvider';
 import './globals.css';
 import Nav from './nav';
 
-import { poppins } from 'app/theme/fonts';
+import { mainFont } from 'app/theme/fonts';
 
 export const metadata = {
-  title: 'Projector',
+  title: 'Touchdown Teller',
 };
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang='en' className={poppins.className}>
+    <html lang='en' className={mainFont.className}>
       <body>
         <ThemeProvider>
           <Nav>{children}</Nav>

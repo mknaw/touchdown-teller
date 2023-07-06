@@ -1,12 +1,12 @@
-import { Poppins } from 'next/font/google';
+import { Archivo_Narrow, Bebas_Neue } from 'next/font/google';
 
-export const poppins = Poppins({
+export const mainFont = Archivo_Narrow({
   subsets: ['latin'],
-  weight: '200',
+  weight: '400',
   display: 'swap',
 });
 
-export const poppins_400 = Poppins({
+export const titleFont = Bebas_Neue({
   subsets: ['latin'],
   weight: '400',
   display: 'swap',
