@@ -1,8 +1,9 @@
+import TeamPage from './TeamPage';
 import { Metadata } from 'next';
 
 import { PrismaClient } from '@prisma/client';
 
-import Header from 'app/components/Header';
+import Nav from '@/app/nav';
 import ProjectionPanel from 'app/components/panels/Projection';
 import { TeamKey, TeamWithExtras, lastSeason } from 'app/types';
 import { getTeamName } from 'app/utils';
@@ -74,14 +75,12 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
 
 export default async function Page({ params: { teamKey } }: Props) {
   const team = await getTeam(teamKey);
-  const players = team.players;
-  const games = [...team.homeGames, ...team.awayGames];
+  //const players = team.players;
+  //const games = [...team.homeGames, ...team.awayGames];
 
-  // TODO believe this `main` should just be in the `layout`
   return (
-    <main className='w-full flex min-h-screen flex-col justify-stretch'>
-      <Header team={teamKey} />
-      <ProjectionPanel team={team} games={games} players={players} />
-    </main>
+    <Nav header={getTeamName(teamKey)}>
+      <TeamPage team={team} />
+    </Nav>
   );
 }

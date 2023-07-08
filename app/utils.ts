@@ -37,3 +37,9 @@ export function getTeamName(teamKey: TeamKey): string {
   };
   return teams[teamKey];
 }
+
+export function setOnClone<K, V>(map: Map<K, V>, key: K, value: V): Map<K, V> {
+  const clone = new Map(map);
+  clone.set(key, value);
+  return clone;
+}

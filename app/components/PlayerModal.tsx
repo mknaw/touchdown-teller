@@ -19,15 +19,15 @@ import {
 } from 'app/data/persistence';
 import { titleFont } from 'app/theme/fonts';
 import {
-  PassProjection,
+  PassStatData,
   PlayerWithExtras,
-  RecvProjection,
-  RushProjection,
+  RecvStatData,
+  RushStatData,
   Share,
   SliderMarks,
-  defaultPassProjection,
-  defaultRecvProjection,
-  defaultRushProjection,
+  defaultPassStats,
+  defaultRecvStats,
+  defaultRushStats,
   lastSeason,
 } from 'app/types';
 import {
@@ -223,10 +223,10 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
           {`${player.name} (${player.position})`}
         </Typography>
         {passingSeason && (
-          <PlayerStatPanel<PassProjection>
+          <PlayerStatPanel<PassStatData>
             playerId={player.id}
             storeKey={passProjectionKey}
-            newDefault={defaultPassProjection}
+            newDefault={defaultPassStats}
             stats={{
               cmp: {
                 getLabel: (p) => `Completion percentage: ${p.cmp}%`,
@@ -251,10 +251,10 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
           />
         )}
         {rushingSeason && (
-          <PlayerStatPanel<RushProjection>
+          <PlayerStatPanel<RushStatData>
             playerId={player.id}
             storeKey={rushProjectionKey}
-            newDefault={defaultRushProjection}
+            newDefault={defaultRushStats}
             stats={{
               ypc: {
                 getLabel: (p) => `Yards per carry: ${p.ypc}`,
@@ -273,16 +273,16 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
           />
         )}
         {receivingSeason && (
-          <PlayerStatPanel<RecvProjection>
+          <PlayerStatPanel<RecvStatData>
             playerId={player.id}
             storeKey={recvProjectionKey}
-            newDefault={defaultRecvProjection}
+            newDefault={defaultRecvStats}
             stats={{
-              cmp: {
-                getLabel: (p) => `Completion percentage: ${p.cmp}%`,
-                marks: getPctMarks(receivingSeason, getRecvCmp),
-                step: 0.5,
-              },
+              //cmp: {
+              //  getLabel: (p) => `Completion percentage: ${p.cmp}%`,
+              //  marks: getPctMarks(receivingSeason, getRecvCmp),
+              //  step: 0.5,
+              //},
               ypr: {
                 getLabel: (p) => `Yards per reception: ${p.ypr}`,
                 marks: getScalarMarks(receivingSeason, getRecvYpr),

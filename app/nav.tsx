@@ -26,7 +26,13 @@ type DrawerProps = {
   setDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
-function HeaderBar({ isDrawerOpen, setDrawerOpen }: DrawerProps) {
+type HeaderProps = { header: string };
+
+function HeaderBar({
+  isDrawerOpen,
+  setDrawerOpen,
+  header,
+}: DrawerProps & HeaderProps) {
   return (
     <Box className={'h-header grow relative flex items-center'}>
       <AppBar position='static' color='transparent' className={'shadow-none'}>
@@ -41,25 +47,26 @@ function HeaderBar({ isDrawerOpen, setDrawerOpen }: DrawerProps) {
           >
             <MenuIcon />
           </IconButton>
-          <HeaderTitle />
+          <HeaderTitle header={header} />
         </Toolbar>
       </AppBar>
     </Box>
   );
 }
 
-function HeaderTitle() {
+function HeaderTitle({ header }: HeaderProps) {
   const className = classNames(
     'grow text-center text-5xl text-white font-semibold',
     titleFont.className
   );
   return (
     <Typography variant='h6' component='div' className={className}>
-      Atlanta Falcons
+      {header}
     </Typography>
   );
 }
 
+// TODO probably SideDrawer can be in a layout and only need dynamic header?
 function SideDrawer({
   isDrawerOpen: isOpen,
   setDrawerOpen: setIsOpen,
@@ -110,13 +117,23 @@ function SideDrawer({
   return drawer;
 }
 
-export default function Nav({ children }: { children: ReactNode }) {
+export default function Nav({
+  children,
+  header,
+}: {
+  children: ReactNode;
+  header: string;
+}) {
   const [isDrawerOpen, setDrawerOpen] = useState(false);
   return (
     <>
       <SideDrawer isDrawerOpen={isDrawerOpen} setDrawerOpen={setDrawerOpen} />
       <main className='w-full flex h-screen flex-col justify-stretch px-5 overflow-clip'>
-        <HeaderBar isDrawerOpen={isDrawerOpen} setDrawerOpen={setDrawerOpen} />
+        <HeaderBar
+          isDrawerOpen={isDrawerOpen}
+          setDrawerOpen={setDrawerOpen}
+          header={header}
+        />
         <div className={'h-body'}>{children}</div>
       </main>
     </>

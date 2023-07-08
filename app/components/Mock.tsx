@@ -1,21 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-//import { lastSeason } from '../types';
-import ClickAwayListener from '@mui/base/ClickAwayListener';
-import AddCircleIcon from '@mui/icons-material/AddCircle';
-import Accordion from '@mui/material/Accordion';
-import AccordionDetails from '@mui/material/AccordionDetails';
-import AccordionSummary from '@mui/material/AccordionSummary';
-import Box from '@mui/material/Box';
-import Fab from '@mui/material/Fab';
+import { setOnClone } from '../utils';
+import _ from 'lodash';
+import { useIndexedDBStore } from 'use-indexeddb';
+
 import Grid from '@mui/material/Grid';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import Popover from '@mui/material/Popover';
-import Slider from '@mui/material/Slider';
-import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
@@ -23,86 +14,165 @@ import Typography from '@mui/material/Typography';
 import Card from 'app/components/Card';
 import DoughnutChart from 'app/components/DoughnutChart';
 import HorizontalChart from 'app/components/HorizontalChart';
-
-function PlayerPassingPanel() {
-  return (
-    <Stack>
-      <Box>
-        <Typography>Games played</Typography>
-        <Slider />
-      </Box>
-      <Box>
-        <Typography>Targets per game</Typography>
-        <Slider />
-      </Box>
-      <Box>
-        <Typography>Completion percentage</Typography>
-        <Slider />
-      </Box>
-      <Box>
-        <Typography>Yards per reception</Typography>
-        <Slider />
-      </Box>
-      <Box>
-        <Typography>Touchdown percentage</Typography>
-        <Slider />
-      </Box>
-    </Stack>
-  );
-}
-
-function PlayerPanel({
-  name,
-  expanded,
-  setExpanded,
-}: {
-  name: string;
-  expanded: boolean;
-  setExpanded: (name: string) => void;
-}) {
-  return (
-    <Stack className={'w-full mb-5'}>
-      {/* TODO elevation, hover styles */}
-      <Accordion
-        expanded={expanded}
-        onChange={(_, e) => setExpanded(e ? name : '')}
-        className={'px-3'}
-      >
-        <AccordionSummary>
-          <Box className={'w-full'}>
-            <Typography className={'text-xl'}>{`${name} (QB)`}</Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails>
-          <PlayerPassingPanel />
-        </AccordionDetails>
-      </Accordion>
-    </Stack>
-  );
-}
-
-function DoughnutCard() {
-  return (
-    <div className={'flex h-full justify-center'}>
-      <div className={'flex w-full justify-center'}>
-        <DoughnutChart />
-      </div>
-    </div>
-  );
-}
+import { StorageKey, setupPersistence } from 'app/data/persistence';
+import AddPlayerFAB from 'app/teams/[teamKey]/AddPlayerFAB';
+import PlayerPanel from 'app/teams/[teamKey]/PlayerPanel';
+import {
+  PlayerStatConstructable,
+  PlayerStatData,
+  PlayerStats,
+  PlayerWithExtras,
+  Position,
+  StatType,
+  TeamWithExtras,
+  createPlayerStats,
+  lastSeason,
+} from 'app/types';
 
 function Doughnutz({ stat }: { stat: string }) {
   return (
     <>
       <Typography className={'text-xl w-full text-center'}>{stat}</Typography>
-      <DoughnutCard />
+      <div className={'flex h-full justify-center'}>
+        <div className={'flex w-full justify-center'}>
+          <DoughnutChart />
+        </div>
+      </div>
     </>
   );
 }
 
-export default function Mock() {
-  const [expandedPlayer, setExpandedPlayer] = useState('');
+function getRelevantPositions(statType: StatType): Position[] {
+  switch (statType) {
+  case StatType.PASS:
+    return [Position.QB];
+  case StatType.RECV:
+    return [Position.WR, Position.TE, Position.RB];
+  default: // Rushing
+    return [Position.RB, Position.QB, Position.WR];
+  }
+}
+
+function getStorageKey(statType: StatType): StorageKey {
+  switch (statType) {
+  case StatType.PASS:
+    return StorageKey.PASS;
+  case StatType.RECV:
+    return StorageKey.RECV;
+  default: // Rushing
+    return StorageKey.RUSH;
+  }
+}
+
+function StatTypeToggleButton({
+  statType,
+  setStatType,
+}: {
+  statType: StatType;
+  setStatType: (s: StatType) => void;
+}) {
+  return (
+    <ToggleButtonGroup
+      color='primary'
+      value={statType}
+      exclusive
+      onChange={(_e, v) => v && setStatType(v)}
+    >
+      <ToggleButton value={StatType.PASS}>Passing</ToggleButton>
+      <ToggleButton value={StatType.RECV}>Receiving</ToggleButton>
+      <ToggleButton value={StatType.RUSH}>Rushing</ToggleButton>
+    </ToggleButtonGroup>
+  );
+}
+
+type MockProps<T extends PlayerStats> = {
+  team: TeamWithExtras;
+  statType: StatType;
+  setStatType: (s: StatType) => void;
+  constructor: PlayerStatConstructable<T>;
+  toStoreData: (s: T) => PlayerStatData<T>;
+};
+
+export default function Mock<T extends PlayerStats>({
+  team,
+  statType,
+  setStatType,
+  constructor,
+  toStoreData,
+}: MockProps<T>) {
+  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
+  const [stats, setStats] = useState<Map<number, T>>(new Map());
   const spacing = 4;
+
+  const storageKey = getStorageKey(statType);
+  const playerStore = useIndexedDBStore<PlayerStatData<T>>(storageKey);
+  const relevantPositions = getRelevantPositions(statType);
+  const relevantPlayers = team.players.filter((player) =>
+    relevantPositions.includes(player.position as Position)
+  );
+  let [stattedPlayers, nonStattedPlayers]: [
+    stattedPlayers: PlayerWithExtras[],
+    nonStattedPlayers: PlayerWithExtras[]
+  ] = _.partition(relevantPlayers, (player: PlayerWithExtras) =>
+    stats.has(player.id)
+  );
+  stattedPlayers = stattedPlayers.sort((a, b) => a.adp - b.adp);
+  nonStattedPlayers = nonStattedPlayers.sort((a, b) => {
+    const positionCmp =
+      relevantPositions.indexOf(a.position as Position) -
+      relevantPositions.indexOf(b.position as Position);
+    const adpCmp = a.adp - b.adp;
+    return positionCmp || adpCmp;
+  });
+
+  // TODO wonder if should memoize these instead of refreshing all the time
+  // not sure how `setupPersistence` plays into that.
+  useEffect(() => {
+    setupPersistence().then(() => {
+      const promises = relevantPlayers.map((player) =>
+        playerStore.getByID(player.id)
+      );
+      Promise.all(promises).then((data) => {
+        data.filter(Boolean).map((d) => createPlayerStats(constructor, d));
+        setStats(
+          new Map(
+            (data.filter((s) => s) as PlayerStatData<T>[])
+              .map((d) => createPlayerStats(constructor, d))
+              .map((p) => [p.id, p])
+          )
+        );
+      });
+    });
+  }, [statType]);
+
+  const addPlayer = (playerId: number) => {
+    const playerStats = constructor.default(playerId);
+    playerStore
+      .add(toStoreData(playerStats), playerId)
+      // TODO would prefer to render optimistically and resolve failure
+      // but that could be more complicated... for later
+      .then(() => {
+        setStats((stats) => setOnClone(stats, playerId, playerStats));
+      })
+      .catch(alert);
+  };
+
+  const updateStats = (playerStats: T) => {
+    setStats((stats) => setOnClone(stats, playerStats.id, playerStats));
+  };
+
+  const persistStats = (stats: T) => {
+    updateStats(stats);
+    playerStore.update(toStoreData(stats), stats.id);
+  };
+
+  const deletePlayer = (playerId: number) => {
+    setStats((stats) => {
+      stats.delete(playerId);
+      return stats;
+    });
+    playerStore.deleteByID(playerId);
+  };
 
   return (
     <div className={'flex h-body pb-5'}>
@@ -114,29 +184,26 @@ export default function Mock() {
       >
         <Grid item xs={6}>
           <Card className={'h-full flex-col justify-stretch relative'}>
-            {['Steve Foo', 'Joe Bar', 'Don Baz'].map((player) => (
-              <PlayerPanel
-                key={player}
-                name={player}
-                expanded={player == expandedPlayer}
-                setExpanded={setExpandedPlayer}
-              />
-            ))}
+            {/* TODO would be nice here to preload some by default... */}
+            {/* Maybe at least everyone whose ADP is <=100 */}
+            {/* TODO double check these are ordered by ADP */}
+            <PlayerPanel
+              players={stattedPlayers}
+              stats={stats}
+              setStats={updateStats}
+              persistStats={persistStats}
+              expandedPlayer={expandedPlayer}
+              setExpandedPlayer={setExpandedPlayer}
+              deletePlayer={deletePlayer}
+            />
             <div className={'absolute bottom-5 left-5'}>
-              <ToggleButtonGroup
-                color='primary'
-                value={'passing'}
-                exclusive
-                //onChange={handleChange}
-                aria-label='Platform'
-              >
-                <ToggleButton value='passing'>Passing</ToggleButton>
-                <ToggleButton value='receiving'>Receiving</ToggleButton>
-                <ToggleButton value='rushing'>Rushing</ToggleButton>
-              </ToggleButtonGroup>
+              <StatTypeToggleButton
+                statType={statType}
+                setStatType={setStatType}
+              />
             </div>
             <div className={'absolute bottom-5 right-5'}>
-              <MouseOverPopover />
+              <AddPlayerFAB players={nonStattedPlayers} addPlayer={addPlayer} />
             </div>
           </Card>
         </Grid>
@@ -157,7 +224,7 @@ export default function Mock() {
                 <Grid key={j} item xs={6}>
                   <Card className={'h-full'}>
                     <div className={'h-full relative'}>
-                      <Doughnutz stat={'2022 Target Share'} />
+                      <Doughnutz stat={`${lastSeason} Target Share`} />
                     </div>
                   </Card>
                 </Grid>
@@ -167,59 +234,5 @@ export default function Mock() {
         </Grid>
       </Grid>
     </div>
-  );
-}
-
-function MouseOverPopover() {
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-
-  const handlePopoverOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handlePopoverClose = () => {
-    setAnchorEl(null);
-  };
-
-  const open = Boolean(anchorEl);
-
-  return (
-    <ClickAwayListener onClickAway={handlePopoverClose}>
-      <div>
-        <Fab color='primary' onClick={handlePopoverOpen} className={'z-20'}>
-          <AddCircleIcon />
-        </Fab>
-        <Popover
-          id='mouse-over-popover'
-          sx={{
-            pointerEvents: 'none',
-          }}
-          open={open}
-          anchorEl={anchorEl}
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          onClose={handlePopoverClose}
-          disableRestoreFocus
-        >
-          <List>
-            <ListItem>
-              <Typography>Dickhead Jones</Typography>
-            </ListItem>
-            <ListItem>
-              <Typography>Alabama Pete</Typography>
-            </ListItem>
-            <ListItem>
-              <Typography>Dave Fuck</Typography>
-            </ListItem>
-          </List>
-        </Popover>
-      </div>
-    </ClickAwayListener>
   );
 }

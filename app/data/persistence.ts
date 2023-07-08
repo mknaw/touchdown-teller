@@ -1,9 +1,15 @@
 import setupIndexedDB from 'use-indexeddb';
 
 export const teamStoreKey = 'team';
-export const passShareKey = 'passing';
-export const rushShareKey = 'rushing';
-export const recvShareKey = 'receiving';
+export enum StorageKey {
+  PASS = 'passing',
+  RECV = 'receiving',
+  RUSH = 'rushing',
+}
+
+export const passShareKey = StorageKey.PASS;
+export const rushShareKey = StorageKey.RUSH;
+export const recvShareKey = StorageKey.RECV;
 export const passProjectionKey = 'pass-projection';
 export const rushProjectionKey = 'rush-projection';
 export const recvProjectionKey = 'recv-projection';
