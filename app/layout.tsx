@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='en' className={mainFont.className}>
-      <body>
+      <body className={'overflow-clip'}>
         <ThemeProvider>
           <Nav>{children}</Nav>
         </ThemeProvider>

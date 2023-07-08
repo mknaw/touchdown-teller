@@ -186,7 +186,7 @@ function MouseOverPopover() {
   return (
     <ClickAwayListener onClickAway={handlePopoverClose}>
       <div>
-        <Fab color='primary' onClick={handlePopoverOpen}>
+        <Fab color='primary' onClick={handlePopoverOpen} className={'z-20'}>
           <AddCircleIcon />
         </Fab>
         <Popover
