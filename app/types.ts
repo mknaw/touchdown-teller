@@ -1,7 +1,35 @@
+import { Prisma } from '@prisma/client';
+
 // TODO could get this from some sort of cfg + calculation.
 export const lastSeason = 2022;
 
 export type SliderMarks = Array<{ label?: string; value: number }>;
+
+export type TeamWithExtras = Prisma.TeamGetPayload<{
+  include: {
+    players: {
+      include: {
+        passingSeasons: true;
+        rushingSeasons: true;
+        receivingSeasons: true;
+      };
+    };
+    seasons: true;
+    passingSeasons: true;
+    receivingSeasons: true;
+    rushingSeasons: true;
+    homeGames: true;
+    awayGames: true;
+  };
+}>;
+
+export type PlayerWithExtras = Prisma.PlayerGetPayload<{
+  include: {
+    passingSeasons: true;
+    rushingSeasons: true;
+    receivingSeasons: true;
+  };
+}>;
 
 export enum TeamKey {
   ARI = 'ARI',

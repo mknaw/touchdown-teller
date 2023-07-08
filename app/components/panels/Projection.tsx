@@ -6,7 +6,7 @@ import SharePanel from './Share';
 import TeamPanel from './Team';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { Game, Player, Team } from '@prisma/client';
+import { Game } from '@prisma/client';
 
 import Container from '@mui/material/Container';
 import Grid from '@mui/material/Grid';
@@ -27,10 +27,12 @@ import {
   teamStoreKey,
 } from 'app/data/persistence';
 import {
+  PlayerWithExtras,
   Position,
   TeamKey,
   TeamProjection,
   TeamProjectionData,
+  TeamWithExtras,
 } from 'app/types';
 
 const ProjectionPaper = ({ children }: { children: React.ReactNode }) => (
@@ -40,9 +42,9 @@ const ProjectionPaper = ({ children }: { children: React.ReactNode }) => (
 );
 
 export interface ProjectionPanelProps {
-  team: Team;
+  team: TeamWithExtras;
   games: Game[]; // Would prefer a `Map` but I think RSC doesn't like it!
-  players: Player[]; // Would prefer a `Map` but I think RSC doesn't like it!
+  players: PlayerWithExtras[]; // Would prefer a `Map` but I think RSC doesn't like it!
 }
 
 export default function ProjectionPanel({
@@ -79,6 +81,7 @@ export default function ProjectionPanel({
   };
 
   const [playerId, setPlayerId] = useState<number | null>(null);
+  const modalPlayer = playerId && playerMap.get(playerId);
 
   return (
     teamProjection && (
@@ -160,11 +163,8 @@ export default function ProjectionPanel({
             </ProjectionPaper>
           </Grid>
         </Grid>
-        {playerId && (
-          <PlayerModal
-            player={playerMap.get(playerId)!}
-            onClose={() => setPlayerId(null)}
-          />
+        {modalPlayer && (
+          <PlayerModal player={modalPlayer} onClose={() => setPlayerId(null)} />
         )}
       </Container>
     )

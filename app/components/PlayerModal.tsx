@@ -3,8 +3,6 @@ import React, { useEffect, useState } from 'react';
 import classNames from 'classnames';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { Player } from '@prisma/client';
-
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Slider, { SliderProps } from '@mui/material/Slider';
@@ -22,6 +20,7 @@ import {
 import { titleFont } from 'app/theme/fonts';
 import {
   PassProjection,
+  PlayerWithExtras,
   RecvProjection,
   RushProjection,
   Share,
@@ -96,7 +95,7 @@ function PlayerStatPanel<T>({
   }, []);
 
   const onChange =
-    (field: keyof T) => (_event: any, value: number | number[]) => {
+    (field: keyof T) => (_event: Event, value: number | number[]) => {
       if (!!projection && typeof value === 'number') {
         setProjection({
           ...projection,
@@ -175,7 +174,7 @@ function getScalarMarks<T>(
 }
 
 interface PlayerModalProps {
-  player: Player;
+  player: PlayerWithExtras;
   onClose: () => void;
 }
 
@@ -223,7 +222,7 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
         >
           {`${player.name} (${player.position})`}
         </Typography>
-        {hasPassing && (
+        {passingSeason && (
           <PlayerStatPanel<PassProjection>
             playerId={player.id}
             storeKey={passProjectionKey}
@@ -251,7 +250,7 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
             }}
           />
         )}
-        {hasRushing && (
+        {rushingSeason && (
           <PlayerStatPanel<RushProjection>
             playerId={player.id}
             storeKey={rushProjectionKey}
@@ -273,7 +272,7 @@ export default function PlayerModal({ player, onClose }: PlayerModalProps) {
             }}
           />
         )}
-        {hasReceiving && (
+        {receivingSeason && (
           <PlayerStatPanel<RecvProjection>
             playerId={player.id}
             storeKey={recvProjectionKey}

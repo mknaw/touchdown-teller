@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 
-import { Team } from '@prisma/client';
-
 import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { TeamProjection, TeamProjectionData, lastSeason } from 'app/types';
+import {
+  TeamProjection,
+  TeamProjectionData,
+  TeamWithExtras,
+  lastSeason,
+} from 'app/types';
 
 const minPlaysPerGame = 45;
 const maxPlaysPerGame = 75;
 
 interface TeamStatsPanelProps {
-  team: Team;
+  team: TeamWithExtras;
   teamProjection: TeamProjection;
   persistTeamProjection: (data: TeamProjectionData) => void;
 }
@@ -31,7 +34,10 @@ export default function TeamPanel({
     return null;
   }
 
-  const season = team.seasons[0]!;
+  const season = team.seasons[0];
+  if (!season) {
+    return null;
+  }
   const ppg = (season.passAtt + season.rushAtt) / 17;
   const passRunRatio =
     100 * (season.passAtt / (season.passAtt + season.rushAtt));
@@ -50,7 +56,7 @@ export default function TeamPanel({
     }
   };
 
-  const onChangeCommitted = (event: any) => {
+  const onChangeCommitted = (event: React.SyntheticEvent | Event) => {
     const { target } = event;
     if (target) {
       const { name, value } = target as HTMLInputElement;

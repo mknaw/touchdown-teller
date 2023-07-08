@@ -235,23 +235,31 @@ export default function SharePanel({
         <Stack sx={{ width: 1 }}>
           {[...shares.entries()]
             .sort((a, b) => {
-              const playerA = players.get(a[0])!;
-              const playerB = players.get(b[0])!;
+              const playerA = players.get(a[0]);
+              const playerB = players.get(b[0]);
+              if (!playerA || !playerB) {
+                return 0; // Don't expect this to happen ...
+              }
               return sortPlayers(playerA, playerB);
             })
-            .map(([id, share]) => (
-              <ShareSlider
-                key={id}
-                player={players.get(id)!}
-                share={share}
-                attempts={attempts}
-                onChange={(value) => setPlayerShare(id, value)}
-                onChangeCommitted={(value) => persistPlayerShare(id, value)}
-                onRemove={() => removePlayerShare(id)}
-                setPlayerId={setPlayerId}
-                lastSeasonShare={lastSeasonShares.get(id)}
-              />
-            ))}
+            .map(([id, share]) => {
+              const player = players.get(id);
+              return (
+                player && (
+                  <ShareSlider
+                    key={id}
+                    player={player}
+                    share={share}
+                    attempts={attempts}
+                    onChange={(value) => setPlayerShare(id, value)}
+                    onChangeCommitted={(value) => persistPlayerShare(id, value)}
+                    onRemove={() => removePlayerShare(id)}
+                    setPlayerId={setPlayerId}
+                    lastSeasonShare={lastSeasonShares.get(id)}
+                  />
+                )
+              );
+            })}
         </Stack>
       )}
       <Box>

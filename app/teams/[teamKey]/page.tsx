@@ -1,10 +1,10 @@
 import { Metadata } from 'next';
 
-import { PrismaClient, Team } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 import Header from 'app/components/Header';
 import ProjectionPanel from 'app/components/panels/Projection';
-import { TeamKey, lastSeason } from 'app/types';
+import { TeamKey, TeamWithExtras, lastSeason } from 'app/types';
 import { getTeamName } from 'app/utils';
 
 interface Props {
@@ -19,10 +19,9 @@ export const generateMetadata = async ({
   title: getTeamName(teamKey),
 });
 
-async function getTeam(teamKey: string): Promise<Team> {
+async function getTeam(teamKey: string): Promise<TeamWithExtras> {
   const prisma = new PrismaClient();
-  // TODO probably should be `findFirstOrThrow`
-  return await prisma.Team.findFirst({
+  return await prisma.team.findFirstOrThrow({
     where: {
       key: teamKey,
     },
