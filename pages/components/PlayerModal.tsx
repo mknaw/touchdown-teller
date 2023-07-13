@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from 'react';
 
-import classNames from 'classnames';
-import { useIndexedDBStore } from 'use-indexeddb';
-
-import Box from '@mui/material/Box';
-import Modal from '@mui/material/Modal';
-import Slider, { SliderProps } from '@mui/material/Slider';
-import Typography from '@mui/material/Typography';
-
 import {
   passProjectionKey,
   passShareKey,
@@ -16,8 +8,8 @@ import {
   rushProjectionKey,
   rushShareKey,
   setupPersistence,
-} from 'app/data/persistence';
-import { titleFont } from 'app/theme/fonts';
+} from '@/pages/data/persistence';
+import { titleFont } from '@/pages/theme/fonts';
 import {
   PassStatData,
   PlayerWithExtras,
@@ -29,7 +21,7 @@ import {
   defaultRecvStats,
   defaultRushStats,
   lastSeason,
-} from 'app/types';
+} from '@/pages/types';
 import {
   getPassCmp,
   getPassTdp,
@@ -39,7 +31,14 @@ import {
   getRecvYpr,
   getRushTdp,
   getRushYpc,
-} from 'app/utils/stats';
+} from '@/pages/utils/stats';
+import classNames from 'classnames';
+import { useIndexedDBStore } from 'use-indexeddb';
+
+import Box from '@mui/material/Box';
+import Modal from '@mui/material/Modal';
+import Slider, { SliderProps } from '@mui/material/Slider';
+import Typography from '@mui/material/Typography';
 
 const style = {
   position: 'absolute' as const,

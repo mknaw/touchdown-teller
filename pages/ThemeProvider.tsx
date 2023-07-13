@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 
-import { ThemeOptions, ThemeProvider, createTheme } from '@mui/material/styles';
+import { mainFont } from '@/pages/theme/fonts';
 
-import { mainFont } from 'app/theme/fonts';
+import { ThemeOptions, ThemeProvider, createTheme } from '@mui/material/styles';
 
 export default function Template({ children }: { children: React.ReactNode }) {
   const theme: ThemeOptions = createTheme({

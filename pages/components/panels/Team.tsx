@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 
-import Slider from '@mui/material/Slider';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
-
 import {
   TeamProjection,
   TeamProjectionData,
   TeamWithExtras,
   lastSeason,
-} from 'app/types';
+} from '@/pages/types';
+
+import Slider from '@mui/material/Slider';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 
 const minPlaysPerGame = 45;
 const maxPlaysPerGame = 75;

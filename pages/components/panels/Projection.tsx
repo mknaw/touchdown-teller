@@ -4,28 +4,15 @@ import React, { useEffect, useState } from 'react';
 
 import SharePanel from './Share';
 import TeamPanel from './Team';
-import { useIndexedDBStore } from 'use-indexeddb';
-
-import { Game } from '@prisma/client';
-
-import Container from '@mui/material/Container';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
-
-import {
-  getLastSeasonPassShare,
-  getLastSeasonRecvShare,
-  getLastSeasonRushShare,
-} from '@/app/utils/stats';
-import PlayerModal from 'app/components/PlayerModal';
-import Schedule from 'app/components/Schedule';
+import PlayerModal from '@/pages/components/PlayerModal';
+import Schedule from '@/pages/components/Schedule';
 import {
   passShareKey,
   recvShareKey,
   rushShareKey,
   setupPersistence,
   teamStoreKey,
-} from 'app/data/persistence';
+} from '@/pages/data/persistence';
 import {
   PlayerWithExtras,
   Position,
@@ -33,7 +20,19 @@ import {
   TeamProjection,
   TeamProjectionData,
   TeamWithExtras,
-} from 'app/types';
+} from '@/pages/types';
+import {
+  getLastSeasonPassShare,
+  getLastSeasonRecvShare,
+  getLastSeasonRushShare,
+} from '@/pages/utils/stats';
+import { useIndexedDBStore } from 'use-indexeddb';
+
+import { Game } from '@prisma/client';
+
+import Container from '@mui/material/Container';
+import Grid from '@mui/material/Grid';
+import Paper from '@mui/material/Paper';
 
 const ProjectionPaper = ({ children }: { children: React.ReactNode }) => (
   <Paper variant='outlined' sx={{ p: 2, height: 1 }}>

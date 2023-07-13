@@ -3,20 +3,9 @@
 import { useEffect, useState } from 'react';
 
 import { setOnClone } from '../utils';
-import _ from 'lodash';
-import { useIndexedDBStore } from 'use-indexeddb';
-
-import Grid from '@mui/material/Grid';
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Typography from '@mui/material/Typography';
-
-import Card from 'app/components/Card';
-import DoughnutChart from 'app/components/DoughnutChart';
-import HorizontalChart from 'app/components/HorizontalChart';
-import { StorageKey, setupPersistence } from 'app/data/persistence';
-import AddPlayerFAB from 'app/teams/[teamKey]/AddPlayerFAB';
-import PlayerPanel from 'app/teams/[teamKey]/PlayerPanel';
+import { StorageKey, setupPersistence } from '@/pages/data/persistence';
+import AddPlayerFAB from '@/pages/teams/AddPlayerFAB';
+import PlayerPanel from '@/pages/teams/PlayerPanel';
 import {
   PlayerStatConstructable,
   PlayerStatData,
@@ -26,21 +15,12 @@ import {
   StatType,
   TeamWithExtras,
   createPlayerStats,
-  lastSeason,
-} from 'app/types';
+} from '@/pages/types';
+import _ from 'lodash';
+import { useIndexedDBStore } from 'use-indexeddb';
 
-function Doughnutz({ stat }: { stat: string }) {
-  return (
-    <>
-      <Typography className={'text-xl w-full text-center'}>{stat}</Typography>
-      <div className={'flex h-full justify-center'}>
-        <div className={'flex w-full justify-center'}>
-          <DoughnutChart />
-        </div>
-      </div>
-    </>
-  );
-}
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 function getRelevantPositions(statType: StatType): Position[] {
   switch (statType) {
@@ -100,9 +80,7 @@ export default function Mock<T extends PlayerStats>({
   constructor,
   toStoreData,
 }: MockProps<T>) {
-  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
   const [stats, setStats] = useState<Map<number, T>>(new Map());
-  const spacing = 4;
 
   const storageKey = getStorageKey(statType);
   const playerStore = useIndexedDBStore<PlayerStatData<T>>(storageKey);
@@ -175,64 +153,23 @@ export default function Mock<T extends PlayerStats>({
   };
 
   return (
-    <div className={'flex h-body pb-5'}>
-      <Grid
-        container
-        alignItems='stretch'
-        justifyContent='stretch'
-        spacing={spacing}
-      >
-        <Grid item xs={6}>
-          <Card className={'h-full flex-col justify-stretch relative'}>
-            {/* TODO would be nice here to preload some by default... */}
-            {/* Maybe at least everyone whose ADP is <=100 */}
-            {/* TODO double check these are ordered by ADP */}
-            <PlayerPanel
-              players={stattedPlayers}
-              stats={stats}
-              setStats={updateStats}
-              persistStats={persistStats}
-              expandedPlayer={expandedPlayer}
-              setExpandedPlayer={setExpandedPlayer}
-              deletePlayer={deletePlayer}
-            />
-            <div className={'absolute bottom-5 left-5'}>
-              <StatTypeToggleButton
-                statType={statType}
-                setStatType={setStatType}
-              />
-            </div>
-            <div className={'absolute bottom-5 right-5'}>
-              <AddPlayerFAB players={nonStattedPlayers} addPlayer={addPlayer} />
-            </div>
-          </Card>
-        </Grid>
-        <Grid container direction={'column'} item xs={6} spacing={spacing}>
-          <Grid item xs={4}>
-            <Card className={'h-full'}>
-              <Typography className={'text-xl w-full text-center'}>
-                HorizontalChart
-              </Typography>
-              <div className={'h-10 relative bg-red-500'}>
-                <HorizontalChart />
-              </div>
-            </Card>
-          </Grid>
-          {[0, 1].map((i) => (
-            <Grid key={i} container item xs={4} spacing={spacing}>
-              {[0, 1].map((j) => (
-                <Grid key={j} item xs={6}>
-                  <Card className={'h-full'}>
-                    <div className={'h-full relative'}>
-                      <Doughnutz stat={`${lastSeason} Target Share`} />
-                    </div>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          ))}
-        </Grid>
-      </Grid>
-    </div>
+    <>
+      {/* TODO would be nice here to preload some by default... */}
+      {/* Maybe at least everyone whose ADP is <=100 */}
+      {/* TODO double check these are ordered by ADP */}
+      <PlayerPanel
+        players={stattedPlayers}
+        stats={stats}
+        setStats={updateStats}
+        persistStats={persistStats}
+        deletePlayer={deletePlayer}
+      />
+      <div className={'absolute bottom-5 left-5'}>
+        <StatTypeToggleButton statType={statType} setStatType={setStatType} />
+      </div>
+      <div className={'absolute bottom-5 right-5'}>
+        <AddPlayerFAB players={nonStattedPlayers} addPlayer={addPlayer} />
+      </div>
+    </>
   );
 }

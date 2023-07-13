@@ -1,4 +1,4 @@
-import { TeamKey } from 'app/types';
+import { TeamKey } from '@/pages/types';
 
 export function getTeamName(teamKey: TeamKey): string {
   const teams: Record<TeamKey, string> = {

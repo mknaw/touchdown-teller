@@ -2,6 +2,9 @@
 
 import React, { ReactNode, useState } from 'react';
 
+import { titleFont } from '@/pages/theme/fonts';
+import { TeamKey } from '@/pages/types';
+import { getTeamName } from '@/pages/utils';
 import classNames from 'classnames';
 import Link from 'next/link';
 
@@ -16,10 +19,6 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
-
-import { titleFont } from 'app/theme/fonts';
-import { TeamKey } from 'app/types';
-import { getTeamName } from 'app/utils';
 
 type DrawerProps = {
   isDrawerOpen: boolean;

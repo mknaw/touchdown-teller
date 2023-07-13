@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 
+import { setupPersistence } from '@/pages/data/persistence';
+import { titleFont } from '@/pages/theme/fonts';
+import { Position, Share, TeamKey, lastSeason } from '@/pages/types';
 import classNames from 'classnames';
 import { useIndexedDBStore } from 'use-indexeddb';
 
@@ -13,10 +16,6 @@ import Select, { SelectChangeEvent } from '@mui/material/Select';
 import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-
-import { setupPersistence } from 'app/data/persistence';
-import { titleFont } from 'app/theme/fonts';
-import { Position, Share, TeamKey, lastSeason } from 'app/types';
 
 interface PlayerPoolProps {
   players: Player[];

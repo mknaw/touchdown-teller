@@ -1,7 +1,15 @@
 'use client';
 
-import { SyntheticEvent } from 'react';
+import { SyntheticEvent, useState } from 'react';
 
+import {
+  PassStats,
+  PlayerStats,
+  PlayerWithExtras,
+  RecvStats,
+  SliderMarks,
+  lastSeason,
+} from '@/pages/types';
 import _ from 'lodash';
 
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -16,15 +24,6 @@ import IconButton from '@mui/material/IconButton';
 import Slider, { SliderProps } from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-
-import {
-  PassStats,
-  PlayerStats,
-  PlayerWithExtras,
-  RecvStats,
-  SliderMarks,
-  lastSeason,
-} from 'app/types';
 
 function getMarks<T>(
   season: T,
@@ -138,6 +137,8 @@ function StatSliderPanel<T extends PlayerStats>({
           {...getCommonProps('gp')}
         />
         <StatSlider
+          min={15}
+          max={50}
           marks={
             season &&
             getMarks(
@@ -149,6 +150,8 @@ function StatSliderPanel<T extends PlayerStats>({
           {...getCommonProps('att')}
         />
         <StatSlider
+          min={20}
+          max={75}
           marks={
             season &&
             getMarks(
@@ -272,8 +275,6 @@ type PlayerPanelProps<T extends PlayerStats> = {
   stats: Map<number, T>;
   setStats: (stats: T) => void;
   persistStats: (stats: T) => void;
-  expandedPlayer: number | null;
-  setExpandedPlayer: (expanded: number | null) => void;
   deletePlayer: (playerId: number) => void;
 };
 
@@ -282,10 +283,9 @@ export default function PlayerPanel<T extends PlayerStats>({
   stats,
   setStats,
   persistStats,
-  expandedPlayer,
-  setExpandedPlayer,
   deletePlayer,
 }: PlayerPanelProps<T>) {
+  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
   return (
     <>
       {players.map((player) => {
