@@ -1,13 +1,5 @@
 import { SyntheticEvent } from 'react';
 
-import {
-  PassStats,
-  PlayerStats,
-  PlayerWithExtras,
-  RecvStats,
-  SliderMarks,
-  lastSeason,
-} from '@/types';
 import _ from 'lodash';
 
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -19,9 +11,12 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
-import Slider, { SliderProps } from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+
+import LabeledSlider from '@/components/LabeledSlider';
+import { PassSeason, RecvSeason } from '@/models/PlayerSeason';
+import { PlayerSeason, PlayerWithExtras, SliderMarks, lastYear } from '@/types';
 
 function getMarks<T>(
   season: T,
@@ -32,7 +27,7 @@ function getMarks<T>(
     return [];
   }
   const value = valueFn(season);
-  const label = `${lastSeason}: ${labelFn(value)}`;
+  const label = `${lastYear}: ${labelFn(value)}`;
   return [
     {
       label,
@@ -41,35 +36,24 @@ function getMarks<T>(
   ];
 }
 
-type StatSliderProps = { label: string } & SliderProps;
-
-function StatSlider({ label, ...props }: StatSliderProps) {
-  return (
-    <Box sx={{ width: 1 }}>
-      <Typography>{label}</Typography>
-      <Slider {...props} />
-    </Box>
-  );
-}
-
 type StatSliderPanelProps<T> = {
   player: PlayerWithExtras;
-  stats: T;
-  setStats: (stats: T) => void;
-  persistStats: (stats: T) => void;
+  season: T;
+  setSeason: (stats: T) => void;
+  persistSeason: (stats: T) => void;
 };
 
-function StatSliderPanel<T extends PlayerStats>({
+function StatSliderPanel<T extends PlayerSeason>({
   player,
-  stats,
-  setStats,
-  persistStats,
+  season,
+  setSeason,
+  persistSeason,
 }: StatSliderPanelProps<T>) {
   // TODO this I think is also doable if you annotate as `keyof T` among keys
   // which are numbers...
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const makeNewStats = (field: string, value: any): T => {
-    const cloned = _.cloneDeep(stats);
+    const cloned = _.cloneDeep(season);
     if (field in cloned) {
       // TODO I don't think calling it `as keyof T` is the 100% correct TS way
       // to achieve this, but also not sure how else to do it.
@@ -86,16 +70,16 @@ function StatSliderPanel<T extends PlayerStats>({
       ) => {
         if (typeof value === 'number') {
           if (persist) {
-            persistStats(makeNewStats(field, value));
+            persistSeason(makeNewStats(field, value));
           } else {
-            setStats(makeNewStats(field, value));
+            setSeason(makeNewStats(field, value));
           }
         }
       };
 
   const getValue = (field: string) => {
-    if (field in stats) {
-      const value = stats[field as keyof typeof stats];
+    if (field in season) {
+      const value = season[field as keyof typeof season];
       if (typeof value === 'number') {
         return value;
       }
@@ -105,8 +89,8 @@ function StatSliderPanel<T extends PlayerStats>({
 
   const getCommonProps = (field: string) => {
     const value = getValue(field);
-    const pct = stats.isPercentField(field) ? '%' : '';
-    const label = `${stats.labelFor(field)}: ${value.toFixed(1)}${pct}`;
+    const pct = season.isPercentField(field) ? '%' : '';
+    const label = `${season.labelFor(field)}: ${value.toFixed(1)}${pct}`;
     return {
       value,
       label,
@@ -116,70 +100,71 @@ function StatSliderPanel<T extends PlayerStats>({
     };
   };
 
+  // TODO these marks don't look correct when they're on the far end - like 0 tds
   let sliders;
-  if (stats instanceof PassStats) {
-    const season = player.passingSeasons[0];
+  if (season instanceof PassSeason) {
+    const lastSeason = player.passSeasons[0];
     sliders = (
       <>
-        <StatSlider
+        <LabeledSlider
           min={1}
           max={17}
           marks={
-            season &&
+            lastSeason &&
             getMarks(
-              season,
+              lastSeason,
               (s) => s.games,
               (v) => v.toFixed(0)
             )
           }
           {...getCommonProps('gp')}
         />
-        <StatSlider
+        <LabeledSlider
           min={15}
           max={50}
           marks={
-            season &&
+            lastSeason &&
             getMarks(
-              season,
+              lastSeason,
               (s) => s.att / s.games,
               (v) => v.toFixed(1)
             )
           }
           {...getCommonProps('att')}
         />
-        <StatSlider
+        <LabeledSlider
           min={20}
           max={75}
           marks={
-            season &&
+            lastSeason &&
             getMarks(
-              season,
+              lastSeason,
               (s) => 100 * (s.cmp / s.att),
               (v) => `${v.toFixed(1)}%`
             )
           }
           {...getCommonProps('cmp')}
         />
-        <StatSlider
+        <LabeledSlider
           min={1}
           max={15}
           marks={
-            season &&
+            lastSeason &&
             getMarks(
-              season,
+              lastSeason,
               (s) => s.yds / s.att,
               (v) => v.toFixed(1)
             )
           }
           {...getCommonProps('ypa')}
         />
-        <StatSlider
+        <LabeledSlider
           min={0}
           max={15}
           marks={
-            season &&
+            lastSeason &&
             getMarks(
-              season,
+              lastSeason,
               (s) => 100 * (s.td / s.att),
               (v) => `${v.toFixed(1)}%`
             )
@@ -188,23 +173,133 @@ function StatSliderPanel<T extends PlayerStats>({
         />
       </>
     );
-  } else if (stats instanceof RecvStats) {
+  } else if (season instanceof RecvSeason) {
+    const lastSeason = player.recvSeasons[0];
     sliders = (
       <>
-        <StatSlider min={1} max={17} {...getCommonProps('gp')} />
-        <StatSlider {...getCommonProps('tgt')} />
-        <StatSlider {...getCommonProps('rec')} />
-        <StatSlider {...getCommonProps('ypr')} />
-        <StatSlider {...getCommonProps('tdp')} />
+        <LabeledSlider
+          min={1}
+          max={17}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => s.games,
+              (v) => v.toFixed(0)
+            )
+          }
+          {...getCommonProps('gp')}
+        />
+        <LabeledSlider
+          min={0}
+          max={15}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => s.tgt / s.games,
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('tgt')}
+        />
+        <LabeledSlider
+          min={0}
+          max={100}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => 100 * (s.rec / s.tgt),
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('rec')}
+        />
+        <LabeledSlider
+          min={0}
+          max={20}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => s.yds / s.rec,
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('ypr')}
+        />
+        <LabeledSlider
+          min={0}
+          max={15}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => 100 * (s.td / s.rec),
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('tdp')}
+        />
       </>
     );
   } else {
+    const lastSeason = player.rushSeasons[0];
     sliders = (
       <>
-        <StatSlider min={1} max={17} {...getCommonProps('gp')} />
-        <StatSlider {...getCommonProps('att')} />
-        <StatSlider {...getCommonProps('ypc')} />
-        <StatSlider {...getCommonProps('tdp')} />
+        <LabeledSlider
+          min={1}
+          max={17}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => s.games,
+              (v) => v.toFixed(0)
+            )
+          }
+          {...getCommonProps('gp')}
+        />
+        <LabeledSlider
+          min={0}
+          max={25}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => s.att / s.games,
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('att')}
+        />
+        <LabeledSlider
+          min={1}
+          max={7}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => s.yds / s.att,
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('ypc')}
+        />
+        <LabeledSlider
+          min={0}
+          max={100}
+          marks={
+            lastSeason &&
+            getMarks(
+              lastSeason,
+              (s) => 100 * (s.td / s.att),
+              (v) => v.toFixed(1)
+            )
+          }
+          {...getCommonProps('tdp')}
+        />
       </>
     );
   }
@@ -212,26 +307,23 @@ function StatSliderPanel<T extends PlayerStats>({
   return <Stack>{sliders}</Stack>;
 }
 
-export default function PlayerAccordion<T extends PlayerStats>({
+export default function PlayerAccordion<T extends PlayerSeason>({
   player,
-  stats,
-  setStats,
-  persistStats,
+  season,
+  setSeason,
+  persistSeason,
   expanded,
   setExpanded,
   onDelete,
 }: {
   player: PlayerWithExtras;
-  stats: T;
-  setStats: (stats: T) => void;
-  persistStats: (stats: T) => void;
+  season: T;
+  setSeason: (stats: T) => void;
+  persistSeason: (stats: T) => void;
   expanded: boolean;
   setExpanded: (playerId: number | null) => void;
   onDelete: (playerId: number) => void;
 }) {
-  if (stats instanceof PassStats) {
-    console.log(stats.cmp);
-  }
   return (
     <Stack className={'w-full mb-5'}>
       {/* TODO elevation, hover styles */}
@@ -246,16 +338,20 @@ export default function PlayerAccordion<T extends PlayerStats>({
               className={'text-xl'}
             >{`${player.name} (${player.position})`}</Typography>
           </Box>
-          <Icon className={'align-baseline'}>
-            {expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+          <Icon>
+            {expanded ? (
+              <ExpandLessIcon className={'align-baseline'} />
+            ) : (
+              <ExpandMoreIcon className={'align-baseline'} />
+            )}
           </Icon>
         </AccordionSummary>
         <AccordionDetails>
           <StatSliderPanel
             player={player}
-            stats={stats}
-            setStats={setStats}
-            persistStats={persistStats}
+            season={season}
+            setSeason={setSeason}
+            persistSeason={persistSeason}
           />
           <Box className={'flex justify-end'}>
             <IconButton onClick={() => onDelete(player.id)}>

@@ -18,7 +18,7 @@ model Game {
   @@map("game")
 }
 
-model PassingSeason {
+model PassSeason {
   id       Int    @id @default(autoincrement())
   playerId Int    @map("player_id")
   teamName String @map("team")
@@ -36,20 +36,20 @@ model PassingSeason {
 }
 
 model Player {
-  id               Int               @id @default(autoincrement())
-  adp              Int
-  teamName         String            @map("team")
-  position         String
-  name             String
-  passingSeasons   PassingSeason[]
-  team             Team              @relation("player_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-  receivingSeasons ReceivingSeason[]
-  rushingSeasons   RushingSeason[]
+  id          Int          @id @default(autoincrement())
+  adp         Int
+  teamName    String       @map("team")
+  position    String
+  name        String
+  passSeasons PassSeason[]
+  team        Team         @relation("player_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  recvSeasons RecvSeason[]
+  rushSeasons RushSeason[]
 
   @@map("player")
 }
 
-model ReceivingSeason {
+model RecvSeason {
   id       Int    @id @default(autoincrement())
   playerId Int    @map("player_id")
   teamName String @map("team")
@@ -65,7 +65,7 @@ model ReceivingSeason {
   @@map("receiving_season")
 }
 
-model RushingSeason {
+model RushSeason {
   id       Int    @id @default(autoincrement())
   playerId Int    @map("player_id")
   teamName String @map("team")
@@ -89,14 +89,14 @@ model schema_migrations {
 }
 
 model Team {
-  key              String            @id @map("name")
-  awayGames        Game[]            @relation("game_awayToteam")
-  homeGames        Game[]            @relation("game_homeToteam")
-  passingSeasons   PassingSeason[]   @relation("passing_season_teamToteam")
-  players          Player[]          @relation("player_teamToteam")
-  receivingSeasons ReceivingSeason[] @relation("receiving_season_teamToteam")
-  rushingSeasons   RushingSeason[]   @relation("rushing_season_teamToteam")
-  seasons          TeamSeason[]      @relation("team_season_teamToteam")
+  key         String       @id @map("name")
+  awayGames   Game[]       @relation("game_awayToteam")
+  homeGames   Game[]       @relation("game_homeToteam")
+  passSeasons PassSeason[] @relation("passing_season_teamToteam")
+  players     Player[]     @relation("player_teamToteam")
+  recvSeasons RecvSeason[] @relation("receiving_season_teamToteam")
+  rushSeasons RushSeason[] @relation("rushing_season_teamToteam")
+  seasons     TeamSeason[] @relation("team_season_teamToteam")
 
   @@map("team")
 }

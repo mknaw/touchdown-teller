@@ -1,28 +1,46 @@
-import { useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
+import _ from 'lodash';
 import { Metadata } from 'next';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
+import { useIndexedDBStore } from 'use-indexeddb';
 
 import { PrismaClient } from '@prisma/client';
 
+import { Paper } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
 import DoughnutChart from '@/components/DoughnutChart';
-import HorizontalChart from '@/components/HorizontalChart';
+import { StorageKey, setupPersistence } from '@/data/persistence';
 import PlayerPanel from '@/features/teams/PlayerPanel';
+import TeamPanel from '@/features/teams/TeamPanel';
 import {
-  PassStats,
-  RecvStats,
-  RushStats,
+  PassSeason,
+  PassSeasonData,
+  RecvSeason,
+  RecvSeasonData,
+  RushSeason,
+  RushSeasonData,
+} from '@/models/PlayerSeason';
+import {
+  PlayerSeason,
+  PlayerSeasonConstructable,
+  PlayerSeasonData,
+  Position,
   StatType,
   TeamKey,
   TeamWithExtras,
-  lastSeason,
+  createPlayerSeason,
+  lastYear,
 } from '@/types';
-import { getTeamName } from '@/utils';
+import { getTeamName, setOnClone } from '@/utils';
+
+interface Params extends ParsedUrlQuery {
+  teamKey: TeamKey;
+}
 
 interface Props {
   params: Params;
@@ -40,45 +58,44 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
     where: {
       key: teamKey,
     },
-    // The `lastSeason` filters are tentative...
     include: {
       players: {
         include: {
-          passingSeasons: {
+          passSeasons: {
             where: {
-              season: lastSeason,
+              season: lastYear,
             },
           },
-          rushingSeasons: {
+          rushSeasons: {
             where: {
-              season: lastSeason,
+              season: lastYear,
             },
           },
-          receivingSeasons: {
+          recvSeasons: {
             where: {
-              season: lastSeason,
+              season: lastYear,
             },
           },
         },
       },
       seasons: {
         where: {
-          season: lastSeason,
+          season: lastYear,
         },
       },
-      passingSeasons: {
+      passSeasons: {
         where: {
-          season: lastSeason,
+          season: lastYear,
         },
       },
-      rushingSeasons: {
+      rushSeasons: {
         where: {
-          season: lastSeason,
+          season: lastYear,
         },
       },
-      receivingSeasons: {
+      recvSeasons: {
         where: {
-          season: lastSeason,
+          season: lastYear,
         },
       },
       homeGames: true,
@@ -95,10 +112,6 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-interface Params extends ParsedUrlQuery {
-  teamKey: TeamKey;
-}
-
 export const getStaticProps: GetStaticProps<
   {
     team: TeamWithExtras;
@@ -113,45 +126,169 @@ export const getStaticProps: GetStaticProps<
   };
 };
 
+interface IDBStore<T> {
+  add(value: T, key?: number): Promise<number>;
+  update(value: T, key?: number): Promise<number>;
+  getManyByKey(keyPath: string, value: string | number): Promise<T[]>;
+  deleteByID(id: number): Promise<number>;
+}
+
+type SeasonMap<T extends PlayerSeason> = Map<number, T>;
+
+const getDataHandlers = <T extends PlayerSeason>(
+  teamKey: TeamKey,
+  constructor: PlayerSeasonConstructable<T>,
+  store: IDBStore<PlayerSeasonData<T>>,
+  toStoreData: (s: T) => PlayerSeasonData<T>,
+  setSeason: Dispatch<SetStateAction<SeasonMap<T>>>
+) => {
+  const fetchedDataToMap = (data: PlayerSeasonData<T>[]): SeasonMap<T> =>
+    new Map(
+      data.map((d) => createPlayerSeason(constructor, d)).map((p) => [p.id, p])
+    );
+
+  const initSeasons = async () => {
+    const data = await store.getManyByKey('team', teamKey);
+    setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
+  };
+
+  const initSeason = (playerId: number) => {
+    const season = constructor.default(playerId, teamKey as TeamKey);
+    store
+      .add(toStoreData(season), playerId)
+      // TODO would prefer to render optimistically and resolve failure
+      // but that could be more complicated... for later
+      .then(() => updateSeason(season))
+      .catch(alert);
+  };
+
+  const updateSeason = (season: T) => {
+    setSeason((s: SeasonMap<T>) => setOnClone(s, season.id, season));
+  };
+
+  const persistSeason = (season: T) => {
+    updateSeason(season);
+    store.update(toStoreData(season), season.id);
+  };
+
+  const deleteSeason = (playerId: number) => {
+    setSeason((season) => {
+      season.delete(playerId);
+      return season;
+    });
+    store.deleteByID(playerId);
+  };
+
+  return {
+    initSeasons,
+    initSeason,
+    updateSeason,
+    persistSeason,
+    deleteSeason,
+  };
+};
+
 export default function Page({ team }: { team: TeamWithExtras }) {
-  const [statType, setStatType] = useState<StatType>(StatType.PASS);
   const spacing = 4;
 
+  const [statType, setStatType] = useState<StatType>(StatType.PASS);
+  const [passSeasons, setPassSeasons] = useState<SeasonMap<PassSeason>>(
+    new Map()
+  );
+  const [recvSeasons, setRecvSeasons] = useState<SeasonMap<RecvSeason>>(
+    new Map()
+  );
+  const [rushSeasons, setRushSeasons] = useState<SeasonMap<RushSeason>>(
+    new Map()
+  );
+
+  const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
+  const passDataHandlers = getDataHandlers(
+    team.key as TeamKey,
+    PassSeason,
+    passStore,
+    (s: PassSeason) => s.toStoreData(),
+    setPassSeasons
+  );
+
+  const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
+  const recvDataHandlers = getDataHandlers(
+    team.key as TeamKey,
+    RecvSeason,
+    recvStore,
+    (s: RecvSeason) => s.toStoreData(),
+    setRecvSeasons
+  );
+
+  const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
+  const rushDataHandlers = getDataHandlers(
+    team.key as TeamKey,
+    RushSeason,
+    rushStore,
+    (s: RushSeason) => s.toStoreData(),
+    setRushSeasons
+  );
+
+  useEffect(() => {
+    const fetch = async () => {
+      await setupPersistence();
+      passDataHandlers.initSeasons();
+      recvDataHandlers.initSeasons();
+      rushDataHandlers.initSeasons();
+    };
+    fetch();
+  }, []);
+
+  let playerPanel;
   const commonProps = {
     team,
     statType,
     setStatType,
   };
-  let statPanel;
   switch (statType) {
-  // TODO seems a little repetitive ...
   case StatType.PASS:
-    statPanel = (
-      <PlayerPanel<PassStats>
+    playerPanel = (
+      <PlayerPanel<PassSeason>
         {...commonProps}
-        constructor={PassStats}
-        toStoreData={(s: PassStats) => s.toStoreData()}
+        relevantPositions={[Position.QB]}
+        seasons={passSeasons}
+        initSeason={passDataHandlers.initSeason}
+        // TODO passing in particular have to enforce that all gp in a team sum to 1.
+        updateSeason={passDataHandlers.updateSeason}
+        persistSeason={passDataHandlers.persistSeason}
+        deleteSeason={passDataHandlers.deleteSeason}
       />
     );
     break;
   case StatType.RECV:
-    statPanel = (
-      <PlayerPanel<RecvStats>
+    playerPanel = (
+      <PlayerPanel<RecvSeason>
         {...commonProps}
-        constructor={RecvStats}
-        toStoreData={(s: RecvStats) => s.toStoreData()}
+        relevantPositions={[Position.WR, Position.TE, Position.RB]}
+        seasons={recvSeasons}
+        initSeason={recvDataHandlers.initSeason}
+        updateSeason={recvDataHandlers.updateSeason}
+        persistSeason={recvDataHandlers.persistSeason}
+        deleteSeason={recvDataHandlers.deleteSeason}
       />
     );
     break;
   default: // Rushing
-    statPanel = (
-      <PlayerPanel<RushStats>
+    playerPanel = (
+      <PlayerPanel<RushSeason>
         {...commonProps}
-        constructor={RushStats}
-        toStoreData={(s: RushStats) => s.toStoreData()}
+        relevantPositions={[Position.RB, Position.QB, Position.WR]}
+        seasons={rushSeasons}
+        initSeason={rushDataHandlers.initSeason}
+        updateSeason={rushDataHandlers.updateSeason}
+        persistSeason={rushDataHandlers.persistSeason}
+        deleteSeason={rushDataHandlers.deleteSeason}
       />
     );
   }
+
+  const passingTotal = _.sumBy([...passSeasons.values()], (s) => s.att * s.gp);
+
   return (
     <div className={'flex h-body pb-5'}>
       <Grid
@@ -162,18 +299,18 @@ export default function Page({ team }: { team: TeamWithExtras }) {
       >
         <Grid item xs={6}>
           <Card className={'h-full flex-col justify-stretch relative'}>
-            {statPanel}
+            {playerPanel}
           </Card>
         </Grid>
         <Grid container direction={'column'} item xs={6} spacing={spacing}>
           <Grid item xs={4}>
             <Card className={'h-full'}>
-              <Typography className={'text-xl w-full text-center'}>
-                HorizontalChart
+              <Typography className={'w-full text-center'}>
+                Team Stats
               </Typography>
-              <div className={'h-10 relative bg-red-500'}>
-                <HorizontalChart />
-              </div>
+              <Paper className={'px-8 py-5'}>
+                <TeamPanel team={team} passingTotal={passingTotal} />
+              </Paper>
             </Card>
           </Grid>
           {[0, 1].map((i) => (
@@ -183,7 +320,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
                   <Card className={'h-full'}>
                     <div className={'h-full relative'}>
                       <Typography className={'text-xl w-full text-center'}>
-                        {`${lastSeason} Target Share`}
+                        {`${lastYear} Target Share`}
                       </Typography>
                       <div className={'flex h-full justify-center'}>
                         <div className={'flex w-full justify-center'}>
