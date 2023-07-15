@@ -1,19 +1,5 @@
 import { useState } from 'react';
 
-import Card from '@/pages/components/Card';
-import DoughnutChart from '@/pages/components/DoughnutChart';
-import HorizontalChart from '@/pages/components/HorizontalChart';
-import Mock from '@/pages/components/Mock';
-import {
-  PassStats,
-  RecvStats,
-  RushStats,
-  StatType,
-  TeamKey,
-  TeamWithExtras,
-  lastSeason,
-} from '@/pages/types';
-import { getTeamName } from '@/pages/utils';
 import { Metadata } from 'next';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
@@ -22,6 +8,21 @@ import { PrismaClient } from '@prisma/client';
 
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
+
+import Card from '@/components/Card';
+import DoughnutChart from '@/components/DoughnutChart';
+import HorizontalChart from '@/components/HorizontalChart';
+import PlayerPanel from '@/features/teams/PlayerPanel';
+import {
+  PassStats,
+  RecvStats,
+  RushStats,
+  StatType,
+  TeamKey,
+  TeamWithExtras,
+  lastSeason,
+} from '@/types';
+import { getTeamName } from '@/utils';
 
 interface Props {
   params: Params;
@@ -116,15 +117,18 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   const [statType, setStatType] = useState<StatType>(StatType.PASS);
   const spacing = 4;
 
-  // TODO seems a little repetitive ...
+  const commonProps = {
+    team,
+    statType,
+    setStatType,
+  };
   let statPanel;
   switch (statType) {
+  // TODO seems a little repetitive ...
   case StatType.PASS:
     statPanel = (
-      <Mock<PassStats>
-        team={team}
-        statType={statType}
-        setStatType={setStatType}
+      <PlayerPanel<PassStats>
+        {...commonProps}
         constructor={PassStats}
         toStoreData={(s: PassStats) => s.toStoreData()}
       />
@@ -132,10 +136,8 @@ export default function Page({ team }: { team: TeamWithExtras }) {
     break;
   case StatType.RECV:
     statPanel = (
-      <Mock<RecvStats>
-        team={team}
-        statType={statType}
-        setStatType={setStatType}
+      <PlayerPanel<RecvStats>
+        {...commonProps}
         constructor={RecvStats}
         toStoreData={(s: RecvStats) => s.toStoreData()}
       />
@@ -143,16 +145,13 @@ export default function Page({ team }: { team: TeamWithExtras }) {
     break;
   default: // Rushing
     statPanel = (
-      <Mock<RushStats>
-        team={team}
-        statType={statType}
-        setStatType={setStatType}
+      <PlayerPanel<RushStats>
+        {...commonProps}
         constructor={RushStats}
         toStoreData={(s: RushStats) => s.toStoreData()}
       />
     );
   }
-  //return statPanel;
   return (
     <div className={'flex h-body pb-5'}>
       <Grid

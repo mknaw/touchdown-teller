@@ -1,6 +1,4 @@
-'use client';
-
-import { SyntheticEvent, useState } from 'react';
+import { SyntheticEvent } from 'react';
 
 import {
   PassStats,
@@ -9,7 +7,7 @@ import {
   RecvStats,
   SliderMarks,
   lastSeason,
-} from '@/pages/types';
+} from '@/types';
 import _ from 'lodash';
 
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -214,7 +212,7 @@ function StatSliderPanel<T extends PlayerStats>({
   return <Stack>{sliders}</Stack>;
 }
 
-function PlayerAccordion<T extends PlayerStats>({
+export default function PlayerAccordion<T extends PlayerStats>({
   player,
   stats,
   setStats,
@@ -267,44 +265,5 @@ function PlayerAccordion<T extends PlayerStats>({
         </AccordionDetails>
       </Accordion>
     </Stack>
-  );
-}
-
-type PlayerPanelProps<T extends PlayerStats> = {
-  players: PlayerWithExtras[];
-  stats: Map<number, T>;
-  setStats: (stats: T) => void;
-  persistStats: (stats: T) => void;
-  deletePlayer: (playerId: number) => void;
-};
-
-export default function PlayerPanel<T extends PlayerStats>({
-  players,
-  stats,
-  setStats,
-  persistStats,
-  deletePlayer,
-}: PlayerPanelProps<T>) {
-  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
-  return (
-    <>
-      {players.map((player) => {
-        const playerStats = stats.get(player.id);
-        return (
-          playerStats && (
-            <PlayerAccordion<T>
-              key={player.id}
-              player={player}
-              stats={playerStats}
-              setStats={setStats}
-              persistStats={persistStats}
-              expanded={player.id == expandedPlayer}
-              setExpanded={setExpandedPlayer}
-              onDelete={deletePlayer}
-            />
-          )
-        );
-      })}
-    </>
   );
 }

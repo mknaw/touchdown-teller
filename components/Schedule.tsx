@@ -1,6 +1,6 @@
 'use client';
 
-import { TeamKey, gameCount } from '../types';
+import { TeamKey, gameCount } from '@/types';
 
 import { Game } from '@prisma/client';
 

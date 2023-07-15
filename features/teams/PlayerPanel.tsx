@@ -2,10 +2,15 @@
 
 import { useEffect, useState } from 'react';
 
-import { setOnClone } from '../utils';
+import _ from 'lodash';
+import { useIndexedDBStore } from 'use-indexeddb';
+
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+
+import AddPlayer from '@/features/teams/AddPlayer';
+import PlayerAccordion from '@/features/teams/PlayerAccordion';
 import { StorageKey, setupPersistence } from '@/pages/data/persistence';
-import AddPlayerFAB from '@/pages/teams/AddPlayerFAB';
-import PlayerPanel from '@/pages/teams/PlayerPanel';
 import {
   PlayerStatConstructable,
   PlayerStatData,
@@ -15,12 +20,8 @@ import {
   StatType,
   TeamWithExtras,
   createPlayerStats,
-} from '@/pages/types';
-import _ from 'lodash';
-import { useIndexedDBStore } from 'use-indexeddb';
-
-import ToggleButton from '@mui/material/ToggleButton';
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+} from '@/types';
+import { setOnClone } from '@/utils';
 
 function getRelevantPositions(statType: StatType): Position[] {
   switch (statType) {
@@ -44,28 +45,26 @@ function getStorageKey(statType: StatType): StorageKey {
   }
 }
 
-function StatTypeToggleButton({
+const StatTypeToggleButton = ({
   statType,
   setStatType,
 }: {
   statType: StatType;
   setStatType: (s: StatType) => void;
-}) {
-  return (
-    <ToggleButtonGroup
-      color='primary'
-      value={statType}
-      exclusive
-      onChange={(_e, v) => v && setStatType(v)}
-    >
-      <ToggleButton value={StatType.PASS}>Passing</ToggleButton>
-      <ToggleButton value={StatType.RECV}>Receiving</ToggleButton>
-      <ToggleButton value={StatType.RUSH}>Rushing</ToggleButton>
-    </ToggleButtonGroup>
-  );
-}
+}) => (
+  <ToggleButtonGroup
+    color='primary'
+    value={statType}
+    exclusive
+    onChange={(_e, v) => v && setStatType(v)}
+  >
+    <ToggleButton value={StatType.PASS}>Passing</ToggleButton>
+    <ToggleButton value={StatType.RECV}>Receiving</ToggleButton>
+    <ToggleButton value={StatType.RUSH}>Rushing</ToggleButton>
+  </ToggleButtonGroup>
+);
 
-type MockProps<T extends PlayerStats> = {
+type PlayerPanelProps<T extends PlayerStats> = {
   team: TeamWithExtras;
   statType: StatType;
   setStatType: (s: StatType) => void;
@@ -73,13 +72,14 @@ type MockProps<T extends PlayerStats> = {
   toStoreData: (s: T) => PlayerStatData<T>;
 };
 
-export default function Mock<T extends PlayerStats>({
+export default function PlayerPanel<T extends PlayerStats>({
   team,
   statType,
   setStatType,
   constructor,
   toStoreData,
-}: MockProps<T>) {
+}: PlayerPanelProps<T>) {
+  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
   const [stats, setStats] = useState<Map<number, T>>(new Map());
 
   const storageKey = getStorageKey(statType);
@@ -157,18 +157,28 @@ export default function Mock<T extends PlayerStats>({
       {/* TODO would be nice here to preload some by default... */}
       {/* Maybe at least everyone whose ADP is <=100 */}
       {/* TODO double check these are ordered by ADP */}
-      <PlayerPanel
-        players={stattedPlayers}
-        stats={stats}
-        setStats={updateStats}
-        persistStats={persistStats}
-        deletePlayer={deletePlayer}
-      />
+      {stattedPlayers.map((player) => {
+        const playerStats = stats.get(player.id);
+        return (
+          playerStats && (
+            <PlayerAccordion<T>
+              key={player.id}
+              player={player}
+              stats={playerStats}
+              setStats={updateStats}
+              persistStats={persistStats}
+              expanded={player.id == expandedPlayer}
+              setExpanded={setExpandedPlayer}
+              onDelete={deletePlayer}
+            />
+          )
+        );
+      })}
       <div className={'absolute bottom-5 left-5'}>
         <StatTypeToggleButton statType={statType} setStatType={setStatType} />
       </div>
       <div className={'absolute bottom-5 right-5'}>
-        <AddPlayerFAB players={nonStattedPlayers} addPlayer={addPlayer} />
+        <AddPlayer players={nonStattedPlayers} addPlayer={addPlayer} />
       </div>
     </>
   );

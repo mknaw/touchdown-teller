@@ -1,12 +1,13 @@
 'use client';
 
-import { titleFont } from '@/pages/theme/fonts';
-import { TeamKey } from '@/pages/types';
-import { getTeamName } from '@/pages/utils';
 import classNames from 'classnames';
 
 import MenuIcon from '@mui/icons-material/Menu';
 import Fab from '@mui/material/Fab';
+
+import { titleFont } from '@/pages/theme/fonts';
+import { TeamKey } from '@/types';
+import { getTeamName } from '@/utils';
 
 export default function Header({ team }: { team: TeamKey }) {
   const className = classNames(

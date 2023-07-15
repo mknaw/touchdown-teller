@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-import { PlayerWithExtras } from '@/pages/types';
-
 import ClickAwayListener from '@mui/base/ClickAwayListener';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import Fab from '@mui/material/Fab';
@@ -13,7 +11,9 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Popover from '@mui/material/Popover';
 
-export default function AddPlayerFAB({
+import { PlayerWithExtras } from '@/types';
+
+export default function AddPlayer({
   players,
   addPlayer,
 }: {
