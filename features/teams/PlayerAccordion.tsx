@@ -15,8 +15,9 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import LabeledSlider from '@/components/LabeledSlider';
+import { lastYear } from '@/constants';
 import { PassSeason, RecvSeason } from '@/models/PlayerSeason';
-import { PlayerSeason, PlayerWithExtras, SliderMarks, lastYear } from '@/types';
+import { PlayerSeason, PlayerWithExtras, SliderMarks } from '@/types';
 
 function getMarks<T>(
   season: T,
@@ -165,7 +166,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => 100 * (s.td / s.att),
+              (s) => 100 * (s.tds / s.att),
               (v) => `${v.toFixed(1)}%`
             )
           }
@@ -236,7 +237,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => 100 * (s.td / s.rec),
+              (s) => 100 * (s.tds / s.rec),
               (v) => v.toFixed(1)
             )
           }
@@ -294,7 +295,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => 100 * (s.td / s.att),
+              (s) => 100 * (s.tds / s.att),
               (v) => v.toFixed(1)
             )
           }

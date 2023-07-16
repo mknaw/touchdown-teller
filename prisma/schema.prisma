@@ -27,7 +27,7 @@ model PassSeason {
   att      Int
   cmp      Int
   yds      Int
-  td       Int
+  tds      Int    @map("td")
   icpt     Int
   player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   team     Team   @relation("passing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
@@ -58,7 +58,7 @@ model RecvSeason {
   tgt      Int
   rec      Int
   yds      Int
-  td       Int
+  tds      Int    @map("td")
   player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   team     Team   @relation("receiving_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
 
@@ -73,7 +73,7 @@ model RushSeason {
   games    Int
   att      Int
   yds      Int
-  td       Int
+  tds      Int    @map("td")
   fum      Int
   player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   team     Team   @relation("rushing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
@@ -106,7 +106,7 @@ model TeamSeason {
   teamName String @map("team")
   season   Int
   passAtt  Int    @map("pass_att")
-  cmp      Int
+  passCmp  Int    @map("cmp")
   passYds  Int    @map("pass_yds")
   passTds  Int    @map("pass_tds")
   rushAtt  Int    @map("rush_ats")

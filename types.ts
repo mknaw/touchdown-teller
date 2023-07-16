@@ -1,5 +1,6 @@
-import { Prisma } from '@prisma/client';
+import { Player, Prisma } from '@prisma/client';
 
+import { TeamKey } from '@/constants';
 import {
   PassSeason,
   PassSeasonData,
@@ -9,8 +10,7 @@ import {
   RushSeasonData,
 } from '@/models/PlayerSeason';
 
-// TODO could get this from some sort of cfg + calculation.
-export const lastYear = 2022;
+export type IdMap<T> = Map<number, T>;
 
 export type SliderMarks = Array<{ label?: string; value: number }>;
 
@@ -24,9 +24,33 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
       };
     };
     seasons: true;
-    passSeasons: true;
-    recvSeasons: true;
-    rushSeasons: true;
+    passSeasons: {
+      include: {
+        player: {
+          select: {
+            name: true;
+          };
+        };
+      };
+    };
+    recvSeasons: {
+      include: {
+        player: {
+          select: {
+            name: true;
+          };
+        };
+      };
+    };
+    rushSeasons: {
+      include: {
+        player: {
+          select: {
+            name: true;
+          };
+        };
+      };
+    };
     homeGames: true;
     awayGames: true;
   };
@@ -40,55 +64,35 @@ export type PlayerWithExtras = Prisma.PlayerGetPayload<{
   };
 }>;
 
-export enum TeamKey {
-  ARI = 'ARI',
-  ATL = 'ATL',
-  BAL = 'BAL',
-  BUF = 'BUF',
-  CAR = 'CAR',
-  CHI = 'CHI',
-  CIN = 'CIN',
-  CLE = 'CLE',
-  DAL = 'DAL',
-  DEN = 'DEN',
-  DET = 'DET',
-  GB = 'GB',
-  HOU = 'HOU',
-  IND = 'IND',
-  JAX = 'JAX',
-  KC = 'KC',
-  LV = 'LV',
-  LAC = 'LAC',
-  LAR = 'LAR',
-  MIA = 'MIA',
-  MIN = 'MIN',
-  NWE = 'NWE',
-  NO = 'NO',
-  NYG = 'NYG',
-  NYJ = 'NYJ',
-  PHI = 'PHI',
-  PIT = 'PIT',
-  SF = 'SF',
-  SEA = 'SEA',
-  TB = 'TB',
-  TEN = 'TEN',
-  WSH = 'WSH',
-}
+export type PassSeasonWithExtras = Prisma.PassSeasonGetPayload<{
+  include: {
+    player: {
+      select: {
+        name: true;
+      };
+    };
+  };
+}>;
 
-export enum Position {
-  QB = 'QB',
-  RB = 'RB',
-  WR = 'WR',
-  TE = 'TE',
-}
+export type RecvSeasonWithExtras = Prisma.RecvSeasonGetPayload<{
+  include: {
+    player: {
+      select: {
+        name: true;
+      };
+    };
+  };
+}>;
 
-export enum StatType {
-  PASS = 'pass',
-  RECV = 'recv',
-  RUSH = 'rush',
-}
-
-export const gameCount = 17;
+export type RushSeasonWithExtras = Prisma.RushSeasonGetPayload<{
+  include: {
+    player: {
+      select: {
+        name: true;
+      };
+    };
+  };
+}>;
 
 export type PlayerSeason = PassSeason | RecvSeason | RushSeason;
 
@@ -100,7 +104,7 @@ export type PlayerSeasonData<T extends PlayerSeason> = T extends PassSeason
 
 export interface PlayerSeasonConstructable<T extends PlayerSeason> {
   new (data: PlayerSeasonData<T>): T;
-  default(id: number, team: TeamKey): T;
+  default(player: Player, team: TeamKey): T;
 }
 
 export function createPlayerSeason<T extends PlayerSeason>(

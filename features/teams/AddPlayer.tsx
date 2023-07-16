@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { Player } from '@prisma/client';
+
 import ClickAwayListener from '@mui/base/ClickAwayListener';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import Fab from '@mui/material/Fab';
@@ -18,7 +20,7 @@ export default function AddPlayer({
   addPlayer,
 }: {
   players: PlayerWithExtras[];
-  addPlayer: (playerId: number) => void;
+  addPlayer: (player: Player) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -61,7 +63,7 @@ export default function AddPlayer({
                 <ListItemButton
                   className={'py-0'}
                   onClick={() => {
-                    addPlayer(player.id);
+                    addPlayer(player);
                     handlePopoverClose();
                   }}
                 >

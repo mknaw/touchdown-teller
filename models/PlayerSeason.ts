@@ -1,13 +1,22 @@
 // TODO do the `fromPrisma` thing for sensible defaults for players with history
-import { TeamKey } from '@/types';
+import { Player } from '@prisma/client';
+
+import { TeamKey } from '@/constants';
+
+type AnnualizedPassSeason = {
+  att: number;
+  yds: number;
+  tds: number;
+};
 
 export type PassSeasonData = Pick<
   PassSeason,
-  'id' | 'team' | 'gp' | 'att' | 'cmp' | 'ypa' | 'tdp'
+  'playerId' | 'name' | 'team' | 'gp' | 'att' | 'cmp' | 'ypa' | 'tdp'
 >;
 
 export class PassSeason implements PassSeasonData {
-  id: number;
+  playerId: number;
+  name: string; // Redundant, but convenient to "denormalize" onto here.
   team: TeamKey;
   gp: number;
   att: number;
@@ -16,7 +25,8 @@ export class PassSeason implements PassSeasonData {
   tdp: number;
 
   constructor(props: PassSeasonData) {
-    this.id = props.id;
+    this.playerId = props.playerId;
+    this.name = props.name;
     this.team = props.team;
     this.gp = props.gp;
     this.att = props.att;
@@ -25,9 +35,10 @@ export class PassSeason implements PassSeasonData {
     this.tdp = props.tdp;
   }
 
-  static default(id: number, team: TeamKey) {
+  static default(player: Player, team: TeamKey) {
     return new PassSeason({
-      id,
+      playerId: player.id,
+      name: player.name,
       team,
       gp: 17,
       att: 30,
@@ -39,7 +50,8 @@ export class PassSeason implements PassSeasonData {
 
   toStoreData(): PassSeasonData {
     return {
-      id: this.id,
+      playerId: this.playerId,
+      name: this.name,
       team: this.team,
       gp: this.gp,
       att: this.att,
@@ -60,85 +72,38 @@ export class PassSeason implements PassSeasonData {
     case 'ypa':
       return 'Yards per Attempt';
     default: // tdp
-      return 'Touchdown Percentage';
+      return 'Touchdowns per Attempt';
     }
   }
 
   isPercentField(stat: string): boolean {
     return ['cmp', 'tdp'].includes(stat);
   }
-}
 
-export type RushSeasonData = Pick<
-  RushSeason,
-  'id' | 'team' | 'gp' | 'att' | 'ypc' | 'tdp'
->;
-
-export class RushSeason implements RushSeasonData {
-  id: number;
-  team: TeamKey;
-  gp: number;
-  att: number;
-  ypc: number;
-  tdp: number;
-
-  constructor(props: RushSeasonData) {
-    this.id = props.id;
-    this.team = props.team;
-    this.gp = props.gp;
-    this.att = props.att;
-    this.ypc = props.ypc;
-    this.tdp = props.tdp;
-  }
-
-  static default(id: number, team: TeamKey) {
-    return new RushSeason({
-      id,
-      team,
-      gp: 15,
-      att: 20,
-      ypc: 3.5,
-      tdp: 5,
-    });
-  }
-
-  toStoreData(): RushSeasonData {
+  annualize(): AnnualizedPassSeason {
     return {
-      id: this.id,
-      team: this.team,
-      gp: this.gp,
-      att: this.att,
-      ypc: this.ypc,
-      tdp: this.tdp,
+      att: this.att * this.gp,
+      yds: this.ypa * this.att * (this.cmp / 100) * this.gp,
+      tds: (this.tdp / 100) * this.att * this.gp,
     };
   }
-
-  labelFor(stat: string): string {
-    switch (stat) {
-    case 'gp':
-      return 'Games Played';
-    case 'att':
-      return 'Attempts per Game';
-    case 'ypc':
-      return 'Yards per Carry';
-    default: // tdp
-      return 'Touchdown Percentage';
-    }
-  }
-
-  isPercentField(stat: string): boolean {
-    return stat == 'tdp';
-  }
 }
 
-// TODO the `Pick` might be marginally cleaner
+type AnnualizedRecvSeason = {
+  tgt: number;
+  rec: number;
+  yds: number;
+  tds: number;
+};
+
 export type RecvSeasonData = Pick<
   RecvSeason,
-  'id' | 'team' | 'gp' | 'tgt' | 'rec' | 'ypr' | 'tdp'
+  'playerId' | 'name' | 'team' | 'gp' | 'tgt' | 'rec' | 'ypr' | 'tdp'
 >;
 
 export class RecvSeason implements RecvSeasonData {
-  id: number;
+  playerId: number;
+  name: string;
   team: TeamKey;
   gp: number;
   tgt: number;
@@ -147,7 +112,8 @@ export class RecvSeason implements RecvSeasonData {
   tdp: number;
 
   constructor(props: RecvSeasonData) {
-    this.id = props.id;
+    this.playerId = props.playerId;
+    this.name = props.name;
     this.team = props.team;
     this.gp = props.gp;
     this.tgt = props.tgt;
@@ -156,9 +122,10 @@ export class RecvSeason implements RecvSeasonData {
     this.tdp = props.tdp;
   }
 
-  static default(id: number, team: TeamKey) {
+  static default(player: Player, team: TeamKey) {
     return new RecvSeason({
-      id,
+      playerId: player.id,
+      name: player.name,
       team,
       gp: 15,
       tgt: 6,
@@ -170,7 +137,8 @@ export class RecvSeason implements RecvSeasonData {
 
   toStoreData(): RecvSeasonData {
     return {
-      id: this.id,
+      playerId: this.playerId,
+      name: this.name,
       team: this.team,
       gp: this.gp,
       tgt: this.tgt,
@@ -199,5 +167,94 @@ export class RecvSeason implements RecvSeasonData {
 
   isPercentField(stat: string): boolean {
     return ['rec', 'tdp'].includes(stat);
+  }
+
+  annualize(): AnnualizedRecvSeason {
+    return {
+      tgt: this.tgt * this.gp,
+      rec: this.tgt * (this.rec / 100) * this.gp,
+      yds: this.tgt * (this.rec / 100) * this.ypr * this.gp,
+      tds: this.tgt * (this.rec / 100) * (this.tdp / 100) * this.gp,
+    };
+  }
+}
+
+type AnnualizedRushSeason = {
+  att: number;
+  yds: number;
+  tds: number;
+};
+
+export type RushSeasonData = Pick<
+  RushSeason,
+  'playerId' | 'name' | 'team' | 'gp' | 'att' | 'ypc' | 'tdp'
+>;
+
+export class RushSeason implements RushSeasonData {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  att: number;
+  ypc: number;
+  tdp: number;
+
+  constructor(props: RushSeasonData) {
+    this.playerId = props.playerId;
+    this.name = props.name;
+    this.team = props.team;
+    this.gp = props.gp;
+    this.att = props.att;
+    this.ypc = props.ypc;
+    this.tdp = props.tdp;
+  }
+
+  static default(player: Player, team: TeamKey) {
+    return new RushSeason({
+      playerId: player.id,
+      name: player.name,
+      team,
+      gp: 15,
+      att: 20,
+      ypc: 3.5,
+      tdp: 5,
+    });
+  }
+
+  toStoreData(): RushSeasonData {
+    return {
+      playerId: this.playerId,
+      name: this.name,
+      team: this.team,
+      gp: this.gp,
+      att: this.att,
+      ypc: this.ypc,
+      tdp: this.tdp,
+    };
+  }
+
+  labelFor(stat: string): string {
+    switch (stat) {
+    case 'gp':
+      return 'Games Played';
+    case 'att':
+      return 'Attempts per Game';
+    case 'ypc':
+      return 'Yards per Carry';
+    default: // tdp
+      return 'Touchdown Percentage';
+    }
+  }
+
+  isPercentField(stat: string): boolean {
+    return stat == 'tdp';
+  }
+
+  annualize(): AnnualizedRushSeason {
+    return {
+      att: this.att * this.gp,
+      yds: this.att * this.ypc * this.gp,
+      tds: this.att * (this.tdp / 100) * this.gp,
+    };
   }
 }

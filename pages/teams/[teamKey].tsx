@@ -1,20 +1,22 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
-import _ from 'lodash';
-import { Metadata } from 'next';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { PrismaClient } from '@prisma/client';
+import { Player, PrismaClient } from '@prisma/client';
 
-import { Paper } from '@mui/material';
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
-import DoughnutChart from '@/components/DoughnutChart';
-import { StorageKey, setupPersistence } from '@/data/persistence';
+import { Position, StatType, TeamKey, lastYear } from '@/constants';
+import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
+import {
+  PassChartGroup,
+  RecvChartGroup,
+  RushChartGroup,
+} from '@/features/teams/ChartGroup';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
 import {
@@ -25,32 +27,20 @@ import {
   RushSeason,
   RushSeasonData,
 } from '@/models/PlayerSeason';
+import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 import {
+  IdMap,
   PlayerSeason,
   PlayerSeasonConstructable,
   PlayerSeasonData,
-  Position,
-  StatType,
-  TeamKey,
   TeamWithExtras,
   createPlayerSeason,
-  lastYear,
 } from '@/types';
-import { getTeamName, setOnClone } from '@/utils';
+import { makeIdMap, setOnClone } from '@/utils';
 
 interface Params extends ParsedUrlQuery {
   teamKey: TeamKey;
 }
-
-interface Props {
-  params: Params;
-}
-
-export const generateMetadata = async ({
-  params: { teamKey },
-}: Props): Promise<Metadata> => ({
-  title: getTeamName(teamKey),
-});
 
 async function getTeam(teamKey: string): Promise<TeamWithExtras> {
   const prisma = new PrismaClient();
@@ -87,15 +77,36 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
         where: {
           season: lastYear,
         },
+        include: {
+          player: {
+            select: {
+              name: true,
+            },
+          },
+        },
       },
       rushSeasons: {
         where: {
           season: lastYear,
         },
+        include: {
+          player: {
+            select: {
+              name: true,
+            },
+          },
+        },
       },
       recvSeasons: {
         where: {
           season: lastYear,
+        },
+        include: {
+          player: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
       homeGames: true,
@@ -133,18 +144,18 @@ interface IDBStore<T> {
   deleteByID(id: number): Promise<number>;
 }
 
-type SeasonMap<T extends PlayerSeason> = Map<number, T>;
-
 const getDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
   constructor: PlayerSeasonConstructable<T>,
   store: IDBStore<PlayerSeasonData<T>>,
   toStoreData: (s: T) => PlayerSeasonData<T>,
-  setSeason: Dispatch<SetStateAction<SeasonMap<T>>>
+  setSeason: Dispatch<SetStateAction<IdMap<T>>>
 ) => {
-  const fetchedDataToMap = (data: PlayerSeasonData<T>[]): SeasonMap<T> =>
+  const fetchedDataToMap = (data: PlayerSeasonData<T>[]): IdMap<T> =>
     new Map(
-      data.map((d) => createPlayerSeason(constructor, d)).map((p) => [p.id, p])
+      data
+        .map((d) => createPlayerSeason(constructor, d))
+        .map((p) => [p.playerId, p])
     );
 
   const initSeasons = async () => {
@@ -152,10 +163,10 @@ const getDataHandlers = <T extends PlayerSeason>(
     setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
   };
 
-  const initSeason = (playerId: number) => {
-    const season = constructor.default(playerId, teamKey as TeamKey);
+  const initSeason = (player: Player) => {
+    const season = constructor.default(player, teamKey as TeamKey);
     store
-      .add(toStoreData(season), playerId)
+      .add(toStoreData(season), player.id)
       // TODO would prefer to render optimistically and resolve failure
       // but that could be more complicated... for later
       .then(() => updateSeason(season))
@@ -163,12 +174,12 @@ const getDataHandlers = <T extends PlayerSeason>(
   };
 
   const updateSeason = (season: T) => {
-    setSeason((s: SeasonMap<T>) => setOnClone(s, season.id, season));
+    setSeason((s: IdMap<T>) => setOnClone(s, season.playerId, season));
   };
 
   const persistSeason = (season: T) => {
     updateSeason(season);
-    store.update(toStoreData(season), season.id);
+    store.update(toStoreData(season), season.playerId);
   };
 
   const deleteSeason = (playerId: number) => {
@@ -192,15 +203,36 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   const spacing = 4;
 
   const [statType, setStatType] = useState<StatType>(StatType.PASS);
-  const [passSeasons, setPassSeasons] = useState<SeasonMap<PassSeason>>(
-    new Map()
-  );
-  const [recvSeasons, setRecvSeasons] = useState<SeasonMap<RecvSeason>>(
-    new Map()
-  );
-  const [rushSeasons, setRushSeasons] = useState<SeasonMap<RushSeason>>(
-    new Map()
-  );
+
+  const [passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
+  const [recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
+  const [rushSeasons, setRushSeasons] = useState<IdMap<RushSeason>>(new Map());
+
+  const [teamSeason, setTeamSeason] = useState<TeamSeason | null>(null);
+  const persistTeamSeason = (data: TeamSeasonData) => {
+    const teamProjection = new TeamSeason(data);
+    teamStore.update(data, team.key);
+    setTeamSeason(teamProjection);
+  };
+  const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
+  const lastSeason = team.seasons[0];
+  if (!lastSeason) {
+    return null; // Shouldn't happen.
+  }
+  useEffect(() => {
+    async function fetch() {
+      await setupPersistence();
+      const teamProjectionData = await teamStore.getByID(team.key);
+      if (teamProjectionData) {
+        setTeamSeason(new TeamSeason(teamProjectionData));
+      } else {
+        const newTeamSeason = TeamSeason.fromPrisma(lastSeason);
+        setTeamSeason(newTeamSeason);
+        teamStore.add(newTeamSeason, team.key);
+      }
+    }
+    fetch();
+  }, [team, teamStore]);
 
   const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
   const passDataHandlers = getDataHandlers(
@@ -287,8 +319,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
     );
   }
 
-  const passingTotal = _.sumBy([...passSeasons.values()], (s) => s.att * s.gp);
-
+  // TODO not sure how I'll handle old players for the lastSeason...
   return (
     <div className={'flex h-body pb-5'}>
       <Grid
@@ -303,17 +334,53 @@ export default function Page({ team }: { team: TeamWithExtras }) {
           </Card>
         </Grid>
         <Grid container direction={'column'} item xs={6} spacing={spacing}>
-          <Grid item xs={4}>
+          <Grid item xs={8}>
             <Card className={'h-full'}>
-              <Typography className={'w-full text-center'}>
+              <Typography className={'text-xl w-full text-center'}>
                 Team Stats
               </Typography>
-              <Paper className={'px-8 py-5'}>
-                <TeamPanel team={team} passingTotal={passingTotal} />
-              </Paper>
+              {teamSeason && team.seasons[0] && (
+                <>
+                  <TeamPanel
+                    statType={statType}
+                    teamSeason={teamSeason}
+                    setTeamSeason={setTeamSeason}
+                    persistTeamSeason={persistTeamSeason}
+                    lastSeason={lastSeason}
+                  />
+                  {
+                    {
+                      [StatType.PASS]: team.passSeasons && (
+                        <PassChartGroup
+                          seasons={passSeasons}
+                          lastSeasons={makeIdMap(team.passSeasons, 'playerId')}
+                          teamSeason={teamSeason}
+                          lastSeason={team.seasons[0]}
+                        />
+                      ),
+                      [StatType.RECV]: team.recvSeasons && (
+                        <RecvChartGroup
+                          seasons={recvSeasons}
+                          lastSeasons={makeIdMap(team.recvSeasons, 'playerId')}
+                          teamSeason={teamSeason}
+                          lastSeason={team.seasons[0]}
+                        />
+                      ),
+                      [StatType.RUSH]: team.rushSeasons && (
+                        <RushChartGroup
+                          seasons={rushSeasons}
+                          lastSeasons={makeIdMap(team.rushSeasons, 'playerId')}
+                          teamSeason={teamSeason}
+                          lastSeason={team.seasons[0]}
+                        />
+                      ),
+                    }[statType]
+                  }
+                </>
+              )}
             </Card>
           </Grid>
-          {[0, 1].map((i) => (
+          {[0].map((i) => (
             <Grid key={i} container item xs={4} spacing={spacing}>
               {[0, 1].map((j) => (
                 <Grid key={j} item xs={6}>
@@ -322,11 +389,13 @@ export default function Page({ team }: { team: TeamWithExtras }) {
                       <Typography className={'text-xl w-full text-center'}>
                         {`${lastYear} Target Share`}
                       </Typography>
+                      {/*
                       <div className={'flex h-full justify-center'}>
                         <div className={'flex w-full justify-center'}>
-                          <DoughnutChart />
+                          <DoughnutChart data={chartData} />
                         </div>
                       </div>
+                      */}
                     </div>
                   </Card>
                 </Grid>

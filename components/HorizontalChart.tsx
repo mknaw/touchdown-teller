@@ -11,6 +11,8 @@ import {
   Tooltip,
 } from 'chart.js';
 
+import { REMAINING_LABEL } from '@/constants';
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -22,41 +24,62 @@ ChartJS.register(
 
 export const options = {
   indexAxis: 'y' as const,
-  elements: {
-    bar: {
-      borderWidth: 2,
+  scales: {
+    x: {
+      stacked: true,
+    },
+    y: {
+      stacked: true,
     },
   },
-  responsive: true,
   plugins: {
     legend: {
-      position: 'right' as const,
+      display: false,
     },
+  },
+  responsive: true,
+  maintainAspectRatio: false,
+  layout: {
+    padding: 0,
   },
 };
 
-const labels = ['Plays per Game'];
+// TODO should be something cyclic
+const colors = [
+  '#716b90',
+  'yellow',
+  'orange',
+  '#716b90',
+  'yellow',
+  'orange',
+  '#716b90',
+  'yellow',
+  'orange',
+  '#716b90',
+  'yellow',
+  'orange',
+];
 
-export const data = {
-  labels,
-  responsive: true,
-  maintainAspectRatio: false,
-  datasets: [
-    {
-      label: '2022',
-      data: [65],
-      borderColor: '#716b90',
-      backgroundColor: '#716b90',
-    },
-    {
-      label: '2023 (projected)',
-      data: [28],
-      borderColor: 'yellow',
-      backgroundColor: 'yellow',
-    },
-  ],
+export type StatTuple = [number | undefined, number | undefined];
+
+export type ChartData = {
+  name: string;
+  stat: StatTuple;
 };
 
-export default function HorizontalChart() {
-  return <Bar options={options} data={data} />;
+export default function HorizontalChart({ data }: { data: ChartData[] }) {
+  return (
+    <Bar
+      options={options}
+      data={{
+        labels: ['2022', '2023'],
+        datasets: data.map((s, i) => ({
+          label: s.name,
+          data: s.stat, // TODO should have some sort of color cyclic iterable
+          backgroundColor: s.name == REMAINING_LABEL ? '#ddd' : colors[i],
+          hoverBackgroundColor: colors[i],
+        })),
+      }}
+    />
+  );
 }

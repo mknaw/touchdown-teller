@@ -17,8 +17,8 @@ import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 
+import { TeamKey } from '@/constants';
 import { titleFont } from '@/pages/theme/fonts';
-import { TeamKey } from '@/types';
 import { getTeamName } from '@/utils';
 
 type DrawerProps = {

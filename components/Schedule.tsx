@@ -1,10 +1,10 @@
 'use client';
 
-import { TeamKey, gameCount } from '@/types';
-
 import { Game } from '@prisma/client';
 
 import Box from '@mui/material/Box';
+
+import { TeamKey, gameCount } from '@/constants';
 
 interface GameCellProps {
   teamKey: TeamKey;

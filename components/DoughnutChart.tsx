@@ -3,6 +3,7 @@
 import { Doughnut } from 'react-chartjs-2';
 
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
+import _ from 'lodash';
 
 // TODO customize this code, prolly
 //const plugins = [
@@ -48,7 +49,6 @@ import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 
 //      ctx.save();
 //      ctx.translate(arc.round.x, arc.round.y * 2);
-//      console.log(arc);
 //      ctx.fillStyle = arc.round.backgroundColor;
 //      ctx.beginPath();
 //      const startAngle = arc.startAngle;
@@ -81,7 +81,15 @@ const options = {
   },
 };
 
-export default function DoughnutChart() {
+export type ChartData = {
+  name: string;
+  // TODO have to make it so it allows different stat types...
+  att: number;
+  yds: number;
+  tds: number;
+};
+
+export default function DoughnutChart({ data }: { data: ChartData[] }) {
   ChartJS.register(ArcElement, Tooltip, Legend);
 
   return (
@@ -91,14 +99,14 @@ export default function DoughnutChart() {
       // plugins={plugins}
       options={options}
       data={{
-        labels: ['Steve Foo', 'Joe Bar', 'Don Baz'],
-        datasets: [
-          {
-            data: [90, 15, 10, 10],
-            backgroundColor: ['#716b90', 'yellow', 'orange', '#ccc'],
-            hoverBackgroundColor: ['#716b90', 'yellow', 'orange', '#ccc'],
-          },
-        ],
+        labels: _.map(data, 'name'),
+        datasets: ['att', 'yds'].map((stat) => ({
+          label: stat,
+          data: _.map(data, stat),
+          // TODO should have some sort of color cyclic iterable
+          backgroundColor: ['#716b90', 'yellow', 'orange', '#ccc'],
+          hoverBackgroundColor: ['#716b90', 'yellow', 'orange', '#ccc'],
+        })),
       }}
     />
   );
