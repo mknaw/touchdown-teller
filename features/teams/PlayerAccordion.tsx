@@ -114,7 +114,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => s.games,
+              (s) => s.gp,
               (v) => v.toFixed(0)
             )
           }
@@ -127,7 +127,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => s.att / s.games,
+              (s) => s.att / s.gp,
               (v) => v.toFixed(1)
             )
           }
@@ -185,7 +185,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => s.games,
+              (s) => s.gp,
               (v) => v.toFixed(0)
             )
           }
@@ -198,7 +198,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => s.tgt / s.games,
+              (s) => s.tgt / s.gp,
               (v) => v.toFixed(1)
             )
           }
@@ -256,7 +256,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => s.games,
+              (s) => s.gp,
               (v) => v.toFixed(0)
             )
           }
@@ -269,7 +269,7 @@ function StatSliderPanel<T extends PlayerSeason>({
             lastSeason &&
             getMarks(
               lastSeason,
-              (s) => s.att / s.games,
+              (s) => s.att / s.gp,
               (v) => v.toFixed(1)
             )
           }

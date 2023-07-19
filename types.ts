@@ -1,4 +1,10 @@
-import { Player, Prisma } from '@prisma/client';
+import {
+  Player,
+  Prisma,
+  PassSeason as PrismaPassSeason,
+  RecvSeason as PrismaRecvSeason,
+  RushSeason as PrismaRushSeason,
+} from '@prisma/client';
 
 import { TeamKey } from '@/constants';
 import {
@@ -102,9 +108,16 @@ export type PlayerSeasonData<T extends PlayerSeason> = T extends PassSeason
   ? RecvSeasonData
   : RushSeasonData;
 
+export type PrismaPlayerSeason<T extends PlayerSeason> = T extends PassSeason
+  ? PrismaPassSeason
+  : T extends RecvSeason
+  ? PrismaRecvSeason
+  : PrismaRushSeason;
+
 export interface PlayerSeasonConstructable<T extends PlayerSeason> {
   new (data: PlayerSeasonData<T>): T;
   default(player: Player, team: TeamKey): T;
+  fromPrisma(player: Player, team: TeamKey, season: PrismaPlayerSeason<T>): T;
 }
 
 export function createPlayerSeason<T extends PlayerSeason>(

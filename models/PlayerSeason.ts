@@ -1,5 +1,10 @@
 // TODO do the `fromPrisma` thing for sensible defaults for players with history
-import { Player } from '@prisma/client';
+import {
+  Player,
+  PassSeason as PrismaPassSeason,
+  RecvSeason as PrismaRecvSeason,
+  RushSeason as PrismaRushSeason,
+} from '@prisma/client';
 
 import { TeamKey } from '@/constants';
 
@@ -40,11 +45,28 @@ export class PassSeason implements PassSeasonData {
       playerId: player.id,
       name: player.name,
       team,
-      gp: 17,
+      gp: 0,
       att: 30,
       cmp: 75,
       ypa: 7.5,
       tdp: 5,
+    });
+  }
+
+  static fromPrisma(
+    player: Player,
+    team: TeamKey,
+    passSeason: PrismaPassSeason
+  ) {
+    return new PassSeason({
+      playerId: player.id,
+      name: player.name,
+      team,
+      gp: passSeason.gp,
+      att: passSeason.att / passSeason.gp,
+      cmp: 100 * (passSeason.cmp / passSeason.att),
+      ypa: passSeason.yds / passSeason.att,
+      tdp: 100 * (passSeason.tds / passSeason.att),
     });
   }
 
@@ -127,11 +149,28 @@ export class RecvSeason implements RecvSeasonData {
       playerId: player.id,
       name: player.name,
       team,
-      gp: 15,
+      gp: 0,
       tgt: 6,
       rec: 65,
       ypr: 9,
       tdp: 5,
+    });
+  }
+
+  static fromPrisma(
+    player: Player,
+    team: TeamKey,
+    recvSeason: PrismaRecvSeason
+  ) {
+    return new RecvSeason({
+      playerId: player.id,
+      name: player.name,
+      team,
+      gp: recvSeason.gp,
+      tgt: recvSeason.tgt / recvSeason.gp,
+      rec: 100 * (recvSeason.rec / recvSeason.tgt),
+      ypr: recvSeason.yds / recvSeason.rec,
+      tdp: 100 * (recvSeason.tds / recvSeason.rec),
     });
   }
 
@@ -214,10 +253,26 @@ export class RushSeason implements RushSeasonData {
       playerId: player.id,
       name: player.name,
       team,
-      gp: 15,
+      gp: 0,
       att: 20,
       ypc: 3.5,
       tdp: 5,
+    });
+  }
+
+  static fromPrisma(
+    player: Player,
+    team: TeamKey,
+    rushSeason: PrismaRushSeason
+  ) {
+    return new RushSeason({
+      playerId: player.id,
+      name: player.name,
+      team,
+      gp: rushSeason.gp,
+      att: rushSeason.att / rushSeason.gp,
+      ypc: rushSeason.yds / rushSeason.att,
+      tdp: 100 * (rushSeason.tds / rushSeason.att),
     });
   }
 

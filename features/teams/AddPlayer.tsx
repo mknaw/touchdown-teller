@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 
-import { Player } from '@prisma/client';
-
 import ClickAwayListener from '@mui/base/ClickAwayListener';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import Fab from '@mui/material/Fab';
@@ -20,7 +18,7 @@ export default function AddPlayer({
   addPlayer,
 }: {
   players: PlayerWithExtras[];
-  addPlayer: (player: Player) => void;
+  addPlayer: (player: PlayerWithExtras) => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 

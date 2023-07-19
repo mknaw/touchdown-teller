@@ -23,7 +23,7 @@ model PassSeason {
   playerId Int    @map("player_id")
   teamName String @map("team")
   season   Int
-  games    Int
+  gp       Int    @map("games")
   att      Int
   cmp      Int
   yds      Int
@@ -54,7 +54,7 @@ model RecvSeason {
   playerId Int    @map("player_id")
   teamName String @map("team")
   season   Int
-  games    Int
+  gp       Int    @map("games")
   tgt      Int
   rec      Int
   yds      Int
@@ -70,7 +70,7 @@ model RushSeason {
   playerId Int    @map("player_id")
   teamName String @map("team")
   season   Int
-  games    Int
+  gp       Int    @map("games")
   att      Int
   yds      Int
   tds      Int    @map("td")

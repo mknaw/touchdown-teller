@@ -4,7 +4,7 @@ import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { Player, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
@@ -33,6 +33,8 @@ import {
   PlayerSeason,
   PlayerSeasonConstructable,
   PlayerSeasonData,
+  PlayerWithExtras,
+  PrismaPlayerSeason,
   TeamWithExtras,
   createPlayerSeason,
 } from '@/types';
@@ -146,6 +148,7 @@ interface IDBStore<T> {
 
 const getDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
+  seasonKey: 'passSeasons' | 'recvSeasons' | 'rushSeasons',
   constructor: PlayerSeasonConstructable<T>,
   store: IDBStore<PlayerSeasonData<T>>,
   toStoreData: (s: T) => PlayerSeasonData<T>,
@@ -163,8 +166,16 @@ const getDataHandlers = <T extends PlayerSeason>(
     setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
   };
 
-  const initSeason = (player: Player) => {
-    const season = constructor.default(player, teamKey as TeamKey);
+  const initSeason = (player: PlayerWithExtras) => {
+    const lastSeason = player[seasonKey][0];
+
+    const season = lastSeason
+      ? constructor.fromPrisma(
+        player,
+          teamKey as TeamKey,
+          lastSeason as PrismaPlayerSeason<T>
+      )
+      : constructor.default(player, teamKey as TeamKey);
     store
       .add(toStoreData(season), player.id)
       // TODO would prefer to render optimistically and resolve failure
@@ -237,6 +248,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
   const passDataHandlers = getDataHandlers(
     team.key as TeamKey,
+    'passSeasons',
     PassSeason,
     passStore,
     (s: PassSeason) => s.toStoreData(),
@@ -246,6 +258,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
   const recvDataHandlers = getDataHandlers(
     team.key as TeamKey,
+    'recvSeasons',
     RecvSeason,
     recvStore,
     (s: RecvSeason) => s.toStoreData(),
@@ -255,6 +268,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
   const rushDataHandlers = getDataHandlers(
     team.key as TeamKey,
+    'rushSeasons',
     RushSeason,
     rushStore,
     (s: RushSeason) => s.toStoreData(),

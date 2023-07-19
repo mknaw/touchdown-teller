@@ -4,15 +4,13 @@ import { useState } from 'react';
 
 import _ from 'lodash';
 
-import { Player } from '@prisma/client';
-
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerAccordion from '@/features/teams/PlayerAccordion';
-import { PlayerSeason, PlayerWithExtras, TeamWithExtras } from '@/types';
+import { IdMap, PlayerSeason, PlayerWithExtras, TeamWithExtras } from '@/types';
 
 const StatTypeToggleButton = ({
   statType,
@@ -33,16 +31,13 @@ const StatTypeToggleButton = ({
   </ToggleButtonGroup>
 );
 
-// TODO dedupe
-type SeasonMap<T extends PlayerSeason> = Map<number, T>;
-
 type PlayerPanelProps<T extends PlayerSeason> = {
   team: TeamWithExtras;
   statType: StatType;
   setStatType: (s: StatType) => void;
   relevantPositions: Position[];
-  seasons: SeasonMap<T>;
-  initSeason: (player: Player) => void;
+  seasons: IdMap<T>;
+  initSeason: (player: PlayerWithExtras) => void;
   updateSeason: (season: T) => void;
   persistSeason: (season: T) => void;
   deleteSeason: (playerId: number) => void;
