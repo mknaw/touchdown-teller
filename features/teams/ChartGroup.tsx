@@ -59,6 +59,7 @@ const makeChartData = <
         ['name', name],
         ...stats.map((stat) => [
           stat,
+          // TODO should filter out beneath some threshold.
           [lastSeason && lastSeason[stat], season && season[stat]],
         ]),
       ])

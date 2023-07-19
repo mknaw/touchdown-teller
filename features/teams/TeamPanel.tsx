@@ -16,6 +16,7 @@ interface TeamStatsPanelProps {
   lastSeason: PrismaTeamSeason;
 }
 
+// TODO also need validation here...
 export default function TeamPanel({
   statType,
   teamSeason,
@@ -60,10 +61,10 @@ export default function TeamPanel({
                 value={teamSeason.passAtt}
                 min={255}
                 max={850}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.passAtt.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.passAtt.toFixed(0)}`,
                     value: lastSeason.passAtt,
                   },
                 ]}
@@ -78,10 +79,10 @@ export default function TeamPanel({
                 value={teamSeason.passYds}
                 min={2000}
                 max={5500}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.passYds.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.passYds.toFixed(0)}`,
                     value: lastSeason.passYds,
                   },
                 ]}
@@ -96,10 +97,10 @@ export default function TeamPanel({
                 value={teamSeason.passTds}
                 min={0}
                 max={70}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.passTds.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.passTds.toFixed(0)}`,
                     value: lastSeason.passTds,
                   },
                 ]}
@@ -119,10 +120,10 @@ export default function TeamPanel({
                 value={teamSeason.passAtt}
                 min={255}
                 max={850}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.passAtt.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.passAtt.toFixed(0)}`,
                     value: lastSeason.passAtt,
                   },
                 ]}
@@ -137,10 +138,10 @@ export default function TeamPanel({
                 value={teamSeason.passYds}
                 min={2000}
                 max={5500}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.passYds.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.passYds.toFixed(0)}`,
                     value: lastSeason.passYds,
                   },
                 ]}
@@ -155,10 +156,10 @@ export default function TeamPanel({
                 value={teamSeason.passTds}
                 min={0}
                 max={70}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.passTds.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.passTds.toFixed(0)}`,
                     value: lastSeason.passTds,
                   },
                 ]}
@@ -177,10 +178,10 @@ export default function TeamPanel({
                 value={teamSeason.rushAtt}
                 min={255}
                 max={850}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.rushAtt.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.rushAtt.toFixed(0)}`,
                     value: lastSeason.rushAtt,
                   },
                 ]}
@@ -195,10 +196,10 @@ export default function TeamPanel({
                 value={teamSeason.rushYds}
                 min={1000}
                 max={5500}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.rushYds.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.rushYds.toFixed(0)}`,
                     value: lastSeason.rushYds,
                   },
                 ]}
@@ -213,10 +214,10 @@ export default function TeamPanel({
                 value={teamSeason.rushTds}
                 min={0}
                 max={70}
-                step={1}
+                step={0.1}
                 marks={[
                   {
-                    label: `${lastYear}: ${lastSeason.rushTds.toFixed(1)}`,
+                    label: `${lastYear}: ${lastSeason.rushTds.toFixed(0)}`,
                     value: lastSeason.rushTds,
                   },
                 ]}

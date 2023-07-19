@@ -308,6 +308,7 @@ function StatSliderPanel<T extends PlayerSeason>({
   return <Stack>{sliders}</Stack>;
 }
 
+// TODO still can get too damn big with too many players.
 export default function PlayerAccordion<T extends PlayerSeason>({
   player,
   season,

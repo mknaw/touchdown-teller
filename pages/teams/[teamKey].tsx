@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 
+import _ from 'lodash';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
 import { useIndexedDBStore } from 'use-indexeddb';
@@ -10,7 +11,7 @@ import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
-import { Position, StatType, TeamKey, lastYear } from '@/constants';
+import { Position, StatType, TeamKey, gameCount, lastYear } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
 import {
   PassChartGroup,
@@ -29,12 +30,16 @@ import {
 } from '@/models/PlayerSeason';
 import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 import {
+  IDBStore,
   IdMap,
+  PassSeasonWithExtras,
   PlayerSeason,
   PlayerSeasonConstructable,
   PlayerSeasonData,
   PlayerWithExtras,
   PrismaPlayerSeason,
+  RecvSeasonWithExtras,
+  RushSeasonWithExtras,
   TeamWithExtras,
   createPlayerSeason,
 } from '@/types';
@@ -139,13 +144,6 @@ export const getStaticProps: GetStaticProps<
   };
 };
 
-interface IDBStore<T> {
-  add(value: T, key?: number): Promise<number>;
-  update(value: T, key?: number): Promise<number>;
-  getManyByKey(keyPath: string, value: string | number): Promise<T[]>;
-  deleteByID(id: number): Promise<number>;
-}
-
 const getDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
   seasonKey: 'passSeasons' | 'recvSeasons' | 'rushSeasons',
@@ -188,9 +186,23 @@ const getDataHandlers = <T extends PlayerSeason>(
     setSeason((s: IdMap<T>) => setOnClone(s, season.playerId, season));
   };
 
-  const persistSeason = (season: T) => {
+  const persistSeason = (
+    season: T,
+    // `validator` returns an error message if the update is _not_ valid.
+    validator: undefined | (() => string | null)
+  ) => {
     updateSeason(season);
-    store.update(toStoreData(season), season.playerId);
+    const errorMsg = (validator && validator()) || '';
+    if (errorMsg) {
+      // Use the `store` to fetch the previous value.
+      // Less overhead trying to "remember" it this way.
+      store.getByID(season.playerId).then((seasonData) => {
+        alert(errorMsg);
+        updateSeason(new constructor(seasonData));
+      });
+    } else {
+      store.update(toStoreData(season), season.playerId);
+    }
   };
 
   const deleteSeason = (playerId: number) => {
@@ -209,6 +221,33 @@ const getDataHandlers = <T extends PlayerSeason>(
     deleteSeason,
   };
 };
+
+const validateAgainstTeamTotals = <T extends PlayerSeason>(
+  seasons: IdMap<T>,
+  teamSeason: TeamSeason,
+  specs: [string, string, string][]
+) => {
+  if (!teamSeason) return '';
+  const annualized = [...seasons.values()].map((s) => s.annualize());
+  for (const [stat, teamStat, label] of specs) {
+    if (
+      _.sumBy(annualized, stat) >
+      teamSeason[teamStat as keyof typeof teamSeason]
+    ) {
+      return `Sum of players' projected ${label} cannot exceed projected team total.`;
+    }
+  }
+  return '';
+};
+
+const filterHistoricalPassSeasons = (seasons: PassSeasonWithExtras[]) =>
+  seasons.filter((s) => s.att > 100);
+
+const filterHistoricalRecvSeasons = (seasons: RecvSeasonWithExtras[]) =>
+  seasons.filter((s) => s.tgt > 50);
+
+const filterHistoricalRushSeasons = (seasons: RushSeasonWithExtras[]) =>
+  seasons.filter((s) => s.att > 50);
 
 export default function Page({ team }: { team: TeamWithExtras }) {
   const spacing = 4;
@@ -254,6 +293,18 @@ export default function Page({ team }: { team: TeamWithExtras }) {
     (s: PassSeason) => s.toStoreData(),
     setPassSeasons
   );
+  const passPersistValidator = () => {
+    if (_.sumBy([...passSeasons.values()], 'gp') > gameCount) {
+      return `Team QBs cannot exceed ${gameCount} games played.`;
+    }
+    if (!teamSeason) return '';
+    return validateAgainstTeamTotals(passSeasons, teamSeason, [
+      ['att', 'passAtt', 'attempts'],
+      ['cmp', 'passCmp', 'completions'],
+      ['yds', 'passYds', 'yards'],
+      ['tds', 'passTds', 'touchdowns'],
+    ]);
+  };
 
   const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
   const recvDataHandlers = getDataHandlers(
@@ -264,6 +315,17 @@ export default function Page({ team }: { team: TeamWithExtras }) {
     (s: RecvSeason) => s.toStoreData(),
     setRecvSeasons
   );
+  const recvPersistValidator = () => {
+    // TODO questionable ...
+    // should have it but nothing should be changeable if we don't
+    if (!teamSeason) return '';
+    return validateAgainstTeamTotals(passSeasons, teamSeason, [
+      ['tgt', 'passAtt', 'targets'],
+      ['rec', 'passCmp', 'receptions'],
+      ['yds', 'passYds', 'yards'],
+      ['tds', 'passTds', 'touchdowns'],
+    ]);
+  };
 
   const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
   const rushDataHandlers = getDataHandlers(
@@ -274,6 +336,17 @@ export default function Page({ team }: { team: TeamWithExtras }) {
     (s: RushSeason) => s.toStoreData(),
     setRushSeasons
   );
+  const rushPersistValidator = () => {
+    // TODO questionable ...
+    // should have it but nothing should be changeable if we don't
+    if (!teamSeason) return '';
+    if (!teamSeason) return '';
+    return validateAgainstTeamTotals(passSeasons, teamSeason, [
+      ['att', 'rushAtt', 'carries'],
+      ['yds', 'rushYds', 'yards'],
+      ['tds', 'rushTds', 'touchdowns'],
+    ]);
+  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -301,7 +374,9 @@ export default function Page({ team }: { team: TeamWithExtras }) {
         initSeason={passDataHandlers.initSeason}
         // TODO passing in particular have to enforce that all gp in a team sum to 1.
         updateSeason={passDataHandlers.updateSeason}
-        persistSeason={passDataHandlers.persistSeason}
+        persistSeason={(s) =>
+          passDataHandlers.persistSeason(s, passPersistValidator)
+        }
         deleteSeason={passDataHandlers.deleteSeason}
       />
     );
@@ -314,7 +389,9 @@ export default function Page({ team }: { team: TeamWithExtras }) {
         seasons={recvSeasons}
         initSeason={recvDataHandlers.initSeason}
         updateSeason={recvDataHandlers.updateSeason}
-        persistSeason={recvDataHandlers.persistSeason}
+        persistSeason={(s) =>
+          recvDataHandlers.persistSeason(s, recvPersistValidator)
+        }
         deleteSeason={recvDataHandlers.deleteSeason}
       />
     );
@@ -327,7 +404,9 @@ export default function Page({ team }: { team: TeamWithExtras }) {
         seasons={rushSeasons}
         initSeason={rushDataHandlers.initSeason}
         updateSeason={rushDataHandlers.updateSeason}
-        persistSeason={rushDataHandlers.persistSeason}
+        persistSeason={(s) =>
+          rushDataHandlers.persistSeason(s, rushPersistValidator)
+        }
         deleteSeason={rushDataHandlers.deleteSeason}
       />
     );
@@ -367,7 +446,10 @@ export default function Page({ team }: { team: TeamWithExtras }) {
                       [StatType.PASS]: team.passSeasons && (
                         <PassChartGroup
                           seasons={passSeasons}
-                          lastSeasons={makeIdMap(team.passSeasons, 'playerId')}
+                          lastSeasons={makeIdMap(
+                            filterHistoricalPassSeasons(team.passSeasons),
+                            'playerId'
+                          )}
                           teamSeason={teamSeason}
                           lastSeason={team.seasons[0]}
                         />
@@ -375,7 +457,10 @@ export default function Page({ team }: { team: TeamWithExtras }) {
                       [StatType.RECV]: team.recvSeasons && (
                         <RecvChartGroup
                           seasons={recvSeasons}
-                          lastSeasons={makeIdMap(team.recvSeasons, 'playerId')}
+                          lastSeasons={makeIdMap(
+                            filterHistoricalRecvSeasons(team.recvSeasons),
+                            'playerId'
+                          )}
                           teamSeason={teamSeason}
                           lastSeason={team.seasons[0]}
                         />
@@ -383,7 +468,10 @@ export default function Page({ team }: { team: TeamWithExtras }) {
                       [StatType.RUSH]: team.rushSeasons && (
                         <RushChartGroup
                           seasons={rushSeasons}
-                          lastSeasons={makeIdMap(team.rushSeasons, 'playerId')}
+                          lastSeasons={makeIdMap(
+                            filterHistoricalRushSeasons(team.rushSeasons),
+                            'playerId'
+                          )}
                           teamSeason={teamSeason}
                           lastSeason={team.seasons[0]}
                         />

@@ -74,6 +74,11 @@ export default function PlayerPanel<T extends PlayerSeason>({
     return positionCmp || adpCmp;
   });
 
+  const addPlayer = (player: PlayerWithExtras) => {
+    initSeason(player);
+    setExpandedPlayer(player.id);
+  };
+
   return (
     <>
       {/* TODO would be nice here to preload some by default... */}
@@ -100,7 +105,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
         <StatTypeToggleButton statType={statType} setStatType={setStatType} />
       </div>
       <div className={'absolute bottom-5 right-5'}>
-        <AddPlayer players={nonStattedPlayers} addPlayer={initSeason} />
+        <AddPlayer players={nonStattedPlayers} addPlayer={addPlayer} />
       </div>
     </>
   );

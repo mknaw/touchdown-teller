@@ -16,6 +16,14 @@ import {
   RushSeasonData,
 } from '@/models/PlayerSeason';
 
+export interface IDBStore<T> {
+  add(value: T, key?: number): Promise<number>;
+  update(value: T, key?: number): Promise<number>;
+  getByID(id: string | number): Promise<T>;
+  getManyByKey(keyPath: string, value: string | number): Promise<T[]>;
+  deleteByID(id: number): Promise<number>;
+}
+
 export type IdMap<T> = Map<number, T>;
 
 export type SliderMarks = Array<{ label?: string; value: number }>;
