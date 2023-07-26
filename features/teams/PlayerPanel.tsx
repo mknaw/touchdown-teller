@@ -4,12 +4,16 @@ import { useState } from 'react';
 
 import _ from 'lodash';
 
+import { Paper } from '@mui/material';
+import MenuItem from '@mui/material/MenuItem';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
+import Card from '@/components/Card';
 import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
-import PlayerAccordion from '@/features/teams/PlayerAccordion';
+import { StatSliderPanel } from '@/features/teams/PlayerAccordion';
 import { IdMap, PlayerSeason, PlayerWithExtras, TeamWithExtras } from '@/types';
 
 const StatTypeToggleButton = ({
@@ -54,8 +58,6 @@ export default function PlayerPanel<T extends PlayerSeason>({
   persistSeason,
   deleteSeason,
 }: PlayerPanelProps<T>) {
-  const [expandedPlayer, setExpandedPlayer] = useState<number | null>(null);
-
   const relevantPlayers = team.players.filter((player) =>
     relevantPositions.includes(player.position as Position)
   );
@@ -66,6 +68,13 @@ export default function PlayerPanel<T extends PlayerSeason>({
     seasons.has(player.id)
   );
   stattedPlayers = stattedPlayers.sort((a, b) => a.adp - b.adp);
+  //
+  // TODO figure out how to initialize...
+  // TODO here the redux would be good to pull up the last one
+  const [selectedPlayer, setSelectedPlayer] = useState<
+    PlayerWithExtras | undefined
+  >(undefined);
+
   nonStattedPlayers = nonStattedPlayers.sort((a, b) => {
     const positionCmp =
       relevantPositions.indexOf(a.position as Position) -
@@ -76,15 +85,43 @@ export default function PlayerPanel<T extends PlayerSeason>({
 
   const addPlayer = (player: PlayerWithExtras) => {
     initSeason(player);
-    setExpandedPlayer(player.id);
+    setSelectedPlayer(player);
   };
+
+  const season = selectedPlayer && seasons.get(selectedPlayer.id);
 
   return (
     <>
+      <Select
+        className={'w-full text-center text-2xl'}
+        value={selectedPlayer ? `${selectedPlayer.id}` : ''}
+        onChange={(event: SelectChangeEvent) => {
+          setSelectedPlayer(
+            _.find(stattedPlayers, { id: parseInt(event.target.value) })
+          );
+        }}
+      >
+        {stattedPlayers.map((player) => (
+          // TODO group by position.
+          <MenuItem key={player.id} value={player.id}>
+            {`${player.name} (${player.position})`}
+          </MenuItem>
+        ))}
+      </Select>
+      {season && (
+        <Paper className={'my-8 p-8'}>
+          <StatSliderPanel
+            player={selectedPlayer}
+            season={season}
+            setSeason={updateSeason}
+            persistSeason={persistSeason}
+          />
+        </Paper>
+      )}
       {/* TODO would be nice here to preload some by default... */}
       {/* Maybe at least everyone whose ADP is <=100 */}
       {/* TODO double check these are ordered by ADP */}
-      {stattedPlayers.map((player) => {
+      {/* stattedPlayers.map((player) => {
         const season = seasons.get(player.id);
         return (
           season && (
@@ -100,7 +137,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
             />
           )
         );
-      })}
+      }) */}
       <div className={'absolute bottom-5 left-5'}>
         <StatTypeToggleButton statType={statType} setStatType={setStatType} />
       </div>

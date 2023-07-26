@@ -44,7 +44,7 @@ type StatSliderPanelProps<T> = {
   persistSeason: (stats: T) => void;
 };
 
-function StatSliderPanel<T extends PlayerSeason>({
+export function StatSliderPanel<T extends PlayerSeason>({
   player,
   season,
   setSeason,
