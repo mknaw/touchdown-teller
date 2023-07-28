@@ -6,14 +6,16 @@ import Typography from '@mui/material/Typography';
 
 import HorizontalChart, { ChartData } from '@/components/HorizontalChart';
 import { REMAINING_LABEL } from '@/constants';
-import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
-import TeamSeason from '@/models/TeamSeason';
 import {
-  IdMap,
-  PassSeasonWithExtras,
-  RecvSeasonWithExtras,
-  RushSeasonWithExtras,
-} from '@/types';
+  PassAggregate,
+  PassSeason,
+  RecvAggregate,
+  RecvSeason,
+  RushAggregate,
+  RushSeason,
+} from '@/models/PlayerSeason';
+import TeamSeason from '@/models/TeamSeason';
+import { IdMap } from '@/types';
 import { mapMap } from '@/utils';
 
 const HzChart = ({ label, data }: { label: string; data: ChartData[] }) => (
@@ -26,7 +28,7 @@ const HzChart = ({ label, data }: { label: string; data: ChartData[] }) => (
 );
 
 const makeChartData = <
-  LS extends { player: { name: string } },
+  LS extends { name: string },
   S extends { name: string; annualize: () => { [K in keyof LS]?: number } }
 >(
     seasons: IdMap<S>,
@@ -45,11 +47,7 @@ const makeChartData = <
   for (const playerId of allPlayerIds) {
     const season = annualizedSeasons.get(playerId);
     const lastSeason = lastSeasons.get(playerId);
-    const name = season
-      ? season.name
-      : lastSeason
-        ? lastSeason.player.name
-        : null;
+    const name = season ? season.name : lastSeason ? lastSeason.name : null;
     if (!name) {
       continue;
     }
@@ -68,6 +66,7 @@ const makeChartData = <
 
   const lastSeasonTotals = [...lastSeasons.values()];
   const seasonTotals = [...annualizedSeasons.values()];
+  // TODO wonder if this wasn't supposed to be a single obj with all stats.
   stats.forEach((stat) => {
     const lastRemaining = Math.max(
       // Really shouldn't ever be < 0... but whatever
@@ -94,7 +93,7 @@ export const PassChartGroup = ({
   lastSeason,
 }: {
   seasons: IdMap<PassSeason>;
-  lastSeasons: IdMap<PassSeasonWithExtras>;
+  lastSeasons: IdMap<PassAggregate>;
   teamSeason: TeamSeason;
   lastSeason: PrismaTeamSeason;
 }) => {
@@ -139,7 +138,7 @@ export const RecvChartGroup = ({
   lastSeason,
 }: {
   seasons: IdMap<RecvSeason>;
-  lastSeasons: IdMap<RecvSeasonWithExtras>;
+  lastSeasons: IdMap<RecvAggregate>;
   teamSeason: TeamSeason;
   lastSeason: PrismaTeamSeason;
 }) => {
@@ -190,7 +189,7 @@ export const RushChartGroup = ({
   lastSeason,
 }: {
   seasons: IdMap<RushSeason>;
-  lastSeasons: IdMap<RushSeasonWithExtras>;
+  lastSeasons: IdMap<RushAggregate>;
   teamSeason: TeamSeason;
   lastSeason: PrismaTeamSeason;
 }) => {

@@ -8,77 +8,28 @@ datasource db {
 }
 
 model Game {
-  id                   Int    @id @default(autoincrement())
-  week                 Int
-  homeName             String @map("home")
-  awayName             String @map("away")
-  away                 Team   @relation("game_awayToteam", fields: [awayName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-  home                 Team   @relation("game_homeToteam", fields: [homeName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  id       Int    @id @default(autoincrement())
+  week     Int
+  homeName String @map("home")
+  awayName String @map("away")
+  away     Team   @relation("game_awayToteam", fields: [awayName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  home     Team   @relation("game_homeToteam", fields: [homeName], references: [key], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("game")
 }
 
-model PassSeason {
-  id       Int    @id @default(autoincrement())
-  playerId Int    @map("player_id")
-  teamName String @map("team")
-  season   Int
-  gp       Int    @map("games")
-  att      Int
-  cmp      Int
-  yds      Int
-  tds      Int    @map("td")
-  icpt     Int
-  player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  team     Team   @relation("passing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("passing_season")
-}
-
 model Player {
-  id          Int          @id @default(autoincrement())
-  adp         Int
-  teamName    String       @map("team")
-  position    String
-  name        String
-  passSeasons PassSeason[]
-  team        Team         @relation("player_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-  recvSeasons RecvSeason[]
-  rushSeasons RushSeason[]
+  id       Int           @id @default(autoincrement())
+  adp      Int?
+  teamName String?       @map("team")
+  position String
+  name     String
+  team     Team?         @relation("player_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
+  passGames  PassGames[]
+  recvGames  RecvGames[]
+  rushGames  RushGames[]
 
   @@map("player")
-}
-
-model RecvSeason {
-  id       Int    @id @default(autoincrement())
-  playerId Int    @map("player_id")
-  teamName String @map("team")
-  season   Int
-  gp       Int    @map("games")
-  tgt      Int
-  rec      Int
-  yds      Int
-  tds      Int    @map("td")
-  player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  team     Team   @relation("receiving_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("receiving_season")
-}
-
-model RushSeason {
-  id       Int    @id @default(autoincrement())
-  playerId Int    @map("player_id")
-  teamName String @map("team")
-  season   Int
-  gp       Int    @map("games")
-  att      Int
-  yds      Int
-  tds      Int    @map("td")
-  fum      Int
-  player   Player @relation(fields: [playerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  team     Team   @relation("rushing_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-
-  @@map("rushing_season")
 }
 
 /// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
@@ -89,14 +40,14 @@ model schema_migrations {
 }
 
 model Team {
-  key         String       @id @map("name")
-  awayGames   Game[]       @relation("game_awayToteam")
-  homeGames   Game[]       @relation("game_homeToteam")
-  passSeasons PassSeason[] @relation("passing_season_teamToteam")
-  players     Player[]     @relation("player_teamToteam")
-  recvSeasons RecvSeason[] @relation("receiving_season_teamToteam")
-  rushSeasons RushSeason[] @relation("rushing_season_teamToteam")
-  seasons     TeamSeason[] @relation("team_season_teamToteam")
+  key       String       @id @map("name")
+  awayGames Game[]       @relation("game_awayToteam")
+  homeGames Game[]       @relation("game_homeToteam")
+  passGames PassGames[]  @relation("passing_game_stats_teamToteam")
+  players   Player[]     @relation("player_teamToteam")
+  recvGames RecvGames[]  @relation("receiving_game_stats_teamToteam")
+  rushGames RushGames[]  @relation("rushing_game_stats_teamToteam")
+  seasons   TeamSeason[] @relation("team_season_teamToteam")
 
   @@map("team")
 }
@@ -115,4 +66,60 @@ model TeamSeason {
   team     Team   @relation("team_season_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("team_season")
+}
+
+model PassGames {
+  id                                 Int    @id @default(autoincrement())
+  player_id                          Int
+  team                               String
+  season                             Int
+  week                               Int
+  att                                Int
+  cmp                                Int
+  yds                                Int
+  td                                 Int
+  icpt                               Int
+  player                             Player @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team_passing_game_stats_teamToteam Team   @relation("passing_game_stats_teamToteam", fields: [team], references: [key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([player_id, season, week], map: "sqlite_autoindex_passing_game_stats_1")
+
+  @@map("passing_game_stats")
+}
+
+model RecvGames {
+  id                                   Int    @id @default(autoincrement())
+  player_id                            Int
+  team                                 String
+  season                               Int
+  week                                 Int
+  tgt                                  Int
+  rec                                  Int
+  yds                                  Int
+  td                                   Int
+  player                               Player @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team_receiving_game_stats_teamToteam Team   @relation("receiving_game_stats_teamToteam", fields: [team], references: [key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([player_id, season, week], map: "sqlite_autoindex_receiving_game_stats_1")
+
+  @@map("receiving_game_stats")
+}
+
+model RushGames {
+  id                                 Int    @id @default(autoincrement())
+  player_id                          Int
+  team                               String
+  season                             Int
+  week                               Int
+  att                                Int
+  yds                                Int
+  td                                 Int
+  fum                                Int
+  player                             Player @relation(fields: [player_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  team_rushing_game_stats_teamToteam Team   @relation("rushing_game_stats_teamToteam", fields: [team], references: [key], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([player_id, season, week], map: "sqlite_autoindex_rushing_game_stats_1")
+
+  @@map("rushing_game_stats")
+
 }

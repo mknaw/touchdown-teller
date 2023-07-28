@@ -1,10 +1,4 @@
-// TODO do the `fromPrisma` thing for sensible defaults for players with history
-import {
-  Player,
-  PassSeason as PrismaPassSeason,
-  RecvSeason as PrismaRecvSeason,
-  RushSeason as PrismaRushSeason,
-} from '@prisma/client';
+import { Player } from '@prisma/client';
 
 import { TeamKey } from '@/constants';
 
@@ -14,10 +8,40 @@ type AnnualizedPassSeason = {
   tds: number;
 };
 
+export type PassAggregate = {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  att: number;
+  cmp: number;
+  yds: number;
+  tds: number;
+};
+
 export type PassSeasonData = Pick<
   PassSeason,
   'playerId' | 'name' | 'team' | 'gp' | 'att' | 'cmp' | 'ypa' | 'tdp'
 >;
+
+export const passAggregateToSeasonData = (
+  player: Player,
+  team: TeamKey,
+  gp: number,
+  aggregate: PassAggregate
+): PassSeasonData => {
+  const att = aggregate.att || 0;
+  return {
+    playerId: player.id,
+    name: player.name,
+    team,
+    gp: gp,
+    att: att / gp,
+    cmp: 100 * ((aggregate.cmp || 0) / att),
+    ypa: (aggregate.yds || 0) / att,
+    tdp: 100 * ((aggregate.tds || 0) / att),
+  };
+};
 
 export class PassSeason implements PassSeasonData {
   playerId: number;
@@ -53,20 +77,25 @@ export class PassSeason implements PassSeasonData {
     });
   }
 
-  static fromPrisma(
-    player: Player,
-    team: TeamKey,
-    passSeason: PrismaPassSeason
-  ) {
+  static fromAggregate({
+    playerId,
+    name,
+    team,
+    gp,
+    att,
+    cmp,
+    yds,
+    tds,
+  }: PassAggregate) {
     return new PassSeason({
-      playerId: player.id,
-      name: player.name,
+      playerId,
+      name,
       team,
-      gp: passSeason.gp,
-      att: passSeason.att / passSeason.gp,
-      cmp: 100 * (passSeason.cmp / passSeason.att),
-      ypa: passSeason.yds / passSeason.att,
-      tdp: 100 * (passSeason.tds / passSeason.att),
+      gp: gp,
+      att: att / gp,
+      cmp: 100 * (cmp / att),
+      ypa: yds / att,
+      tdp: 100 * (tds / att),
     });
   }
 
@@ -110,6 +139,17 @@ export class PassSeason implements PassSeasonData {
     };
   }
 }
+
+export type RecvAggregate = {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  tgt: number;
+  rec: number;
+  yds: number;
+  tds: number;
+};
 
 type AnnualizedRecvSeason = {
   tgt: number;
@@ -157,20 +197,25 @@ export class RecvSeason implements RecvSeasonData {
     });
   }
 
-  static fromPrisma(
-    player: Player,
-    team: TeamKey,
-    recvSeason: PrismaRecvSeason
-  ) {
+  static fromAggregate({
+    playerId,
+    name,
+    team,
+    gp,
+    tgt,
+    rec,
+    yds,
+    tds,
+  }: RecvAggregate) {
     return new RecvSeason({
-      playerId: player.id,
-      name: player.name,
+      playerId,
+      name,
       team,
-      gp: recvSeason.gp,
-      tgt: recvSeason.tgt / recvSeason.gp,
-      rec: 100 * (recvSeason.rec / recvSeason.tgt),
-      ypr: recvSeason.yds / recvSeason.rec,
-      tdp: 100 * (recvSeason.tds / recvSeason.rec),
+      gp: gp,
+      tgt: tgt / gp,
+      rec: 100 * (rec / tgt),
+      ypr: yds / rec,
+      tdp: 100 * (tds / rec),
     });
   }
 
@@ -218,6 +263,16 @@ export class RecvSeason implements RecvSeasonData {
   }
 }
 
+export type RushAggregate = {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  att: number;
+  yds: number;
+  tds: number;
+};
+
 type AnnualizedRushSeason = {
   att: number;
   yds: number;
@@ -260,19 +315,23 @@ export class RushSeason implements RushSeasonData {
     });
   }
 
-  static fromPrisma(
-    player: Player,
-    team: TeamKey,
-    rushSeason: PrismaRushSeason
-  ) {
+  static fromAggregate({
+    playerId,
+    name,
+    team,
+    gp,
+    att,
+    yds,
+    tds,
+  }: RushAggregate) {
     return new RushSeason({
-      playerId: player.id,
-      name: player.name,
+      playerId,
+      name,
       team,
-      gp: rushSeason.gp,
-      att: rushSeason.att / rushSeason.gp,
-      ypc: rushSeason.yds / rushSeason.att,
-      tdp: 100 * (rushSeason.tds / rushSeason.att),
+      gp: gp,
+      att: att / gp,
+      ypc: yds / att,
+      tdp: 100 * (tds / att),
     });
   }
 

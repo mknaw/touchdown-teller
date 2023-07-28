@@ -5,7 +5,7 @@ import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { PrismaClient } from '@prisma/client';
+import { Player, Prisma, PrismaClient } from '@prisma/client';
 
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
@@ -21,10 +21,13 @@ import {
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
 import {
+  PassAggregate,
   PassSeason,
   PassSeasonData,
+  RecvAggregate,
   RecvSeason,
   RecvSeasonData,
+  RushAggregate,
   RushSeason,
   RushSeasonData,
 } from '@/models/PlayerSeason';
@@ -32,14 +35,9 @@ import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 import {
   IDBStore,
   IdMap,
-  PassSeasonWithExtras,
   PlayerSeason,
   PlayerSeasonConstructable,
   PlayerSeasonData,
-  PlayerWithExtras,
-  PrismaPlayerSeason,
-  RecvSeasonWithExtras,
-  RushSeasonWithExtras,
   TeamWithExtras,
   createPlayerSeason,
 } from '@/types';
@@ -49,8 +47,10 @@ interface Params extends ParsedUrlQuery {
   teamKey: TeamKey;
 }
 
-async function getTeam(teamKey: string): Promise<TeamWithExtras> {
-  const prisma = new PrismaClient();
+async function getTeam(
+  prisma: PrismaClient,
+  teamKey: string
+): Promise<TeamWithExtras> {
   return await prisma.team.findFirstOrThrow({
     where: {
       key: teamKey,
@@ -58,17 +58,17 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
     include: {
       players: {
         include: {
-          passSeasons: {
+          passGames: {
             where: {
               season: lastYear,
             },
           },
-          rushSeasons: {
+          rushGames: {
             where: {
               season: lastYear,
             },
           },
-          recvSeasons: {
+          recvGames: {
             where: {
               season: lastYear,
             },
@@ -80,7 +80,7 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
           season: lastYear,
         },
       },
-      passSeasons: {
+      passGames: {
         where: {
           season: lastYear,
         },
@@ -92,7 +92,7 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
           },
         },
       },
-      rushSeasons: {
+      rushGames: {
         where: {
           season: lastYear,
         },
@@ -104,7 +104,7 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
           },
         },
       },
-      recvSeasons: {
+      recvGames: {
         where: {
           season: lastYear,
         },
@@ -122,6 +122,101 @@ async function getTeam(teamKey: string): Promise<TeamWithExtras> {
   });
 }
 
+const downcastBigInts = (obj: object) =>
+  _.mapValues(obj, (val) => (typeof val === 'bigint' ? Number(val) : val));
+
+async function getPlayerPassAggregates(
+  prisma: PrismaClient,
+  teamKey: string,
+  playerIds: number[]
+): Promise<PassAggregate[]> {
+  const agg: object[] = await prisma.$queryRaw`
+    SELECT 
+        p.id AS playerId,
+        p.name,
+        s.team,
+        COUNT(s.week) AS gp,
+        SUM(s.att) AS att,
+        SUM(s.cmp) AS cmp,
+        SUM(s.yds) AS yds,
+        SUM(s.td) AS tds
+    FROM 
+        passing_game_stats s
+    JOIN 
+        player p ON p.id = s.player_id
+    WHERE
+        s.season = 2022
+        AND (
+          s.team = ${teamKey}
+          OR s.player_id IN (${Prisma.join(playerIds)})
+        )
+    GROUP BY 
+        s.player_id, s.team;
+    `;
+  return _.map(agg, downcastBigInts) as PassAggregate[];
+}
+
+async function getPlayerRecvAggregates(
+  prisma: PrismaClient,
+  teamKey: string,
+  playerIds: number[]
+): Promise<RecvAggregate[]> {
+  const agg: object[] = await prisma.$queryRaw`
+    SELECT 
+        p.id AS playerId,
+        p.name,
+        s.team,
+        COUNT(s.week) AS gp,
+        SUM(s.tgt) AS tgt,
+        SUM(s.rec) AS rec,
+        SUM(s.yds) AS yds,
+        SUM(s.td) AS tds
+    FROM 
+        receiving_game_stats s
+    JOIN 
+        player p ON p.id = s.player_id
+    WHERE
+        s.season = 2022
+        AND (
+          s.team = ${teamKey}
+          OR s.player_id IN (${Prisma.join(playerIds)})
+        )
+    GROUP BY 
+        s.player_id, s.team;
+    `;
+  return _.map(agg, downcastBigInts) as RecvAggregate[];
+}
+
+async function getPlayerRushAggregates(
+  prisma: PrismaClient,
+  teamKey: string,
+  playerIds: number[]
+): Promise<RushAggregate[]> {
+  const agg: object[] = await prisma.$queryRaw`
+    SELECT 
+        p.id AS playerId,
+        p.name,
+        s.team,
+        COUNT(s.week) AS gp,
+        SUM(s.att) AS att,
+        SUM(s.yds) AS yds,
+        SUM(s.td) AS tds
+    FROM 
+        rushing_game_stats s
+    JOIN 
+        player p ON p.id = s.player_id
+    WHERE
+        s.season = 2022
+        AND (
+          s.team = ${teamKey}
+          OR s.player_id IN (${Prisma.join(playerIds)})
+        )
+    GROUP BY 
+        s.player_id, s.team;
+    `;
+  return _.map(agg, downcastBigInts) as RushAggregate[];
+}
+
 // TODO have to 404 if not among these?
 export const getStaticPaths: GetStaticPaths = async () => {
   return {
@@ -137,16 +232,23 @@ export const getStaticProps: GetStaticProps<
   Params
 > = async (context) => {
   const { teamKey } = context.params as Params;
-  const team = await getTeam(teamKey);
+  const prisma = new PrismaClient();
+  const team = await getTeam(prisma, teamKey);
+  const playerIds = _.map(team.players, 'id');
+  const [passAggregates, recvAggregates, rushAggregates] = await Promise.all([
+    getPlayerPassAggregates(prisma, teamKey, playerIds),
+    getPlayerRecvAggregates(prisma, teamKey, playerIds),
+    getPlayerRushAggregates(prisma, teamKey, playerIds),
+  ]);
 
   return {
-    props: { team },
+    props: { team, passAggregates, recvAggregates, rushAggregates },
   };
 };
 
 const getDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
-  seasonKey: 'passSeasons' | 'recvSeasons' | 'rushSeasons',
+  playerSeasons: IdMap<T>,
   constructor: PlayerSeasonConstructable<T>,
   store: IDBStore<PlayerSeasonData<T>>,
   toStoreData: (s: T) => PlayerSeasonData<T>,
@@ -164,15 +266,10 @@ const getDataHandlers = <T extends PlayerSeason>(
     setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
   };
 
-  const initSeason = (player: PlayerWithExtras) => {
-    const lastSeason = player[seasonKey][0];
-
+  const initSeason = (player: Player) => {
+    const lastSeason = playerSeasons.get(player.id);
     const season = lastSeason
-      ? constructor.fromPrisma(
-        player,
-          teamKey as TeamKey,
-          lastSeason as PrismaPlayerSeason<T>
-      )
+      ? _.cloneDeep(lastSeason)
       : constructor.default(player, teamKey as TeamKey);
     store
       .add(toStoreData(season), player.id)
@@ -240,16 +337,26 @@ const validateAgainstTeamTotals = <T extends PlayerSeason>(
   return '';
 };
 
-const filterHistoricalPassSeasons = (seasons: PassSeasonWithExtras[]) =>
+const filterHistoricalPassAggregates = (seasons: PassAggregate[]) =>
   seasons.filter((s) => s.att > 100);
 
-const filterHistoricalRecvSeasons = (seasons: RecvSeasonWithExtras[]) =>
+const filterHistoricalRecvAggregates = (seasons: RecvAggregate[]) =>
   seasons.filter((s) => s.tgt > 50);
 
-const filterHistoricalRushSeasons = (seasons: RushSeasonWithExtras[]) =>
+const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
   seasons.filter((s) => s.att > 50);
 
-export default function Page({ team }: { team: TeamWithExtras }) {
+export default function Page({
+  team,
+  passAggregates,
+  recvAggregates,
+  rushAggregates,
+}: {
+  team: TeamWithExtras;
+  passAggregates: PassAggregate[];
+  recvAggregates: RecvAggregate[];
+  rushAggregates: RushAggregate[];
+}) {
   const spacing = 4;
 
   const [statType, setStatType] = useState<StatType>(StatType.PASS);
@@ -285,9 +392,25 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   }, [team, teamStore]);
 
   const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
+  // TODO really embarrassing to WET this up...
+  const playerPassSeasons = makeIdMap(
+    _.map(_.groupBy(passAggregates, 'playerId'), (agg, playerId) => {
+      return PassSeason.fromAggregate({
+        playerId: parseInt(playerId),
+        name: agg[0].name,
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+        att: _.sumBy(agg, 'att'),
+        cmp: _.sumBy(agg, 'cmp'),
+        yds: _.sumBy(agg, 'yds'),
+        tds: _.sumBy(agg, 'tds'),
+      });
+    }),
+    'playerId'
+  );
   const passDataHandlers = getDataHandlers(
     team.key as TeamKey,
-    'passSeasons',
+    playerPassSeasons,
     PassSeason,
     passStore,
     (s: PassSeason) => s.toStoreData(),
@@ -307,9 +430,24 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   };
 
   const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
+  const playerRecvSeasons = makeIdMap(
+    _.map(_.groupBy(recvAggregates, 'playerId'), (agg, playerId) => {
+      return RecvSeason.fromAggregate({
+        playerId: parseInt(playerId),
+        name: agg[0].name,
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+        tgt: _.sumBy(agg, 'tgt'),
+        rec: _.sumBy(agg, 'rec'),
+        yds: _.sumBy(agg, 'yds'),
+        tds: _.sumBy(agg, 'tds'),
+      });
+    }),
+    'playerId'
+  );
   const recvDataHandlers = getDataHandlers(
     team.key as TeamKey,
-    'recvSeasons',
+    playerRecvSeasons,
     RecvSeason,
     recvStore,
     (s: RecvSeason) => s.toStoreData(),
@@ -328,9 +466,23 @@ export default function Page({ team }: { team: TeamWithExtras }) {
   };
 
   const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
+  const playerRushSeasons = makeIdMap(
+    _.map(_.groupBy(rushAggregates, 'playerId'), (agg, playerId) => {
+      return RushSeason.fromAggregate({
+        playerId: parseInt(playerId),
+        name: agg[0].name,
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+        att: _.sumBy(agg, 'att'),
+        yds: _.sumBy(agg, 'yds'),
+        tds: _.sumBy(agg, 'tds'),
+      });
+    }),
+    'playerId'
+  );
   const rushDataHandlers = getDataHandlers(
     team.key as TeamKey,
-    'rushSeasons',
+    playerRushSeasons,
     RushSeason,
     rushStore,
     (s: RushSeason) => s.toStoreData(),
@@ -371,8 +523,8 @@ export default function Page({ team }: { team: TeamWithExtras }) {
         {...commonProps}
         relevantPositions={[Position.QB]}
         seasons={passSeasons}
+        pastSeasons={playerPassSeasons}
         initSeason={passDataHandlers.initSeason}
-        // TODO passing in particular have to enforce that all gp in a team sum to 1.
         updateSeason={passDataHandlers.updateSeason}
         persistSeason={(s) =>
           passDataHandlers.persistSeason(s, passPersistValidator)
@@ -387,6 +539,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
         {...commonProps}
         relevantPositions={[Position.WR, Position.TE, Position.RB]}
         seasons={recvSeasons}
+        pastSeasons={playerRecvSeasons}
         initSeason={recvDataHandlers.initSeason}
         updateSeason={recvDataHandlers.updateSeason}
         persistSeason={(s) =>
@@ -402,6 +555,7 @@ export default function Page({ team }: { team: TeamWithExtras }) {
         {...commonProps}
         relevantPositions={[Position.RB, Position.QB, Position.WR]}
         seasons={rushSeasons}
+        pastSeasons={playerRushSeasons}
         initSeason={rushDataHandlers.initSeason}
         updateSeason={rushDataHandlers.updateSeason}
         persistSeason={(s) =>
@@ -443,33 +597,48 @@ export default function Page({ team }: { team: TeamWithExtras }) {
                   />
                   {
                     {
-                      [StatType.PASS]: team.passSeasons && (
+                      [StatType.PASS]: (
                         <PassChartGroup
                           seasons={passSeasons}
                           lastSeasons={makeIdMap(
-                            filterHistoricalPassSeasons(team.passSeasons),
+                            filterHistoricalPassAggregates(
+                              _.filter(
+                                passAggregates,
+                                (agg) => agg.team == team.key
+                              )
+                            ),
                             'playerId'
                           )}
                           teamSeason={teamSeason}
                           lastSeason={team.seasons[0]}
                         />
                       ),
-                      [StatType.RECV]: team.recvSeasons && (
+                      [StatType.RECV]: (
                         <RecvChartGroup
                           seasons={recvSeasons}
                           lastSeasons={makeIdMap(
-                            filterHistoricalRecvSeasons(team.recvSeasons),
+                            filterHistoricalRecvAggregates(
+                              _.filter(
+                                recvAggregates,
+                                (agg) => agg.team == team.key
+                              )
+                            ),
                             'playerId'
                           )}
                           teamSeason={teamSeason}
                           lastSeason={team.seasons[0]}
                         />
                       ),
-                      [StatType.RUSH]: team.rushSeasons && (
+                      [StatType.RUSH]: (
                         <RushChartGroup
                           seasons={rushSeasons}
                           lastSeasons={makeIdMap(
-                            filterHistoricalRushSeasons(team.rushSeasons),
+                            filterHistoricalRushAggregates(
+                              _.filter(
+                                rushAggregates,
+                                (agg) => agg.team == team.key
+                              )
+                            ),
                             'playerId'
                           )}
                           teamSeason={teamSeason}

@@ -1,17 +1,14 @@
-import {
-  Player,
-  Prisma,
-  PassSeason as PrismaPassSeason,
-  RecvSeason as PrismaRecvSeason,
-  RushSeason as PrismaRushSeason,
-} from '@prisma/client';
+import { Player, Prisma } from '@prisma/client';
 
 import { TeamKey } from '@/constants';
 import {
+  PassAggregate,
   PassSeason,
   PassSeasonData,
+  RecvAggregate,
   RecvSeason,
   RecvSeasonData,
+  RushAggregate,
   RushSeason,
   RushSeasonData,
 } from '@/models/PlayerSeason';
@@ -32,13 +29,13 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
   include: {
     players: {
       include: {
-        passSeasons: true;
-        rushSeasons: true;
-        recvSeasons: true;
+        passGames: true;
+        rushGames: true;
+        recvGames: true;
       };
     };
     seasons: true;
-    passSeasons: {
+    passGames: {
       include: {
         player: {
           select: {
@@ -47,7 +44,7 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
         };
       };
     };
-    recvSeasons: {
+    recvGames: {
       include: {
         player: {
           select: {
@@ -56,7 +53,7 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
         };
       };
     };
-    rushSeasons: {
+    rushGames: {
       include: {
         player: {
           select: {
@@ -70,44 +67,6 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
   };
 }>;
 
-export type PlayerWithExtras = Prisma.PlayerGetPayload<{
-  include: {
-    passSeasons: true;
-    rushSeasons: true;
-    recvSeasons: true;
-  };
-}>;
-
-export type PassSeasonWithExtras = Prisma.PassSeasonGetPayload<{
-  include: {
-    player: {
-      select: {
-        name: true;
-      };
-    };
-  };
-}>;
-
-export type RecvSeasonWithExtras = Prisma.RecvSeasonGetPayload<{
-  include: {
-    player: {
-      select: {
-        name: true;
-      };
-    };
-  };
-}>;
-
-export type RushSeasonWithExtras = Prisma.RushSeasonGetPayload<{
-  include: {
-    player: {
-      select: {
-        name: true;
-      };
-    };
-  };
-}>;
-
 export type PlayerSeason = PassSeason | RecvSeason | RushSeason;
 
 export type PlayerSeasonData<T extends PlayerSeason> = T extends PassSeason
@@ -116,16 +75,16 @@ export type PlayerSeasonData<T extends PlayerSeason> = T extends PassSeason
   ? RecvSeasonData
   : RushSeasonData;
 
-export type PrismaPlayerSeason<T extends PlayerSeason> = T extends PassSeason
-  ? PrismaPassSeason
+export type SeasonAggregate<T extends PlayerSeason> = T extends PassSeason
+  ? PassAggregate
   : T extends RecvSeason
-  ? PrismaRecvSeason
-  : PrismaRushSeason;
+  ? RecvAggregate
+  : RushAggregate;
 
 export interface PlayerSeasonConstructable<T extends PlayerSeason> {
   new (data: PlayerSeasonData<T>): T;
   default(player: Player, team: TeamKey): T;
-  fromPrisma(player: Player, team: TeamKey, season: PrismaPlayerSeason<T>): T;
+  fromAggregate(aggregate: SeasonAggregate<T>): T;
 }
 
 export function createPlayerSeason<T extends PlayerSeason>(
