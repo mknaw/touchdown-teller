@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 import _ from 'lodash';
 
@@ -42,6 +42,8 @@ type PlayerPanelProps<T extends PlayerSeason> = {
   team: TeamWithExtras;
   statType: StatType;
   setStatType: (s: StatType) => void;
+  selectedPlayer: Player | undefined;
+  setSelectedPlayer: (p: Player | undefined) => void;
   relevantPositions: Position[];
   seasons: IdMap<T>;
   pastSeasons: IdMap<T>;
@@ -55,6 +57,8 @@ export default function PlayerPanel<T extends PlayerSeason>({
   team,
   statType,
   setStatType,
+  selectedPlayer,
+  setSelectedPlayer,
   relevantPositions,
   seasons,
   pastSeasons,
@@ -78,9 +82,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
     nonStattedPlayers: Player[]
   ] = _.partition(relevantPlayers, (player: Player) => seasons.has(player.id));
 
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(
-    undefined
-  );
+  // TODO this is broken now
   // Initialize `select` value.
   // TODO here it would be good to pull up last selected from redux.
   useEffect(() => {

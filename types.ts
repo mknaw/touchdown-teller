@@ -35,33 +35,6 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
       };
     };
     seasons: true;
-    passGames: {
-      include: {
-        player: {
-          select: {
-            name: true;
-          };
-        };
-      };
-    };
-    recvGames: {
-      include: {
-        player: {
-          select: {
-            name: true;
-          };
-        };
-      };
-    };
-    rushGames: {
-      include: {
-        player: {
-          select: {
-            name: true;
-          };
-        };
-      };
-    };
     homeGames: true;
     awayGames: true;
   };

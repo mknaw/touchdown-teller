@@ -5,7 +5,14 @@ import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { Player, Prisma, PrismaClient } from '@prisma/client';
+import {
+  PassGames,
+  Player,
+  Prisma,
+  PrismaClient,
+  RecvGames,
+  RushGames,
+} from '@prisma/client';
 
 import Grid from '@mui/material/Grid';
 import Typography from '@mui/material/Typography';
@@ -18,6 +25,7 @@ import {
   RecvChartGroup,
   RushChartGroup,
 } from '@/features/teams/ChartGroup';
+import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
 import {
@@ -80,44 +88,51 @@ async function getTeam(
           season: lastYear,
         },
       },
-      passGames: {
-        where: {
-          season: lastYear,
-        },
-        include: {
-          player: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      rushGames: {
-        where: {
-          season: lastYear,
-        },
-        include: {
-          player: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-      recvGames: {
-        where: {
-          season: lastYear,
-        },
-        include: {
-          player: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
       homeGames: true,
       awayGames: true,
+    },
+  });
+}
+
+// TODO also could probably easily dedupe these fns
+async function getPlayerPassGames(
+  prisma: PrismaClient,
+  playerIds: number[]
+): Promise<PassGames[]> {
+  return prisma.passGames.findMany({
+    where: {
+      season: lastYear,
+      player_id: {
+        in: playerIds,
+      },
+    },
+  });
+}
+
+async function getPlayerRecvGames(
+  prisma: PrismaClient,
+  playerIds: number[]
+): Promise<RecvGames[]> {
+  return prisma.recvGames.findMany({
+    where: {
+      season: lastYear,
+      player_id: {
+        in: playerIds,
+      },
+    },
+  });
+}
+
+async function getPlayerRushGames(
+  prisma: PrismaClient,
+  playerIds: number[]
+): Promise<RushGames[]> {
+  return prisma.rushGames.findMany({
+    where: {
+      season: lastYear,
+      player_id: {
+        in: playerIds,
+      },
     },
   });
 }
@@ -235,14 +250,32 @@ export const getStaticProps: GetStaticProps<
   const prisma = new PrismaClient();
   const team = await getTeam(prisma, teamKey);
   const playerIds = _.map(team.players, 'id');
-  const [passAggregates, recvAggregates, rushAggregates] = await Promise.all([
+  const [
+    passGames,
+    recvGames,
+    rushGames,
+    passAggregates,
+    recvAggregates,
+    rushAggregates,
+  ] = await Promise.all([
+    getPlayerPassGames(prisma, playerIds),
+    getPlayerRecvGames(prisma, playerIds),
+    getPlayerRushGames(prisma, playerIds),
     getPlayerPassAggregates(prisma, teamKey, playerIds),
     getPlayerRecvAggregates(prisma, teamKey, playerIds),
     getPlayerRushAggregates(prisma, teamKey, playerIds),
   ]);
 
   return {
-    props: { team, passAggregates, recvAggregates, rushAggregates },
+    props: {
+      team,
+      passGames,
+      recvGames,
+      rushGames,
+      passAggregates,
+      recvAggregates,
+      rushAggregates,
+    },
   };
 };
 
@@ -319,6 +352,9 @@ const getDataHandlers = <T extends PlayerSeason>(
   };
 };
 
+// TODO I think it will be better to have one big State that we pass
+// to a validation module (maybe with an "event" characterizing what
+// just changed)
 const validateAgainstTeamTotals = <T extends PlayerSeason>(
   seasons: IdMap<T>,
   teamSeason: TeamSeason,
@@ -348,11 +384,17 @@ const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
 
 export default function Page({
   team,
+  passGames,
+  recvGames,
+  rushGames,
   passAggregates,
   recvAggregates,
   rushAggregates,
 }: {
   team: TeamWithExtras;
+  passGames: PassGames[];
+  recvGames: RecvGames[];
+  rushGames: RushGames[];
   passAggregates: PassAggregate[];
   recvAggregates: RecvAggregate[];
   rushAggregates: RushAggregate[];
@@ -364,6 +406,14 @@ export default function Page({
   const [passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
   const [recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
   const [rushSeasons, setRushSeasons] = useState<IdMap<RushSeason>>(new Map());
+
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(
+    undefined
+  );
+  // TODO
+  //useEffect(() => {
+  //  setSelectedPlayer(undefined);
+  //}, [team]);
 
   const [teamSeason, setTeamSeason] = useState<TeamSeason | null>(null);
   const persistTeamSeason = (data: TeamSeasonData) => {
@@ -514,7 +564,14 @@ export default function Page({
   const commonProps = {
     team,
     statType,
-    setStatType,
+    setStatType: (st: StatType) => {
+      // TODO probably could do better by remembering
+      // the last selected player for each `StatType`
+      setStatType(st);
+      setSelectedPlayer(undefined);
+    },
+    selectedPlayer,
+    setSelectedPlayer,
   };
   switch (statType) {
   case StatType.PASS:
@@ -566,21 +623,38 @@ export default function Page({
     );
   }
 
+  const games = selectedPlayer
+    ? {
+      [StatType.PASS]: _.filter(
+        passGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+      [StatType.RECV]: _.filter(
+        recvGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+      [StatType.RUSH]: _.filter(
+        rushGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+    }[statType]
+    : [];
+
   // TODO not sure how I'll handle old players for the lastSeason...
   return (
-    <div className={'flex h-body pb-5'}>
+    <div className={'flex h-full pb-5'}>
       <Grid
         container
         alignItems='stretch'
         justifyContent='stretch'
         spacing={spacing}
       >
-        <Grid item xs={6}>
+        <Grid item xs={6} className={'h-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
           </Card>
         </Grid>
-        <Grid container direction={'column'} item xs={6} spacing={spacing}>
+        <Grid item xs={6} container direction={'column'} spacing={spacing}>
           <Grid item xs={8}>
             <Card className={'h-full'}>
               <Typography className={'text-xl w-full text-center'}>
@@ -651,28 +725,28 @@ export default function Page({
               )}
             </Card>
           </Grid>
-          {[0].map((i) => (
-            <Grid key={i} container item xs={4} spacing={spacing}>
-              {[0, 1].map((j) => (
-                <Grid key={j} item xs={6}>
-                  <Card className={'h-full'}>
-                    <div className={'h-full relative'}>
-                      <Typography className={'text-xl w-full text-center'}>
-                        {`${lastYear} Target Share`}
-                      </Typography>
-                      {/*
-                      <div className={'flex h-full justify-center'}>
-                        <div className={'flex w-full justify-center'}>
-                          <DoughnutChart data={chartData} />
-                        </div>
-                      </div>
-                      */}
+          <Grid item xs={4} className={'h-full'}>
+            <Card className={'h-full w-full'}>
+              {games.length ? (
+                <>
+                  <div className={'flex-col h-full bg-slate-500'}>
+                    <Typography className={'text-center'}>
+                      2022 Gamelog
+                    </Typography>
+                    {/* TODO flexing to fill the rest of the space is driving me insane! */}
+                    <div className={'flex w-full bg-red-500'}>
+                      <PlayerGameLog
+                        className={'h-full w-full'}
+                        games={games}
+                      />
                     </div>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          ))}
+                  </div>
+                </>
+              ) : (
+                <div>No player selected</div>
+              )}
+            </Card>
+          </Grid>
         </Grid>
       </Grid>
     </div>

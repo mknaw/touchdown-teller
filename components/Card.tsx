@@ -10,7 +10,7 @@ export default function Card({
   className?: string;
 }) {
   return (
-    <Paper variant='outlined' className={classNames(className, 'p-5')}>
+    <Paper variant='outlined' className={classNames(className, 'p-5 flex-col')}>
       {/* TODO maybe should _actually_ use `Card` here, but who knows */}
       {children}
     </Paper>

@@ -80,8 +80,10 @@ function SideDrawer({
           !isOpen && 'opacity-0'
         )}
       >
-        <div className={'w-1/3 h-screen bg-red-500 pt-12'}>
-          <List className={'flex-col h-full justify-space mt-5'}>
+        <div className={'w-1/3 h-screen bg-red-500'}>
+          <List
+            className={'flex-col h-full justify-space mt-0 pt-0 top-header'}
+          >
             {Object.keys(TeamKey).map((key) => (
               <ListItem
                 key={key}
