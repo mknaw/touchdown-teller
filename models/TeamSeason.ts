@@ -41,4 +41,16 @@ export default class TeamSeason {
       rushTds: teamSeason.rushTds,
     });
   }
+
+  toStoreData(): TeamSeasonData {
+    return {
+      passAtt: this.passAtt,
+      passCmp: this.passCmp,
+      passYds: this.passYds,
+      passTds: this.passTds,
+      rushAtt: this.rushAtt,
+      rushYds: this.rushYds,
+      rushTds: this.rushTds,
+    };
+  }
 }

@@ -36,6 +36,23 @@ export const options = {
     legend: {
       display: false,
     },
+    // TODO don't need the 3 decimal places here.
+    //tooltip: {
+    //  callbacks: {
+    //    label: function (context) {
+    //      let label = context.dataset.label || '';
+
+    //      if (label) {
+    //        label += ': ';
+    //      }
+    //      console.log(context);
+    //      if (context.parsed.y !== null) {
+    //        label += context.parsed.y;
+    //      }
+    //      return label;
+    //    },
+    //  },
+    //},
   },
   responsive: true,
   maintainAspectRatio: false,

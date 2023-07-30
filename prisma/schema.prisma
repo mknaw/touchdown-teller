@@ -25,9 +25,9 @@ model Player {
   position String
   name     String
   team     Team?         @relation("player_teamToteam", fields: [teamName], references: [key], onDelete: NoAction, onUpdate: NoAction)
-  passGames  PassGames[]
-  recvGames  RecvGames[]
-  rushGames  RushGames[]
+  passGames  PassGame[]
+  recvGames  RecvGame[]
+  rushGames  RushGame[]
 
   @@map("player")
 }
@@ -43,10 +43,10 @@ model Team {
   key       String       @id @map("name")
   awayGames Game[]       @relation("game_awayToteam")
   homeGames Game[]       @relation("game_homeToteam")
-  passGames PassGames[]  @relation("passing_game_stats_teamToteam")
+  passGames PassGame[]  @relation("passing_game_stats_teamToteam")
   players   Player[]     @relation("player_teamToteam")
-  recvGames RecvGames[]  @relation("receiving_game_stats_teamToteam")
-  rushGames RushGames[]  @relation("rushing_game_stats_teamToteam")
+  recvGames RecvGame[]  @relation("receiving_game_stats_teamToteam")
+  rushGames RushGame[]  @relation("rushing_game_stats_teamToteam")
   seasons   TeamSeason[] @relation("team_season_teamToteam")
 
   @@map("team")
@@ -68,7 +68,7 @@ model TeamSeason {
   @@map("team_season")
 }
 
-model PassGames {
+model PassGame {
   id                                 Int    @id @default(autoincrement())
   player_id                          Int
   team                               String
@@ -87,7 +87,7 @@ model PassGames {
   @@map("passing_game_stats")
 }
 
-model RecvGames {
+model RecvGame {
   id                                   Int    @id @default(autoincrement())
   player_id                            Int
   team                                 String
@@ -105,7 +105,7 @@ model RecvGames {
   @@map("receiving_game_stats")
 }
 
-model RushGames {
+model RushGame {
   id                                 Int    @id @default(autoincrement())
   player_id                          Int
   team                               String

@@ -67,22 +67,25 @@ const makeChartData = <
   const lastSeasonTotals = [...lastSeasons.values()];
   const seasonTotals = [...annualizedSeasons.values()];
   // TODO wonder if this wasn't supposed to be a single obj with all stats.
-  stats.forEach((stat) => {
-    const lastRemaining = Math.max(
-      // Really shouldn't ever be < 0... but whatever
-      (lastSeason[stat] || 0) - _.sumBy(lastSeasonTotals, stat as string),
-      0
-    );
-    const remaining = Math.max(
-      (teamSeason[stat] || 0) - _.sumBy(seasonTotals, stat as string),
-      0
-    );
-    chartData.push({
-      name: REMAINING_LABEL,
-      [stat]: [lastRemaining, remaining],
-    });
-  });
-
+  chartData.push(
+    // TODO fix the typing here
+    stats.reduce<any>(
+      (acc, stat) => {
+        const lastRemaining = Math.max(
+          // Really shouldn't ever be < 0... but whatever
+          (lastSeason[stat] || 0) - _.sumBy(lastSeasonTotals, stat as string),
+          0
+        );
+        const remaining = Math.max(
+          (teamSeason[stat] || 0) - _.sumBy(seasonTotals, stat as string),
+          0
+        );
+        acc[stat] = [lastRemaining, remaining];
+        return acc;
+      },
+      { name: REMAINING_LABEL }
+    )
+  );
   return chartData;
 };
 
@@ -100,14 +103,16 @@ export const PassChartGroup = ({
   const chartData = makeChartData(
     seasons,
     lastSeasons,
-    ['att', 'yds', 'tds'],
+    ['att', 'cmp', 'yds', 'tds'],
     {
       att: teamSeason.passAtt,
+      cmp: teamSeason.passCmp,
       yds: teamSeason.passYds,
       tds: teamSeason.passTds,
     },
     {
       att: lastSeason.passAtt,
+      cmp: lastSeason.passCmp,
       yds: lastSeason.passYds,
       tds: lastSeason.passTds,
     }
@@ -118,6 +123,10 @@ export const PassChartGroup = ({
       <HzChart
         label={'Passing Attempts'}
         data={chartData.map(({ name, att }) => ({ name, stat: att }))}
+      />
+      <HzChart
+        label={'Completions'}
+        data={chartData.map(({ name, cmp }) => ({ name, stat: cmp }))}
       />
       <HzChart
         label={'Passing Yards'}

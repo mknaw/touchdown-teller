@@ -11,6 +11,8 @@ module.exports = {
       spacing: {
         'header': '10vh',
         'body': '90vh',
+        '1/10': '10%',
+        '8/10': '80%',
       },
     },
   },

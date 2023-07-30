@@ -13,7 +13,7 @@ import {
 } from 'chart.js';
 import _ from 'lodash';
 
-import { PassGames, RecvGames, RushGames } from '@prisma/client';
+import { PassGame, RecvGame, RushGame } from '@prisma/client';
 
 import { gameCount } from '@/constants';
 
@@ -51,7 +51,7 @@ export const options = {
   },
 };
 
-type Game = PassGames | RecvGames | RushGames;
+type Game = PassGame | RecvGame | RushGame;
 
 export default function PlayerGameLog({
   games,
@@ -78,7 +78,6 @@ export default function PlayerGameLog({
   if (games.length > 17) {
     alert('Too many games!');
   }
-  console.log(games, data);
   return (
     <div className={className}>
       <Line options={options} data={data} />

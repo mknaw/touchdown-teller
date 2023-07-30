@@ -26,7 +26,7 @@ type PlayerStatSliderPanelProps<T> = {
   season: T;
   pastSeason: T | undefined;
   setSeason: (stats: T) => void;
-  persistSeason: (stats: T) => void;
+  persistSeason: (stats: T, field: keyof T) => void;
 };
 
 export default function PlayerStatSliderPanel<T extends PlayerSeason>({
@@ -38,32 +38,30 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
   // TODO this I think is also doable if you annotate as `keyof T` among keys
   // which are numbers...
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const makeNewStats = (field: string, value: any): T => {
+  const makeNewStats = (field: keyof T, value: any): T => {
     const cloned = _.cloneDeep(season);
     if (field in cloned) {
-      // TODO I don't think calling it `as keyof T` is the 100% correct TS way
-      // to achieve this, but also not sure how else to do it.
-      cloned[field as keyof T] = value;
+      cloned[field] = value;
     }
     return cloned;
   };
 
   const onChange =
-    (field: string, persist: boolean) =>
+    (field: keyof T, persist: boolean) =>
       (
         _event: Event | SyntheticEvent<Element, Event>,
         value: number | number[]
       ) => {
         if (typeof value === 'number') {
           if (persist) {
-            persistSeason(makeNewStats(field, value));
+            persistSeason(makeNewStats(field, value), field);
           } else {
             setSeason(makeNewStats(field, value));
           }
         }
       };
 
-  const getValue = (field: string) => {
+  const getValue = (field: keyof T) => {
     if (field in season) {
       const value = season[field as keyof typeof season];
       if (typeof value === 'number') {
@@ -73,10 +71,12 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
     return 0;
   };
 
-  const getCommonProps = (field: string) => {
+  const getCommonProps = (field: keyof T) => {
     const value = getValue(field);
-    const pct = season.isPercentField(field) ? '%' : '';
-    const label = `${season.labelFor(field)}: ${value.toFixed(1)}${pct}`;
+    const pct = season.isPercentField(field as string) ? '%' : '';
+    const label = `${season.labelFor(field as string)}: ${value.toFixed(
+      1
+    )}${pct}`;
     return {
       value,
       label,
@@ -104,25 +104,25 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
           min={15}
           max={50}
           marks={ps && makeMarks(ps.att, (v) => v.toFixed(1))}
-          {...getCommonProps('att')}
+          {...getCommonProps('att' as keyof T)}
         />
         <LabeledSlider
           min={20}
           max={75}
           marks={ps && makeMarks(ps.cmp, (v) => `${v.toFixed(1)}%`)}
-          {...getCommonProps('cmp')}
+          {...getCommonProps('cmp' as keyof T)}
         />
         <LabeledSlider
           min={1}
           max={15}
           marks={ps && makeMarks(ps.ypa, (v) => v.toFixed(1))}
-          {...getCommonProps('ypa')}
+          {...getCommonProps('ypa' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={15}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
-          {...getCommonProps('tdp')}
+          {...getCommonProps('tdp' as keyof T)}
         />
       </>
     );
@@ -140,19 +140,19 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
           min={0}
           max={15}
           marks={ps && makeMarks(ps.tgt, (v) => v.toFixed(0))}
-          {...getCommonProps('tgt')}
+          {...getCommonProps('tgt' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={100}
           marks={ps && makeMarks(ps.rec, (v) => `${v.toFixed(1)}%`)}
-          {...getCommonProps('rec')}
+          {...getCommonProps('rec' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={20}
           marks={ps && makeMarks(ps.ypr, (v) => v.toFixed(1))}
-          {...getCommonProps('ypr')}
+          {...getCommonProps('ypr' as keyof T)}
         />
         <LabeledSlider
           min={0}
@@ -176,19 +176,19 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
           min={0}
           max={25}
           marks={ps && makeMarks(ps.att, (v) => v.toFixed(0))}
-          {...getCommonProps('att')}
+          {...getCommonProps('att' as keyof T)}
         />
         <LabeledSlider
           min={1}
           max={7}
           marks={ps && makeMarks(ps.ypc, (v) => v.toFixed(1))}
-          {...getCommonProps('ypc')}
+          {...getCommonProps('ypc' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={100}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
-          {...getCommonProps('tdp')}
+          {...getCommonProps('tdp' as keyof T)}
         />
       </>
     );

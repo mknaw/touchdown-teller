@@ -3,14 +3,12 @@ import './globals.css';
 import type { AppProps } from 'next/app';
 
 import Nav from '@/pages/nav';
-import { getTeamName } from '@/utils';
 
 export default function MyApp({ Component, pageProps }: AppProps) {
-  // TODO not really safe to assume this will always be present...
-  const { team } = pageProps;
+  const { title } = pageProps;
   return (
     <ThemeProvider>
-      <Nav header={getTeamName(team.key)}>
+      <Nav header={title || 'Touchdown Teller'}>
         <Component {...pageProps} />
       </Nav>
     </ThemeProvider>

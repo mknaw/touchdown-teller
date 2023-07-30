@@ -17,7 +17,36 @@ import Typography from '@mui/material/Typography';
 import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
+import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
+
+function SeasonSummary<T extends PlayerSeason>({ season }: { season: T }) {
+  const labelledStats: string[] = [];
+  if (season instanceof PassSeason) {
+    const annualized = season.annualize();
+    labelledStats.push(
+      `${annualized.att.toFixed(0)} attempts`,
+      `${annualized.yds.toFixed(0)} yards`,
+      `${annualized.tds.toFixed(0)} TDs`
+    );
+  } else if (season instanceof RecvSeason) {
+    const annualized = season.annualize();
+    labelledStats.push(
+      `${annualized.tgt.toFixed(0)} targets`,
+      `${annualized.rec.toFixed(0)} receptions`,
+      `${annualized.yds.toFixed(0)} yards`,
+      `${annualized.tds.toFixed(0)} TDs`
+    );
+  } else if (season instanceof RushSeason) {
+    const annualized = season.annualize();
+    labelledStats.push(
+      `${annualized.att.toFixed(0)} carries`,
+      `${annualized.yds.toFixed(0)} yards`,
+      `${annualized.tds.toFixed(0)} TDs`
+    );
+  }
+  return <Typography>{labelledStats.join(' / ')}</Typography>;
+}
 
 const StatTypeToggleButton = ({
   statType,
@@ -49,7 +78,7 @@ type PlayerPanelProps<T extends PlayerSeason> = {
   pastSeasons: IdMap<T>;
   initSeason: (player: Player) => void;
   updateSeason: (season: T) => void;
-  persistSeason: (season: T) => void;
+  persistSeason: (season: T, field: keyof T) => void;
   deleteSeason: (playerId: number) => void;
 };
 
@@ -105,7 +134,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
       {stattedPlayers.length ? (
         <>
           <Select
-            className={'w-full text-center text-2xl'}
+            className={'w-full text-center text-2xl mb-8'}
             value={selectedPlayer ? `${selectedPlayer.id}` : ''}
             onChange={(event: SelectChangeEvent) => {
               setSelectedPlayer(
@@ -121,24 +150,33 @@ export default function PlayerPanel<T extends PlayerSeason>({
             ))}
           </Select>
           {season && (
-            <Paper className={'my-8 p-8'}>
-              <PlayerStatSliderPanel
-                season={season}
-                pastSeason={pastSeasons.get(selectedPlayer.id)}
-                setSeason={updateSeason}
-                persistSeason={persistSeason}
-              />
-              <div className={'flex justify-end w-full'}>
-                <IconButton
-                  onClick={() => {
-                    deleteSeason(selectedPlayer.id);
-                    setSelectedPlayer(undefined);
-                  }}
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </div>
-            </Paper>
+            <>
+              <Paper className={'p-8'}>
+                <PlayerStatSliderPanel
+                  season={season}
+                  pastSeason={pastSeasons.get(selectedPlayer.id)}
+                  setSeason={updateSeason}
+                  persistSeason={persistSeason}
+                />
+                {/* TODO style this better */}
+                <Paper>
+                  <div
+                    className={'flex w-full justify-center items-center pt-5'}
+                  >
+                    <SeasonSummary season={season} />
+                    <IconButton
+                      onClick={() => {
+                        deleteSeason(selectedPlayer.id);
+                        setSelectedPlayer(undefined);
+                      }}
+                      className={'absolute right-0 -translate-x-full'}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </div>
+                </Paper>
+              </Paper>
+            </>
           )}
         </>
       ) : (

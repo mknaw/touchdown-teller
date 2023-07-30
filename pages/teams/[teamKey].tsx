@@ -6,19 +6,19 @@ import { ParsedUrlQuery } from 'querystring';
 import { useIndexedDBStore } from 'use-indexeddb';
 
 import {
-  PassGames,
+  PassGame,
   Player,
-  Prisma,
   PrismaClient,
-  RecvGames,
-  RushGames,
+  RecvGame,
+  RushGame,
 } from '@prisma/client';
 
 import Grid from '@mui/material/Grid';
+import Snackbar from '@mui/material/Snackbar';
 import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
-import { Position, StatType, TeamKey, gameCount, lastYear } from '@/constants';
+import { Position, StatType, TeamKey } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
 import {
   PassChartGroup,
@@ -28,6 +28,20 @@ import {
 import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
+import {
+  getPlayerPassAggregates,
+  getPlayerPassGame,
+  getPlayerRecvAggregates,
+  getPlayerRecvGame,
+  getPlayerRushAggregates,
+  getPlayerRushGame,
+  getTeam,
+} from '@/features/teams/queries';
+import {
+  clampPlayerSeason,
+  clampTeamSeason,
+  ensureValid,
+} from '@/features/teams/validation';
 import {
   PassAggregate,
   PassSeason,
@@ -49,187 +63,10 @@ import {
   TeamWithExtras,
   createPlayerSeason,
 } from '@/types';
-import { makeIdMap, setOnClone } from '@/utils';
+import { getTeamName, makeIdMap, setOnClone } from '@/utils';
 
 interface Params extends ParsedUrlQuery {
   teamKey: TeamKey;
-}
-
-async function getTeam(
-  prisma: PrismaClient,
-  teamKey: string
-): Promise<TeamWithExtras> {
-  return await prisma.team.findFirstOrThrow({
-    where: {
-      key: teamKey,
-    },
-    include: {
-      players: {
-        include: {
-          passGames: {
-            where: {
-              season: lastYear,
-            },
-          },
-          rushGames: {
-            where: {
-              season: lastYear,
-            },
-          },
-          recvGames: {
-            where: {
-              season: lastYear,
-            },
-          },
-        },
-      },
-      seasons: {
-        where: {
-          season: lastYear,
-        },
-      },
-      homeGames: true,
-      awayGames: true,
-    },
-  });
-}
-
-// TODO also could probably easily dedupe these fns
-async function getPlayerPassGames(
-  prisma: PrismaClient,
-  playerIds: number[]
-): Promise<PassGames[]> {
-  return prisma.passGames.findMany({
-    where: {
-      season: lastYear,
-      player_id: {
-        in: playerIds,
-      },
-    },
-  });
-}
-
-async function getPlayerRecvGames(
-  prisma: PrismaClient,
-  playerIds: number[]
-): Promise<RecvGames[]> {
-  return prisma.recvGames.findMany({
-    where: {
-      season: lastYear,
-      player_id: {
-        in: playerIds,
-      },
-    },
-  });
-}
-
-async function getPlayerRushGames(
-  prisma: PrismaClient,
-  playerIds: number[]
-): Promise<RushGames[]> {
-  return prisma.rushGames.findMany({
-    where: {
-      season: lastYear,
-      player_id: {
-        in: playerIds,
-      },
-    },
-  });
-}
-
-const downcastBigInts = (obj: object) =>
-  _.mapValues(obj, (val) => (typeof val === 'bigint' ? Number(val) : val));
-
-async function getPlayerPassAggregates(
-  prisma: PrismaClient,
-  teamKey: string,
-  playerIds: number[]
-): Promise<PassAggregate[]> {
-  const agg: object[] = await prisma.$queryRaw`
-    SELECT 
-        p.id AS playerId,
-        p.name,
-        s.team,
-        COUNT(s.week) AS gp,
-        SUM(s.att) AS att,
-        SUM(s.cmp) AS cmp,
-        SUM(s.yds) AS yds,
-        SUM(s.td) AS tds
-    FROM 
-        passing_game_stats s
-    JOIN 
-        player p ON p.id = s.player_id
-    WHERE
-        s.season = 2022
-        AND (
-          s.team = ${teamKey}
-          OR s.player_id IN (${Prisma.join(playerIds)})
-        )
-    GROUP BY 
-        s.player_id, s.team;
-    `;
-  return _.map(agg, downcastBigInts) as PassAggregate[];
-}
-
-async function getPlayerRecvAggregates(
-  prisma: PrismaClient,
-  teamKey: string,
-  playerIds: number[]
-): Promise<RecvAggregate[]> {
-  const agg: object[] = await prisma.$queryRaw`
-    SELECT 
-        p.id AS playerId,
-        p.name,
-        s.team,
-        COUNT(s.week) AS gp,
-        SUM(s.tgt) AS tgt,
-        SUM(s.rec) AS rec,
-        SUM(s.yds) AS yds,
-        SUM(s.td) AS tds
-    FROM 
-        receiving_game_stats s
-    JOIN 
-        player p ON p.id = s.player_id
-    WHERE
-        s.season = 2022
-        AND (
-          s.team = ${teamKey}
-          OR s.player_id IN (${Prisma.join(playerIds)})
-        )
-    GROUP BY 
-        s.player_id, s.team;
-    `;
-  return _.map(agg, downcastBigInts) as RecvAggregate[];
-}
-
-async function getPlayerRushAggregates(
-  prisma: PrismaClient,
-  teamKey: string,
-  playerIds: number[]
-): Promise<RushAggregate[]> {
-  const agg: object[] = await prisma.$queryRaw`
-    SELECT 
-        p.id AS playerId,
-        p.name,
-        s.team,
-        COUNT(s.week) AS gp,
-        SUM(s.att) AS att,
-        SUM(s.yds) AS yds,
-        SUM(s.td) AS tds
-    FROM 
-        rushing_game_stats s
-    JOIN 
-        player p ON p.id = s.player_id
-    WHERE
-        s.season = 2022
-        AND (
-          s.team = ${teamKey}
-          OR s.player_id IN (${Prisma.join(playerIds)})
-        )
-    GROUP BY 
-        s.player_id, s.team;
-    `;
-  return _.map(agg, downcastBigInts) as RushAggregate[];
 }
 
 // TODO have to 404 if not among these?
@@ -258,9 +95,9 @@ export const getStaticProps: GetStaticProps<
     recvAggregates,
     rushAggregates,
   ] = await Promise.all([
-    getPlayerPassGames(prisma, playerIds),
-    getPlayerRecvGames(prisma, playerIds),
-    getPlayerRushGames(prisma, playerIds),
+    getPlayerPassGame(prisma, playerIds),
+    getPlayerRecvGame(prisma, playerIds),
+    getPlayerRushGame(prisma, playerIds),
     getPlayerPassAggregates(prisma, teamKey, playerIds),
     getPlayerRecvAggregates(prisma, teamKey, playerIds),
     getPlayerRushAggregates(prisma, teamKey, playerIds),
@@ -269,6 +106,7 @@ export const getStaticProps: GetStaticProps<
   return {
     props: {
       team,
+      title: getTeamName(team.key as TeamKey),
       passGames,
       recvGames,
       rushGames,
@@ -277,6 +115,13 @@ export const getStaticProps: GetStaticProps<
       rushAggregates,
     },
   };
+};
+
+export type Projection = {
+  teamSeason: TeamSeason;
+  passSeasons: PassSeason[];
+  recvSeasons: RecvSeason[];
+  rushSeasons: RushSeason[];
 };
 
 const getDataHandlers = <T extends PlayerSeason>(
@@ -299,11 +144,12 @@ const getDataHandlers = <T extends PlayerSeason>(
     setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
   };
 
-  const initSeason = (player: Player) => {
+  const initSeason = (player: Player, projection: Projection) => {
     const lastSeason = playerSeasons.get(player.id);
-    const season = lastSeason
+    let season = lastSeason
       ? _.cloneDeep(lastSeason)
       : constructor.default(player, teamKey as TeamKey);
+    season = ensureValid(season, projection);
     store
       .add(toStoreData(season), player.id)
       // TODO would prefer to render optimistically and resolve failure
@@ -318,20 +164,22 @@ const getDataHandlers = <T extends PlayerSeason>(
 
   const persistSeason = (
     season: T,
-    // `validator` returns an error message if the update is _not_ valid.
-    validator: undefined | (() => string | null)
+    projection: Projection,
+    field: keyof T,
+    setValidationMessage: (message: string) => void
   ) => {
-    updateSeason(season);
-    const errorMsg = (validator && validator()) || '';
-    if (errorMsg) {
-      // Use the `store` to fetch the previous value.
-      // Less overhead trying to "remember" it this way.
-      store.getByID(season.playerId).then((seasonData) => {
-        alert(errorMsg);
-        updateSeason(new constructor(seasonData));
-      });
+    const [updatedSeason, wasValid] = clampPlayerSeason(
+      season,
+      projection,
+      field
+    );
+    updateSeason(updatedSeason);
+    if (wasValid) {
+      store.update(toStoreData(updatedSeason), season.playerId);
     } else {
-      store.update(toStoreData(season), season.playerId);
+      setValidationMessage(
+        'Player projection limited in accordance with team total.'
+      );
     }
   };
 
@@ -350,27 +198,6 @@ const getDataHandlers = <T extends PlayerSeason>(
     persistSeason,
     deleteSeason,
   };
-};
-
-// TODO I think it will be better to have one big State that we pass
-// to a validation module (maybe with an "event" characterizing what
-// just changed)
-const validateAgainstTeamTotals = <T extends PlayerSeason>(
-  seasons: IdMap<T>,
-  teamSeason: TeamSeason,
-  specs: [string, string, string][]
-) => {
-  if (!teamSeason) return '';
-  const annualized = [...seasons.values()].map((s) => s.annualize());
-  for (const [stat, teamStat, label] of specs) {
-    if (
-      _.sumBy(annualized, stat) >
-      teamSeason[teamStat as keyof typeof teamSeason]
-    ) {
-      return `Sum of players' projected ${label} cannot exceed projected team total.`;
-    }
-  }
-  return '';
 };
 
 const filterHistoricalPassAggregates = (seasons: PassAggregate[]) =>
@@ -392,9 +219,9 @@ export default function Page({
   rushAggregates,
 }: {
   team: TeamWithExtras;
-  passGames: PassGames[];
-  recvGames: RecvGames[];
-  rushGames: RushGames[];
+  passGames: PassGame[];
+  recvGames: RecvGame[];
+  rushGames: RushGame[];
   passAggregates: PassAggregate[];
   recvAggregates: RecvAggregate[];
   rushAggregates: RushAggregate[];
@@ -410,17 +237,8 @@ export default function Page({
   const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(
     undefined
   );
-  // TODO
-  //useEffect(() => {
-  //  setSelectedPlayer(undefined);
-  //}, [team]);
 
   const [teamSeason, setTeamSeason] = useState<TeamSeason | null>(null);
-  const persistTeamSeason = (data: TeamSeasonData) => {
-    const teamProjection = new TeamSeason(data);
-    teamStore.update(data, team.key);
-    setTeamSeason(teamProjection);
-  };
   const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
   const lastSeason = team.seasons[0];
   if (!lastSeason) {
@@ -440,6 +258,11 @@ export default function Page({
     }
     fetch();
   }, [team, teamStore]);
+
+  const [playerSeasonValidationMessage, setPlayerSeasonValidationMessage] =
+    useState('');
+  const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
+    useState('');
 
   const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
   // TODO really embarrassing to WET this up...
@@ -466,18 +289,6 @@ export default function Page({
     (s: PassSeason) => s.toStoreData(),
     setPassSeasons
   );
-  const passPersistValidator = () => {
-    if (_.sumBy([...passSeasons.values()], 'gp') > gameCount) {
-      return `Team QBs cannot exceed ${gameCount} games played.`;
-    }
-    if (!teamSeason) return '';
-    return validateAgainstTeamTotals(passSeasons, teamSeason, [
-      ['att', 'passAtt', 'attempts'],
-      ['cmp', 'passCmp', 'completions'],
-      ['yds', 'passYds', 'yards'],
-      ['tds', 'passTds', 'touchdowns'],
-    ]);
-  };
 
   const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
   const playerRecvSeasons = makeIdMap(
@@ -503,17 +314,6 @@ export default function Page({
     (s: RecvSeason) => s.toStoreData(),
     setRecvSeasons
   );
-  const recvPersistValidator = () => {
-    // TODO questionable ...
-    // should have it but nothing should be changeable if we don't
-    if (!teamSeason) return '';
-    return validateAgainstTeamTotals(passSeasons, teamSeason, [
-      ['tgt', 'passAtt', 'targets'],
-      ['rec', 'passCmp', 'receptions'],
-      ['yds', 'passYds', 'yards'],
-      ['tds', 'passTds', 'touchdowns'],
-    ]);
-  };
 
   const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
   const playerRushSeasons = makeIdMap(
@@ -538,17 +338,6 @@ export default function Page({
     (s: RushSeason) => s.toStoreData(),
     setRushSeasons
   );
-  const rushPersistValidator = () => {
-    // TODO questionable ...
-    // should have it but nothing should be changeable if we don't
-    if (!teamSeason) return '';
-    if (!teamSeason) return '';
-    return validateAgainstTeamTotals(passSeasons, teamSeason, [
-      ['att', 'rushAtt', 'carries'],
-      ['yds', 'rushYds', 'yards'],
-      ['tds', 'rushTds', 'touchdowns'],
-    ]);
-  };
 
   useEffect(() => {
     const fetch = async () => {
@@ -558,7 +347,7 @@ export default function Page({
       rushDataHandlers.initSeasons();
     };
     fetch();
-  }, []);
+  }, [team]);
 
   let playerPanel;
   const commonProps = {
@@ -573,74 +362,112 @@ export default function Page({
     selectedPlayer,
     setSelectedPlayer,
   };
+  if (!teamSeason) {
+    return null; // Shouldn't happen.
+  }
+
+  const projection = {
+    teamSeason,
+    passSeasons: [...passSeasons.values()],
+    recvSeasons: [...recvSeasons.values()],
+    rushSeasons: [...rushSeasons.values()],
+  };
+
+  const persistTeamSeason = () => {
+    const [newTeamSeason, wasValid] = clampTeamSeason(projection);
+    setTeamSeason(() => _.cloneDeep(newTeamSeason));
+
+    if (wasValid) {
+      teamStore.update(newTeamSeason.toStoreData(), team.key);
+    } else {
+      setTeamSeasonValidationMessage(
+        'Team total limited in accordance with player projection total.'
+      );
+    }
+  };
+
   switch (statType) {
-  case StatType.PASS:
-    playerPanel = (
-      <PlayerPanel<PassSeason>
-        {...commonProps}
-        relevantPositions={[Position.QB]}
-        seasons={passSeasons}
-        pastSeasons={playerPassSeasons}
-        initSeason={passDataHandlers.initSeason}
-        updateSeason={passDataHandlers.updateSeason}
-        persistSeason={(s) =>
-          passDataHandlers.persistSeason(s, passPersistValidator)
-        }
-        deleteSeason={passDataHandlers.deleteSeason}
-      />
-    );
-    break;
-  case StatType.RECV:
-    playerPanel = (
-      <PlayerPanel<RecvSeason>
-        {...commonProps}
-        relevantPositions={[Position.WR, Position.TE, Position.RB]}
-        seasons={recvSeasons}
-        pastSeasons={playerRecvSeasons}
-        initSeason={recvDataHandlers.initSeason}
-        updateSeason={recvDataHandlers.updateSeason}
-        persistSeason={(s) =>
-          recvDataHandlers.persistSeason(s, recvPersistValidator)
-        }
-        deleteSeason={recvDataHandlers.deleteSeason}
-      />
-    );
-    break;
-  default: // Rushing
-    playerPanel = (
-      <PlayerPanel<RushSeason>
-        {...commonProps}
-        relevantPositions={[Position.RB, Position.QB, Position.WR]}
-        seasons={rushSeasons}
-        pastSeasons={playerRushSeasons}
-        initSeason={rushDataHandlers.initSeason}
-        updateSeason={rushDataHandlers.updateSeason}
-        persistSeason={(s) =>
-          rushDataHandlers.persistSeason(s, rushPersistValidator)
-        }
-        deleteSeason={rushDataHandlers.deleteSeason}
-      />
-    );
+    case StatType.PASS:
+      playerPanel = (
+        <PlayerPanel<PassSeason>
+          {...commonProps}
+          relevantPositions={[Position.QB]}
+          seasons={passSeasons}
+          pastSeasons={playerPassSeasons}
+          initSeason={(p) => passDataHandlers.initSeason(p, projection)}
+          updateSeason={passDataHandlers.updateSeason}
+          persistSeason={(s, f) =>
+            passDataHandlers.persistSeason(
+              s,
+              projection,
+              f,
+              setPlayerSeasonValidationMessage
+            )
+          }
+          deleteSeason={passDataHandlers.deleteSeason}
+        />
+      );
+      break;
+    case StatType.RECV:
+      playerPanel = (
+        <PlayerPanel<RecvSeason>
+          {...commonProps}
+          relevantPositions={[Position.WR, Position.TE, Position.RB]}
+          seasons={recvSeasons}
+          pastSeasons={playerRecvSeasons}
+          initSeason={(p) => recvDataHandlers.initSeason(p, projection)}
+          updateSeason={recvDataHandlers.updateSeason}
+          persistSeason={(s, f) =>
+            recvDataHandlers.persistSeason(
+              s,
+              projection,
+              f,
+              setPlayerSeasonValidationMessage
+            )
+          }
+          deleteSeason={recvDataHandlers.deleteSeason}
+        />
+      );
+      break;
+    default: // Rushing
+      playerPanel = (
+        <PlayerPanel<RushSeason>
+          {...commonProps}
+          relevantPositions={[Position.RB, Position.QB, Position.WR]}
+          seasons={rushSeasons}
+          pastSeasons={playerRushSeasons}
+          initSeason={(p) => rushDataHandlers.initSeason(p, projection)}
+          updateSeason={rushDataHandlers.updateSeason}
+          persistSeason={(s, f) =>
+            rushDataHandlers.persistSeason(
+              s,
+              projection,
+              f,
+              setPlayerSeasonValidationMessage
+            )
+          }
+          deleteSeason={rushDataHandlers.deleteSeason}
+        />
+      );
   }
 
   const games = selectedPlayer
     ? {
-      [StatType.PASS]: _.filter(
-        passGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-      [StatType.RECV]: _.filter(
-        recvGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-      [StatType.RUSH]: _.filter(
-        rushGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-    }[statType]
+        [StatType.PASS]: _.filter(
+          passGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+        [StatType.RECV]: _.filter(
+          recvGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+        [StatType.RUSH]: _.filter(
+          rushGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+      }[statType]
     : [];
 
-  // TODO not sure how I'll handle old players for the lastSeason...
   return (
     <div className={'flex h-full pb-5'}>
       <Grid
@@ -652,12 +479,19 @@ export default function Page({
         <Grid item xs={6} className={'h-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
+            <Snackbar
+              className={'absolute'}
+              open={!!playerSeasonValidationMessage}
+              autoHideDuration={3000}
+              message={playerSeasonValidationMessage}
+              onClose={() => setPlayerSeasonValidationMessage('')}
+            />
           </Card>
         </Grid>
         <Grid item xs={6} container direction={'column'} spacing={spacing}>
           <Grid item xs={8}>
-            <Card className={'h-full'}>
-              <Typography className={'text-xl w-full text-center'}>
+            <Card className={'h-full relative'}>
+              <Typography className={'text-3xl w-full text-center'}>
                 Team Stats
               </Typography>
               {teamSeason && team.seasons[0] && (
@@ -723,18 +557,24 @@ export default function Page({
                   }
                 </>
               )}
+              <Snackbar
+                className={'absolute'}
+                open={!!teamSeasonValidationMessage}
+                autoHideDuration={3000}
+                message={teamSeasonValidationMessage}
+                onClose={() => setTeamSeasonValidationMessage('')}
+              />
             </Card>
           </Grid>
           <Grid item xs={4} className={'h-full'}>
             <Card className={'h-full w-full'}>
               {games.length ? (
                 <>
-                  <div className={'flex-col h-full bg-slate-500'}>
+                  <div className={'flex flex-col h-full'}>
                     <Typography className={'text-center'}>
                       2022 Gamelog
                     </Typography>
-                    {/* TODO flexing to fill the rest of the space is driving me insane! */}
-                    <div className={'flex w-full bg-red-500'}>
+                    <div className={'flex w-full h-full'}>
                       <PlayerGameLog
                         className={'h-full w-full'}
                         games={games}

@@ -2,8 +2,9 @@ import { Player } from '@prisma/client';
 
 import { TeamKey } from '@/constants';
 
-type AnnualizedPassSeason = {
+export type AnnualizedPassSeason = {
   att: number;
+  cmp: number;
   yds: number;
   tds: number;
 };
@@ -134,6 +135,7 @@ export class PassSeason implements PassSeasonData {
   annualize(): AnnualizedPassSeason {
     return {
       att: this.att * this.gp,
+      cmp: (this.cmp / 100) * this.att * this.gp,
       yds: this.ypa * this.att * (this.cmp / 100) * this.gp,
       tds: (this.tdp / 100) * this.att * this.gp,
     };
@@ -151,7 +153,7 @@ export type RecvAggregate = {
   tds: number;
 };
 
-type AnnualizedRecvSeason = {
+export type AnnualizedRecvSeason = {
   tgt: number;
   rec: number;
   yds: number;
@@ -273,7 +275,7 @@ export type RushAggregate = {
   tds: number;
 };
 
-type AnnualizedRushSeason = {
+export type AnnualizedRushSeason = {
   att: number;
   yds: number;
   tds: number;

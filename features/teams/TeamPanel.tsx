@@ -8,15 +8,16 @@ import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
 import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 
+const valueLabelFormat = (value: number) => value.toFixed(0);
+
 interface TeamStatsPanelProps {
   statType: StatType;
   teamSeason: TeamSeason;
   setTeamSeason: Dispatch<SetStateAction<TeamSeason | null>>;
-  persistTeamSeason: (teamSeason: TeamSeasonData) => void;
+  persistTeamSeason: () => void;
   lastSeason: PrismaTeamSeason;
 }
 
-// TODO also need validation here...
 export default function TeamPanel({
   statType,
   teamSeason,
@@ -36,17 +37,6 @@ export default function TeamPanel({
             [name]: value,
           })
       );
-    }
-  };
-
-  const onChangeCommitted = (event: SyntheticEvent | Event) => {
-    const { target } = event;
-    if (target) {
-      const { name, value } = target as HTMLInputElement;
-      persistTeamSeason({
-        ...teamSeason,
-        [name as keyof TeamSeasonData]: value,
-      });
     }
   };
 
@@ -72,7 +62,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='passAtt'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
               <LabeledSlider
                 label={`Passing Yards: ${teamSeason.passYds.toFixed(1)}`}
@@ -90,7 +81,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='passYds'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
               <LabeledSlider
                 label={`Passing Touchdowns: ${teamSeason.passTds.toFixed(1)}`}
@@ -108,7 +100,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='passTds'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
             </>
           ),
@@ -131,7 +124,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='passAtt'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
               <LabeledSlider
                 label={`Passing Yards: ${teamSeason.passYds.toFixed(1)}`}
@@ -149,7 +143,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='passYds'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
               <LabeledSlider
                 label={`Passing Touchdowns: ${teamSeason.passTds.toFixed(1)}`}
@@ -167,7 +162,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='passTds'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
             </>
           ),
@@ -189,7 +185,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='rushAtt'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
               <LabeledSlider
                 label={`Rushing Yards: ${teamSeason.rushYds.toFixed(1)}`}
@@ -207,7 +204,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='rushYds'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
               <LabeledSlider
                 label={`Rushing Touchdowns: ${teamSeason.rushTds.toFixed(1)}`}
@@ -225,7 +223,8 @@ export default function TeamPanel({
                 valueLabelDisplay='auto'
                 name='rushTds'
                 onChange={handleInputChange}
-                onChangeCommitted={onChangeCommitted}
+                onChangeCommitted={persistTeamSeason}
+                valueLabelFormat={valueLabelFormat}
               />
             </>
           ),
