@@ -19,9 +19,9 @@ import { IdMap } from '@/types';
 import { mapMap } from '@/utils';
 
 const HzChart = ({ label, data }: { label: string; data: ChartData[] }) => (
-  <div className={'w-full h-12 flex'}>
+  <div className={'w-full flex items-center'}>
     <Typography className={'w-1/4'}>{label}</Typography>
-    <div className={'w-full'}>
+    <div className={'w-full overflow-hidden h-full max-h-full'}>
       <HorizontalChart data={data} />
     </div>
   </div>
@@ -31,12 +31,12 @@ const makeChartData = <
   LS extends { name: string },
   S extends { name: string; annualize: () => { [K in keyof LS]?: number } }
 >(
-    seasons: IdMap<S>,
-    lastSeasons: IdMap<LS>,
-    stats: Array<keyof LS>,
-    teamSeason: { [K in keyof LS]?: number },
-    lastSeason: { [K in keyof LS]?: number }
-  ) => {
+  seasons: IdMap<S>,
+  lastSeasons: IdMap<LS>,
+  stats: Array<keyof LS>,
+  teamSeason: { [K in keyof LS]?: number },
+  lastSeason: { [K in keyof LS]?: number }
+) => {
   const allPlayerIds = _.uniq([...seasons.keys(), ...lastSeasons.keys()]);
   _.toArray(seasons.entries());
   const annualizedSeasons = mapMap(seasons, (s) => ({

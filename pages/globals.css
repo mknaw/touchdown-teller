@@ -14,3 +14,7 @@ body {
     var(--background)
   );
 }
+
+canvas {
+  height: 100% !important;
+}

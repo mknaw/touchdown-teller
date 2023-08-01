@@ -13,7 +13,6 @@ import {
   RushGame,
 } from '@prisma/client';
 
-import Grid from '@mui/material/Grid';
 import Snackbar from '@mui/material/Snackbar';
 import Typography from '@mui/material/Typography';
 
@@ -470,13 +469,8 @@ export default function Page({
 
   return (
     <div className={'flex h-full pb-5'}>
-      <Grid
-        container
-        alignItems='stretch'
-        justifyContent='stretch'
-        spacing={spacing}
-      >
-        <Grid item xs={6} className={'h-full'}>
+      <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
+        <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
             <Snackbar
@@ -487,22 +481,26 @@ export default function Page({
               onClose={() => setPlayerSeasonValidationMessage('')}
             />
           </Card>
-        </Grid>
-        <Grid item xs={6} container direction={'column'} spacing={spacing}>
-          <Grid item xs={8}>
-            <Card className={'h-full relative'}>
-              <Typography className={'text-3xl w-full text-center'}>
-                Team Stats
-              </Typography>
-              {teamSeason && team.seasons[0] && (
-                <>
-                  <TeamPanel
-                    statType={statType}
-                    teamSeason={teamSeason}
-                    setTeamSeason={setTeamSeason}
-                    persistTeamSeason={persistTeamSeason}
-                    lastSeason={lastSeason}
-                  />
+        </div>
+        <div className={'w-full h-full grid grid-flow-row grid-rows-3 gap-8'}>
+          <Card className={'row-span-2 h-full relative flex flex-col'}>
+            <Typography className={'text-3xl w-full text-center'}>
+              Team Stats
+            </Typography>
+            {teamSeason && team.seasons[0] && (
+              <>
+                <TeamPanel
+                  statType={statType}
+                  teamSeason={teamSeason}
+                  setTeamSeason={setTeamSeason}
+                  persistTeamSeason={persistTeamSeason}
+                  lastSeason={lastSeason}
+                />
+                <div
+                  className={
+                    'grid grid-flow-row grid-rows-4 h-full overflow-hidden'
+                  }
+                >
                   {
                     {
                       [StatType.PASS]: (
@@ -555,40 +553,35 @@ export default function Page({
                       ),
                     }[statType]
                   }
-                </>
-              )}
-              <Snackbar
-                className={'absolute'}
-                open={!!teamSeasonValidationMessage}
-                autoHideDuration={3000}
-                message={teamSeasonValidationMessage}
-                onClose={() => setTeamSeasonValidationMessage('')}
-              />
-            </Card>
-          </Grid>
-          <Grid item xs={4} className={'h-full'}>
-            <Card className={'h-full w-full'}>
-              {games.length ? (
-                <>
-                  <div className={'flex flex-col h-full'}>
-                    <Typography className={'text-center'}>
-                      2022 Gamelog
-                    </Typography>
-                    <div className={'flex w-full h-full'}>
-                      <PlayerGameLog
-                        className={'h-full w-full'}
-                        games={games}
-                      />
-                    </div>
+                </div>
+              </>
+            )}
+            <Snackbar
+              className={'absolute'}
+              open={!!teamSeasonValidationMessage}
+              autoHideDuration={3000}
+              message={teamSeasonValidationMessage}
+              onClose={() => setTeamSeasonValidationMessage('')}
+            />
+          </Card>
+          <Card className={'h-full w-full'}>
+            {games.length ? (
+              <>
+                <div className={'flex flex-col h-full'}>
+                  <Typography className={'text-center'}>
+                    2022 Gamelog
+                  </Typography>
+                  <div className={'flex w-full h-full'}>
+                    <PlayerGameLog className={'h-full w-full'} games={games} />
                   </div>
-                </>
-              ) : (
-                <div>No player selected</div>
-              )}
-            </Card>
-          </Grid>
-        </Grid>
-      </Grid>
+                </div>
+              </>
+            ) : (
+              <div>No player selected</div>
+            )}
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
