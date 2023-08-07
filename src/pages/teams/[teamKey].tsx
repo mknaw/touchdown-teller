@@ -225,8 +225,6 @@ export default function Page({
   recvAggregates: RecvAggregate[];
   rushAggregates: RushAggregate[];
 }) {
-  const spacing = 4;
-
   const [statType, setStatType] = useState<StatType>(StatType.PASS);
 
   const [passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
@@ -386,85 +384,85 @@ export default function Page({
   };
 
   switch (statType) {
-    case StatType.PASS:
-      playerPanel = (
-        <PlayerPanel<PassSeason>
-          {...commonProps}
-          relevantPositions={[Position.QB]}
-          seasons={passSeasons}
-          pastSeasons={playerPassSeasons}
-          initSeason={(p) => passDataHandlers.initSeason(p, projection)}
-          updateSeason={passDataHandlers.updateSeason}
-          persistSeason={(s, f) =>
-            passDataHandlers.persistSeason(
-              s,
-              projection,
-              f,
-              setPlayerSeasonValidationMessage
-            )
-          }
-          deleteSeason={passDataHandlers.deleteSeason}
-        />
-      );
-      break;
-    case StatType.RECV:
-      playerPanel = (
-        <PlayerPanel<RecvSeason>
-          {...commonProps}
-          relevantPositions={[Position.WR, Position.TE, Position.RB]}
-          seasons={recvSeasons}
-          pastSeasons={playerRecvSeasons}
-          initSeason={(p) => recvDataHandlers.initSeason(p, projection)}
-          updateSeason={recvDataHandlers.updateSeason}
-          persistSeason={(s, f) =>
-            recvDataHandlers.persistSeason(
-              s,
-              projection,
-              f,
-              setPlayerSeasonValidationMessage
-            )
-          }
-          deleteSeason={recvDataHandlers.deleteSeason}
-        />
-      );
-      break;
-    default: // Rushing
-      playerPanel = (
-        <PlayerPanel<RushSeason>
-          {...commonProps}
-          relevantPositions={[Position.RB, Position.QB, Position.WR]}
-          seasons={rushSeasons}
-          pastSeasons={playerRushSeasons}
-          initSeason={(p) => rushDataHandlers.initSeason(p, projection)}
-          updateSeason={rushDataHandlers.updateSeason}
-          persistSeason={(s, f) =>
-            rushDataHandlers.persistSeason(
-              s,
-              projection,
-              f,
-              setPlayerSeasonValidationMessage
-            )
-          }
-          deleteSeason={rushDataHandlers.deleteSeason}
-        />
-      );
+  case StatType.PASS:
+    playerPanel = (
+      <PlayerPanel<PassSeason>
+        {...commonProps}
+        relevantPositions={[Position.QB]}
+        seasons={passSeasons}
+        pastSeasons={playerPassSeasons}
+        initSeason={(p) => passDataHandlers.initSeason(p, projection)}
+        updateSeason={passDataHandlers.updateSeason}
+        persistSeason={(s, f) =>
+          passDataHandlers.persistSeason(
+            s,
+            projection,
+            f,
+            setPlayerSeasonValidationMessage
+          )
+        }
+        deleteSeason={passDataHandlers.deleteSeason}
+      />
+    );
+    break;
+  case StatType.RECV:
+    playerPanel = (
+      <PlayerPanel<RecvSeason>
+        {...commonProps}
+        relevantPositions={[Position.WR, Position.TE, Position.RB]}
+        seasons={recvSeasons}
+        pastSeasons={playerRecvSeasons}
+        initSeason={(p) => recvDataHandlers.initSeason(p, projection)}
+        updateSeason={recvDataHandlers.updateSeason}
+        persistSeason={(s, f) =>
+          recvDataHandlers.persistSeason(
+            s,
+            projection,
+            f,
+            setPlayerSeasonValidationMessage
+          )
+        }
+        deleteSeason={recvDataHandlers.deleteSeason}
+      />
+    );
+    break;
+  default: // Rushing
+    playerPanel = (
+      <PlayerPanel<RushSeason>
+        {...commonProps}
+        relevantPositions={[Position.RB, Position.QB, Position.WR]}
+        seasons={rushSeasons}
+        pastSeasons={playerRushSeasons}
+        initSeason={(p) => rushDataHandlers.initSeason(p, projection)}
+        updateSeason={rushDataHandlers.updateSeason}
+        persistSeason={(s, f) =>
+          rushDataHandlers.persistSeason(
+            s,
+            projection,
+            f,
+            setPlayerSeasonValidationMessage
+          )
+        }
+        deleteSeason={rushDataHandlers.deleteSeason}
+      />
+    );
   }
 
   const games = selectedPlayer
     ? {
-        [StatType.PASS]: _.filter(
-          passGames,
-          (g) => g.player_id == selectedPlayer.id
-        ),
-        [StatType.RECV]: _.filter(
-          recvGames,
-          (g) => g.player_id == selectedPlayer.id
-        ),
-        [StatType.RUSH]: _.filter(
-          rushGames,
-          (g) => g.player_id == selectedPlayer.id
-        ),
-      }[statType]
+      [StatType.PASS]: _.filter(
+        passGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+      [StatType.RECV]: _.filter(
+        recvGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+      [StatType.RUSH]: _.filter(
+        rushGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+    }[statType]
     : [];
 
   return (

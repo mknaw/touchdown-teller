@@ -18,7 +18,7 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 
 import { TeamKey } from '@/constants';
-import { titleFont } from '@/pages/theme/fonts';
+import { titleFont } from '@/styles/fonts';
 import { getTeamName } from '@/utils';
 
 type DrawerProps = {

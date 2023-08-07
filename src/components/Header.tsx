@@ -6,7 +6,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Fab from '@mui/material/Fab';
 
 import { TeamKey } from '@/constants';
-import { titleFont } from '@/pages/theme/fonts';
+import { titleFont } from '@/styles/fonts';
 import { getTeamName } from '@/utils';
 
 export default function Header({ team }: { team: TeamKey }) {
