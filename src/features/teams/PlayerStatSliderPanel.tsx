@@ -120,7 +120,7 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
         />
         <LabeledSlider
           min={0}
-          max={15}
+          max={20}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
           {...getCommonProps('tdp' as keyof T)}
         />
@@ -186,7 +186,7 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
         />
         <LabeledSlider
           min={0}
-          max={100}
+          max={20}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
           {...getCommonProps('tdp' as keyof T)}
         />

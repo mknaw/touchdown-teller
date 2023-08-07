@@ -129,7 +129,8 @@ const getDataHandlers = <T extends PlayerSeason>(
   constructor: PlayerSeasonConstructable<T>,
   store: IDBStore<PlayerSeasonData<T>>,
   toStoreData: (s: T) => PlayerSeasonData<T>,
-  setSeason: Dispatch<SetStateAction<IdMap<T>>>
+  setSeason: Dispatch<SetStateAction<IdMap<T>>>,
+  setValidationMessage: (message: string) => void
 ) => {
   const fetchedDataToMap = (data: PlayerSeasonData<T>[]): IdMap<T> =>
     new Map(
@@ -161,25 +162,15 @@ const getDataHandlers = <T extends PlayerSeason>(
     setSeason((s: IdMap<T>) => setOnClone(s, season.playerId, season));
   };
 
-  const persistSeason = (
-    season: T,
-    projection: Projection,
-    field: keyof T,
-    setValidationMessage: (message: string) => void
-  ) => {
-    const [updatedSeason, wasValid] = clampPlayerSeason(
-      season,
-      projection,
-      field
-    );
-    updateSeason(updatedSeason);
-    if (wasValid) {
-      store.update(toStoreData(updatedSeason), season.playerId);
-    } else {
+  const persistSeason = (season: T, projection: Projection) => {
+    const [updatedSeason, wasValid] = clampPlayerSeason(season, projection);
+    if (!wasValid) {
       setValidationMessage(
         'Player projection limited in accordance with team total.'
       );
     }
+    updateSeason(updatedSeason);
+    store.update(toStoreData(updatedSeason), season.playerId);
   };
 
   const deleteSeason = (playerId: number) => {
@@ -284,7 +275,8 @@ export default function Page({
     PassSeason,
     passStore,
     (s: PassSeason) => s.toStoreData(),
-    setPassSeasons
+    setPassSeasons,
+    setPlayerSeasonValidationMessage
   );
 
   const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
@@ -309,7 +301,8 @@ export default function Page({
     RecvSeason,
     recvStore,
     (s: RecvSeason) => s.toStoreData(),
-    setRecvSeasons
+    setRecvSeasons,
+    setPlayerSeasonValidationMessage
   );
 
   const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
@@ -333,7 +326,8 @@ export default function Page({
     RushSeason,
     rushStore,
     (s: RushSeason) => s.toStoreData(),
-    setRushSeasons
+    setRushSeasons,
+    setPlayerSeasonValidationMessage
   );
 
   useEffect(() => {
@@ -393,14 +387,7 @@ export default function Page({
         pastSeasons={playerPassSeasons}
         initSeason={(p) => passDataHandlers.initSeason(p, projection)}
         updateSeason={passDataHandlers.updateSeason}
-        persistSeason={(s, f) =>
-          passDataHandlers.persistSeason(
-            s,
-            projection,
-            f,
-            setPlayerSeasonValidationMessage
-          )
-        }
+        persistSeason={(s) => passDataHandlers.persistSeason(s, projection)}
         deleteSeason={passDataHandlers.deleteSeason}
       />
     );
@@ -414,14 +401,7 @@ export default function Page({
         pastSeasons={playerRecvSeasons}
         initSeason={(p) => recvDataHandlers.initSeason(p, projection)}
         updateSeason={recvDataHandlers.updateSeason}
-        persistSeason={(s, f) =>
-          recvDataHandlers.persistSeason(
-            s,
-            projection,
-            f,
-            setPlayerSeasonValidationMessage
-          )
-        }
+        persistSeason={(s) => recvDataHandlers.persistSeason(s, projection)}
         deleteSeason={recvDataHandlers.deleteSeason}
       />
     );
@@ -435,14 +415,7 @@ export default function Page({
         pastSeasons={playerRushSeasons}
         initSeason={(p) => rushDataHandlers.initSeason(p, projection)}
         updateSeason={rushDataHandlers.updateSeason}
-        persistSeason={(s, f) =>
-          rushDataHandlers.persistSeason(
-            s,
-            projection,
-            f,
-            setPlayerSeasonValidationMessage
-          )
-        }
+        persistSeason={(s) => rushDataHandlers.persistSeason(s, projection)}
         deleteSeason={rushDataHandlers.deleteSeason}
       />
     );

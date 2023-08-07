@@ -78,7 +78,7 @@ type PlayerPanelProps<T extends PlayerSeason> = {
   pastSeasons: IdMap<T>;
   initSeason: (player: Player) => void;
   updateSeason: (season: T) => void;
-  persistSeason: (season: T, field: keyof T) => void;
+  persistSeason: (season: T) => void;
   deleteSeason: (playerId: number) => void;
 };
 

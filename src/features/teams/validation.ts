@@ -39,8 +39,8 @@ function getRecvBudget(projection: Projection): AnnualizedRecvSeason {
 }
 
 function getRushBudget(projection: Projection): AnnualizedRushSeason {
-  const { teamSeason, passSeasons } = projection;
-  const annualized = _.map(passSeasons, (s) => s.annualize());
+  const { teamSeason, rushSeasons } = projection;
+  const annualized = _.map(rushSeasons, (s) => s.annualize());
   return {
     att: teamSeason.rushAtt - _.sumBy(annualized, 'att'),
     yds: teamSeason.rushYds - _.sumBy(annualized, 'yds'),
@@ -88,8 +88,7 @@ export function ensureValid<T extends PlayerSeason>(
 // TODO seems like the kind of thing that warrants unit testing.
 export function clampPlayerSeason<T extends PlayerSeason>(
   season: T,
-  projection: Projection,
-  stat: keyof T
+  projection: Projection
 ): [T, boolean] {
   let valid = true;
   if (season instanceof PassSeason) {
@@ -97,25 +96,27 @@ export function clampPlayerSeason<T extends PlayerSeason>(
     if (!_.isEmpty(getNegativeStats(remaining))) {
       valid = false;
     }
-    if (stat == 'gp') {
-      const gpTotal = _.sumBy(projection.passSeasons, 'gp');
-      const remainingGp = gameCount - gpTotal;
-      if (remainingGp < 0) {
-        season.gp += remainingGp;
-        season.gp = Math.max(season.gp, 0);
-      }
+    const gpTotal = _.sumBy(projection.passSeasons, 'gp');
+    const remainingGp = gameCount - gpTotal;
+    if (remainingGp < 0) {
+      valid = false;
+      season.gp += remainingGp;
+      season.gp = Math.max(season.gp, 0);
     }
-    if (stat == 'att' && remaining.att < 0) {
+    if (remaining.att < 0) {
       season.att += remaining.att / season.gp;
       season.att = Math.max(season.att, 0);
-    } else if (stat == 'cmp' && remaining.cmp < 0) {
+    }
+    if (remaining.cmp < 0) {
       season.cmp += (100 * remaining.cmp) / (season.att * season.gp);
       season.cmp = Math.max(season.cmp, 0);
-    } else if (stat == 'ypa' && remaining.yds < 0) {
+    }
+    if (remaining.yds < 0) {
       season.ypa +=
         remaining.yds / (season.att * season.gp * (season.cmp / 100));
       season.ypa = Math.max(season.ypa, 0);
-    } else if (stat == 'tdp' && remaining.tds < 0) {
+    }
+    if (remaining.tds < 0) {
       season.tdp += (100 * remaining.tds) / (season.att * season.gp);
       season.tdp = Math.max(season.tdp, 0);
     }
@@ -124,17 +125,20 @@ export function clampPlayerSeason<T extends PlayerSeason>(
     if (!_.isEmpty(getNegativeStats(remaining))) {
       valid = false;
     }
-    if (stat == 'tgt' && remaining.tgt < 0) {
+    if (remaining.tgt < 0) {
       season.tgt += remaining.tgt / season.gp;
       season.tgt = Math.max(season.tgt, 0);
-    } else if (stat == 'rec' && remaining.rec < 0) {
+    }
+    if (remaining.rec < 0) {
       season.rec += (100 * remaining.rec) / (season.gp * season.tgt);
       season.rec = Math.max(season.rec, 0);
-    } else if (stat == 'ypr' && remaining.yds < 0) {
+    }
+    if (remaining.yds < 0) {
       season.ypr +=
         remaining.yds / (season.tgt * (season.rec / 100) * season.gp);
       season.ypr = Math.max(season.ypr, 0);
-    } else if (stat == 'tdp' && remaining.tds < 0) {
+    }
+    if (remaining.tds < 0) {
       season.tdp +=
         (100 * remaining.tds) / (season.tgt * (season.rec / 100) * season.gp);
       season.tdp = Math.max(season.tdp, 0);
@@ -144,13 +148,15 @@ export function clampPlayerSeason<T extends PlayerSeason>(
     if (!_.isEmpty(getNegativeStats(remaining))) {
       valid = false;
     }
-    if (stat == 'att' && remaining.att < 0) {
+    if (remaining.att < 0) {
       season.att += remaining.att / season.gp;
       season.att = Math.max(season.att, 0);
-    } else if (stat == 'ypc' && remaining.yds < 0) {
+    }
+    if (remaining.yds < 0) {
       season.ypc += remaining.yds / (season.att * season.gp);
       season.ypc = Math.max(season.ypc, 0);
-    } else if (stat == 'tdp' && remaining.tds < 0) {
+    }
+    if (remaining.tds < 0) {
       season.tdp += (100 * remaining.tds) / (season.att * season.gp);
       season.tdp = Math.max(season.tdp, 0);
     }
