@@ -1,4 +1,4 @@
-import React, { Dispatch, SetStateAction, SyntheticEvent } from 'react';
+import React, { Dispatch, SetStateAction } from 'react';
 
 import { TeamSeason as PrismaTeamSeason } from '@prisma/client';
 
@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 
 import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
-import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
+import TeamSeason from '@/models/TeamSeason';
 
 const valueLabelFormat = (value: number) => value.toFixed(0);
 

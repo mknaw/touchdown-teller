@@ -1,3 +1,4 @@
+// TODO maybe this should move to the `/models/` directory
 import _ from 'lodash';
 
 import { gameCount } from '@/constants';
@@ -28,8 +29,9 @@ function getPassBudget(projection: Projection): AnnualizedPassSeason {
 }
 
 function getRecvBudget(projection: Projection): AnnualizedRecvSeason {
-  const { teamSeason, passSeasons } = projection;
-  const annualized = _.map(passSeasons, (s) => s.annualize());
+  const { teamSeason, recvSeasons } = projection;
+
+  const annualized = _.map(recvSeasons, (s) => s.annualize());
   return {
     tgt: teamSeason.passAtt - _.sumBy(annualized, 'tgt'),
     rec: teamSeason.passCmp - _.sumBy(annualized, 'rec'),
@@ -166,22 +168,23 @@ export function clampPlayerSeason<T extends PlayerSeason>(
 
 export function clampTeamSeason(projection: Projection): [TeamSeason, boolean] {
   const remainingPass = getPassBudget(projection);
-  // TODO is it appropriate to ignore `getRecvBudget`?
+  const remainingRecv = getRecvBudget(projection);
   const remainingRush = getRushBudget(projection);
 
   const { teamSeason } = projection;
 
   if (
     _.isEmpty(getNegativeStats(remainingPass)) &&
+    _.isEmpty(getNegativeStats(remainingRecv)) &&
     _.isEmpty(getNegativeStats(remainingRush))
   ) {
     return [teamSeason, true];
   }
 
-  teamSeason.passAtt -= Math.min(remainingPass.att, 0);
-  teamSeason.passCmp -= Math.min(remainingPass.cmp, 0);
-  teamSeason.passYds -= Math.min(remainingPass.yds, 0);
-  teamSeason.passTds -= Math.min(remainingPass.tds, 0);
+  teamSeason.passAtt -= Math.min(remainingPass.att, remainingRecv.tgt, 0);
+  teamSeason.passCmp -= Math.min(remainingPass.cmp, remainingRecv.rec, 0);
+  teamSeason.passYds -= Math.min(remainingPass.yds, remainingRecv.yds, 0);
+  teamSeason.passTds -= Math.min(remainingPass.tds, remainingRecv.tds, 0);
   teamSeason.rushAtt -= Math.min(remainingRush.att, 0);
   teamSeason.rushYds -= Math.min(remainingRush.yds, 0);
   teamSeason.rushTds -= Math.min(remainingRush.tds, 0);

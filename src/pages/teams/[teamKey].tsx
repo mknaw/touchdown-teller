@@ -1,4 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { useSelector } from 'react-redux';
 
 import _ from 'lodash';
 import type { GetStaticPaths, GetStaticProps } from 'next';
@@ -53,6 +54,7 @@ import {
   RushSeasonData,
 } from '@/models/PlayerSeason';
 import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
+import { AppState } from '@/store';
 import {
   IDBStore,
   IdMap,
@@ -216,7 +218,9 @@ export default function Page({
   recvAggregates: RecvAggregate[];
   rushAggregates: RushAggregate[];
 }) {
-  const [statType, setStatType] = useState<StatType>(StatType.PASS);
+  const statType = useSelector<AppState, StatType>(
+    (state) => state.settings.statType
+  );
 
   const [passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
   const [recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
@@ -344,12 +348,6 @@ export default function Page({
   const commonProps = {
     team,
     statType,
-    setStatType: (st: StatType) => {
-      // TODO probably could do better by remembering
-      // the last selected player for each `StatType`
-      setStatType(st);
-      setSelectedPlayer(undefined);
-    },
     selectedPlayer,
     setSelectedPlayer,
   };
@@ -438,6 +436,12 @@ export default function Page({
     }[statType]
     : [];
 
+  const teamPanelHeader = {
+    [StatType.PASS]: 'Team Passing Stats',
+    [StatType.RECV]: 'Team Receiving Stats',
+    [StatType.RUSH]: 'Team Rushing Stats',
+  }[statType];
+
   return (
     <div className={'flex h-full pb-5'}>
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
@@ -455,8 +459,9 @@ export default function Page({
         </div>
         <div className={'w-full h-full grid grid-flow-row grid-rows-3 gap-8'}>
           <Card className={'row-span-2 h-full relative flex flex-col'}>
-            <Typography className={'text-3xl w-full text-center'}>
-              Team Stats
+            {/* TODO ought to do a better job of vertical alignment with LHS */}
+            <Typography className={'text-2xl w-full text-center py-4'}>
+              {teamPanelHeader}
             </Typography>
             {teamSeason && team.seasons[0] && (
               <>
@@ -539,7 +544,7 @@ export default function Page({
             {games.length ? (
               <>
                 <div className={'flex flex-col h-full'}>
-                  <Typography className={'text-center'}>
+                  <Typography className={'text-center text-2xl'}>
                     2022 Gamelog
                   </Typography>
                   <div className={'flex w-full h-full'}>
@@ -548,6 +553,8 @@ export default function Page({
                 </div>
               </>
             ) : (
+              // TODO replace with schedule grid
+              // Or even message about rookies...
               <div>No player selected</div>
             )}
           </Card>

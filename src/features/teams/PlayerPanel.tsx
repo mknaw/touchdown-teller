@@ -1,6 +1,5 @@
-'use client';
-
 import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
 
 import _ from 'lodash';
 
@@ -18,6 +17,7 @@ import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
+import { settingsAction } from '@/store';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 
 function SeasonSummary<T extends PlayerSeason>({ season }: { season: T }) {
@@ -70,7 +70,6 @@ const StatTypeToggleButton = ({
 type PlayerPanelProps<T extends PlayerSeason> = {
   team: TeamWithExtras;
   statType: StatType;
-  setStatType: (s: StatType) => void;
   selectedPlayer: Player | undefined;
   setSelectedPlayer: (p: Player | undefined) => void;
   relevantPositions: Position[];
@@ -85,7 +84,6 @@ type PlayerPanelProps<T extends PlayerSeason> = {
 export default function PlayerPanel<T extends PlayerSeason>({
   team,
   statType,
-  setStatType,
   selectedPlayer,
   setSelectedPlayer,
   relevantPositions,
@@ -96,6 +94,12 @@ export default function PlayerPanel<T extends PlayerSeason>({
   persistSeason,
   deleteSeason,
 }: PlayerPanelProps<T>) {
+  const dispatch = useDispatch();
+  const setStatType = (statType: StatType) => {
+    dispatch(settingsAction(statType));
+    setSelectedPlayer(undefined);
+  };
+
   const relevantPlayers = team.players
     .filter((player) => relevantPositions.includes(player.position as Position))
     .sort((a, b) => {
@@ -159,22 +163,18 @@ export default function PlayerPanel<T extends PlayerSeason>({
                   persistSeason={persistSeason}
                 />
                 {/* TODO style this better */}
-                <Paper>
-                  <div
-                    className={'flex w-full justify-center items-center pt-5'}
+                <div className={'flex w-full justify-center items-center pt-5'}>
+                  <SeasonSummary season={season} />
+                  <IconButton
+                    onClick={() => {
+                      deleteSeason(selectedPlayer.id);
+                      setSelectedPlayer(undefined);
+                    }}
+                    className={'absolute right-0 -translate-x-full'}
                   >
-                    <SeasonSummary season={season} />
-                    <IconButton
-                      onClick={() => {
-                        deleteSeason(selectedPlayer.id);
-                        setSelectedPlayer(undefined);
-                      }}
-                      className={'absolute right-0 -translate-x-full'}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </div>
-                </Paper>
+                    <DeleteIcon />
+                  </IconButton>
+                </div>
               </Paper>
             </>
           )}

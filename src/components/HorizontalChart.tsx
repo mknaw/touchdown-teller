@@ -5,6 +5,7 @@ import {
   BarElement,
   CategoryScale,
   Chart as ChartJS,
+  ChartOptions,
   Legend,
   LinearScale,
   Title,
@@ -22,7 +23,7 @@ ChartJS.register(
   Legend
 );
 
-export const options = {
+export const options: ChartOptions<'bar'> = {
   indexAxis: 'y' as const,
   scales: {
     x: {
@@ -36,23 +37,21 @@ export const options = {
     legend: {
       display: false,
     },
-    // TODO don't need the 3 decimal places here.
-    //tooltip: {
-    //  callbacks: {
-    //    label: function (context) {
-    //      let label = context.dataset.label || '';
+    tooltip: {
+      callbacks: {
+        label: function (context) {
+          let label = context.dataset.label || '';
 
-    //      if (label) {
-    //        label += ': ';
-    //      }
-    //      console.log(context);
-    //      if (context.parsed.y !== null) {
-    //        label += context.parsed.y;
-    //      }
-    //      return label;
-    //    },
-    //  },
-    //},
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += context.parsed.x.toFixed(0);
+          }
+          return label;
+        },
+      },
+    },
   },
   responsive: true,
   maintainAspectRatio: false,
