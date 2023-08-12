@@ -121,7 +121,7 @@ export const PassChartGroup = ({
   return (
     <>
       <HzChart
-        label={'Passing Attempts'}
+        label={'Pass Attempts'}
         data={chartData.map(({ name, att }) => ({ name, stat: att }))}
       />
       <HzChart
@@ -129,11 +129,11 @@ export const PassChartGroup = ({
         data={chartData.map(({ name, cmp }) => ({ name, stat: cmp }))}
       />
       <HzChart
-        label={'Passing Yards'}
+        label={'Pass Yards'}
         data={chartData.map(({ name, yds }) => ({ name, stat: yds }))}
       />
       <HzChart
-        label={'Passing Touchdowns'}
+        label={'Pass Touchdowns'}
         data={chartData.map(({ name, tds }) => ({ name, stat: tds }))}
       />
     </>

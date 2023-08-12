@@ -16,6 +16,8 @@ interface TeamStatsPanelProps {
   setTeamSeason: Dispatch<SetStateAction<TeamSeason | null>>;
   persistTeamSeason: () => void;
   lastSeason: PrismaTeamSeason;
+  // TODO at this point I think it's probably to track this stuff with redux...
+  setTeamComparisonDialogOpen: (val: boolean) => void;
 }
 
 export default function TeamPanel({
@@ -24,6 +26,7 @@ export default function TeamPanel({
   setTeamSeason,
   persistTeamSeason,
   lastSeason,
+  setTeamComparisonDialogOpen,
 }: TeamStatsPanelProps) {
   const handleInputChange = (event: Event) => {
     const { target } = event;
@@ -40,6 +43,8 @@ export default function TeamPanel({
     }
   };
 
+  const onClick = () => setTeamComparisonDialogOpen(true);
+
   return (
     <Stack className={'w-full'}>
       {
@@ -48,6 +53,7 @@ export default function TeamPanel({
             <>
               <LabeledSlider
                 label={`Passing Attempts: ${teamSeason.passAtt.toFixed(1)}`}
+                onClick={onClick}
                 value={teamSeason.passAtt}
                 min={255}
                 max={850}
@@ -67,6 +73,7 @@ export default function TeamPanel({
               />
               <LabeledSlider
                 label={`Passing Yards: ${teamSeason.passYds.toFixed(1)}`}
+                onClick={onClick}
                 value={teamSeason.passYds}
                 min={2000}
                 max={5500}
@@ -86,6 +93,7 @@ export default function TeamPanel({
               />
               <LabeledSlider
                 label={`Passing Touchdowns: ${teamSeason.passTds.toFixed(1)}`}
+                onClick={onClick}
                 value={teamSeason.passTds}
                 min={0}
                 max={70}

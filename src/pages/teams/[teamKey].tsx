@@ -20,6 +20,7 @@ import Typography from '@mui/material/Typography';
 import Card from '@/components/Card';
 import { Position, StatType, TeamKey } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
+import TeamComparisonDialog from '@/features/TeamComparisonDialog';
 import {
   PassChartGroup,
   RecvChartGroup,
@@ -256,6 +257,9 @@ export default function Page({
   const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
     useState('');
 
+  const [isTeamComparisonDialogOpen, setTeamComparisonDialogOpen] =
+    useState(false);
+
   const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
   // TODO really embarrassing to WET this up...
   const playerPassSeasons = makeIdMap(
@@ -344,7 +348,6 @@ export default function Page({
     fetch();
   }, [team]);
 
-  let playerPanel;
   const commonProps = {
     team,
     statType,
@@ -375,9 +378,8 @@ export default function Page({
     }
   };
 
-  switch (statType) {
-  case StatType.PASS:
-    playerPanel = (
+  const playerPanel = {
+    [StatType.PASS]: (
       <PlayerPanel<PassSeason>
         {...commonProps}
         relevantPositions={[Position.QB]}
@@ -388,10 +390,8 @@ export default function Page({
         persistSeason={(s) => passDataHandlers.persistSeason(s, projection)}
         deleteSeason={passDataHandlers.deleteSeason}
       />
-    );
-    break;
-  case StatType.RECV:
-    playerPanel = (
+    ),
+    [StatType.RECV]: (
       <PlayerPanel<RecvSeason>
         {...commonProps}
         relevantPositions={[Position.WR, Position.TE, Position.RB]}
@@ -402,10 +402,8 @@ export default function Page({
         persistSeason={(s) => recvDataHandlers.persistSeason(s, projection)}
         deleteSeason={recvDataHandlers.deleteSeason}
       />
-    );
-    break;
-  default: // Rushing
-    playerPanel = (
+    ),
+    [StatType.RUSH]: (
       <PlayerPanel<RushSeason>
         {...commonProps}
         relevantPositions={[Position.RB, Position.QB, Position.WR]}
@@ -416,8 +414,8 @@ export default function Page({
         persistSeason={(s) => rushDataHandlers.persistSeason(s, projection)}
         deleteSeason={rushDataHandlers.deleteSeason}
       />
-    );
-  }
+    ),
+  }[statType];
 
   const games = selectedPlayer
     ? {
@@ -444,6 +442,10 @@ export default function Page({
 
   return (
     <div className={'flex h-full pb-5'}>
+      <TeamComparisonDialog
+        open={isTeamComparisonDialogOpen}
+        onClose={() => setTeamComparisonDialogOpen(false)}
+      />
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
         <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
@@ -460,7 +462,11 @@ export default function Page({
         <div className={'w-full h-full grid grid-flow-row grid-rows-3 gap-8'}>
           <Card className={'row-span-2 h-full relative flex flex-col'}>
             {/* TODO ought to do a better job of vertical alignment with LHS */}
-            <Typography className={'text-2xl w-full text-center py-4'}>
+            {/* TODO also ought to just be in the `TeamPanel` */}
+            <Typography
+              className={'text-2xl w-full text-center cursor-pointer py-4'}
+              onClick={() => setTeamComparisonDialogOpen(false)}
+            >
               {teamPanelHeader}
             </Typography>
             {teamSeason && team.seasons[0] && (
@@ -471,6 +477,7 @@ export default function Page({
                   setTeamSeason={setTeamSeason}
                   persistTeamSeason={persistTeamSeason}
                   lastSeason={lastSeason}
+                  setTeamComparisonDialogOpen={setTeamComparisonDialogOpen}
                 />
                 <div
                   className={

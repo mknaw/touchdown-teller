@@ -1,7 +1,10 @@
 import { TeamSeason as PrismaTeamSeason } from '@prisma/client';
 
+import { TeamKey } from '@/constants';
+
 export type TeamSeasonData = Pick<
   TeamSeason,
+  | 'teamName'
   | 'passAtt'
   | 'passCmp'
   | 'passYds'
@@ -12,6 +15,7 @@ export type TeamSeasonData = Pick<
 >;
 
 export default class TeamSeason {
+  teamName: TeamKey;
   passAtt: number;
   passCmp: number;
   passYds: number;
@@ -21,6 +25,7 @@ export default class TeamSeason {
   rushTds: number;
 
   constructor(props: TeamSeasonData) {
+    this.teamName = props.teamName;
     this.passAtt = props.passAtt;
     this.passCmp = props.passCmp;
     this.passYds = props.passYds;
@@ -32,6 +37,7 @@ export default class TeamSeason {
 
   static fromPrisma(teamSeason: PrismaTeamSeason) {
     return new TeamSeason({
+      teamName: teamSeason.teamName as TeamKey,
       passAtt: teamSeason.passAtt,
       passCmp: teamSeason.passCmp,
       passYds: teamSeason.passYds,
@@ -44,6 +50,7 @@ export default class TeamSeason {
 
   toStoreData(): TeamSeasonData {
     return {
+      teamName: this.teamName,
       passAtt: this.passAtt,
       passCmp: this.passCmp,
       passYds: this.passYds,
