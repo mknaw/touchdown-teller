@@ -1,4 +1,5 @@
 import React, { Dispatch, SetStateAction } from 'react';
+import { useDispatch } from 'react-redux';
 
 import { TeamSeason as PrismaTeamSeason } from '@prisma/client';
 
@@ -7,6 +8,7 @@ import Stack from '@mui/material/Stack';
 import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
 import TeamSeason from '@/models/TeamSeason';
+import { toggleTeamPassSeasonModal } from '@/store/appStateSlice';
 
 const valueLabelFormat = (value: number) => value.toFixed(0);
 
@@ -16,8 +18,6 @@ interface TeamStatsPanelProps {
   setTeamSeason: Dispatch<SetStateAction<TeamSeason | null>>;
   persistTeamSeason: () => void;
   lastSeason: PrismaTeamSeason;
-  // TODO at this point I think it's probably to track this stuff with redux...
-  setTeamComparisonDialogOpen: (val: boolean) => void;
 }
 
 export default function TeamPanel({
@@ -26,7 +26,6 @@ export default function TeamPanel({
   setTeamSeason,
   persistTeamSeason,
   lastSeason,
-  setTeamComparisonDialogOpen,
 }: TeamStatsPanelProps) {
   const handleInputChange = (event: Event) => {
     const { target } = event;
@@ -43,7 +42,8 @@ export default function TeamPanel({
     }
   };
 
-  const onClick = () => setTeamComparisonDialogOpen(true);
+  const dispatch = useDispatch();
+  const onClick = () => dispatch(toggleTeamPassSeasonModal());
 
   return (
     <Stack className={'w-full'}>

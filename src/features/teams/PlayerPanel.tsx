@@ -18,6 +18,7 @@ import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 import { settingsAction } from '@/store';
+import { setStatType } from '@/store/settingsSlice';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 
 function SeasonSummary<T extends PlayerSeason>({ season }: { season: T }) {
@@ -95,8 +96,8 @@ export default function PlayerPanel<T extends PlayerSeason>({
   deleteSeason,
 }: PlayerPanelProps<T>) {
   const dispatch = useDispatch();
-  const setStatType = (statType: StatType) => {
-    dispatch(settingsAction(statType));
+  const onStatTypeChange = (statType: StatType) => {
+    dispatch(setStatType(statType));
     setSelectedPlayer(undefined);
   };
 
@@ -183,7 +184,10 @@ export default function PlayerPanel<T extends PlayerSeason>({
         <Typography>Click to add player (TODO)</Typography>
       )}
       <div className={'absolute bottom-5 left-5'}>
-        <StatTypeToggleButton statType={statType} setStatType={setStatType} />
+        <StatTypeToggleButton
+          statType={statType}
+          setStatType={onStatTypeChange}
+        />
       </div>
       <div className={'absolute bottom-5 right-5'}>
         <AddPlayer players={nonStattedPlayers} addPlayer={addPlayer} />

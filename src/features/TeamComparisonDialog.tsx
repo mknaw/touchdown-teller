@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import Dialog from '@/components/Dialog';
+import Modal from '@/components/Modal';
 import { setupPersistence, teamStoreKey } from '@/data/persistence';
 import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';
 import TeamSeason from '@/models/TeamSeason';
+import { AppState } from '@/store';
+import { toggleTeamPassSeasonModal } from '@/store/appStateSlice';
 import { getTeamName } from '@/utils';
 
-export default ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+function useTeamProjections() {
   const [teamSeasons, setTeamSeasons] = useState<TeamSeason[]>([]);
   const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
-
   useEffect(() => {
     async function fetch() {
       await setupPersistence();
@@ -21,6 +23,16 @@ export default ({ open, onClose }: { open: boolean; onClose: () => void }) => {
     }
     fetch();
   }, [teamStore]);
+  return teamSeasons;
+}
+
+export default () => {
+  const open = useSelector<AppState, boolean>(
+    (state) => state.appState.isTeamPassSeasonModalOpen
+  );
+  const dispatch = useDispatch();
+  const onClose = () => dispatch(toggleTeamPassSeasonModal());
+  const teamSeasons = useTeamProjections();
 
   const headers = {
     teamName: 'Team',
@@ -39,8 +51,8 @@ export default ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const title = 'Team Passing Projections';
 
   return (
-    <Dialog open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={onClose} title={title}>
       <StatsTable headers={headers} data={serializedSeasons} />
-    </Dialog>
+    </Modal>
   );
 };

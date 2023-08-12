@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 import _ from 'lodash';
 import type { GetStaticPaths, GetStaticProps } from 'next';
@@ -56,6 +56,7 @@ import {
 } from '@/models/PlayerSeason';
 import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 import { AppState } from '@/store';
+import { toggleTeamPassSeasonModal } from '@/store/appStateSlice';
 import {
   IDBStore,
   IdMap,
@@ -257,9 +258,6 @@ export default function Page({
   const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
     useState('');
 
-  const [isTeamComparisonDialogOpen, setTeamComparisonDialogOpen] =
-    useState(false);
-
   const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
   // TODO really embarrassing to WET this up...
   const playerPassSeasons = makeIdMap(
@@ -440,12 +438,11 @@ export default function Page({
     [StatType.RUSH]: 'Team Rushing Stats',
   }[statType];
 
+  const dispatch = useDispatch();
+
   return (
     <div className={'flex h-full pb-5'}>
-      <TeamComparisonDialog
-        open={isTeamComparisonDialogOpen}
-        onClose={() => setTeamComparisonDialogOpen(false)}
-      />
+      <TeamComparisonDialog />
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
         <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
@@ -465,7 +462,7 @@ export default function Page({
             {/* TODO also ought to just be in the `TeamPanel` */}
             <Typography
               className={'text-2xl w-full text-center cursor-pointer py-4'}
-              onClick={() => setTeamComparisonDialogOpen(false)}
+              onClick={() => dispatch(toggleTeamPassSeasonModal())}
             >
               {teamPanelHeader}
             </Typography>
@@ -477,7 +474,6 @@ export default function Page({
                   setTeamSeason={setTeamSeason}
                   persistTeamSeason={persistTeamSeason}
                   lastSeason={lastSeason}
-                  setTeamComparisonDialogOpen={setTeamComparisonDialogOpen}
                 />
                 <div
                   className={

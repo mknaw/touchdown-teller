@@ -13,6 +13,8 @@ export default function LabeledSlider({
   ...props
 }: LabeledSliderProps) {
   const className = onClick ? 'cursor-pointer' : '';
+  console.log(onClick);
+
   return (
     <Box sx={{ width: 1 }}>
       <Typography className={className} onClick={onClick}>
