@@ -20,7 +20,7 @@ import Typography from '@mui/material/Typography';
 import Card from '@/components/Card';
 import { Position, StatType, TeamKey } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
-import TeamComparisonDialog from '@/features/TeamComparisonDialog';
+import TeamPassSeasonsModal from '@/features/TeamSeasonsModal';
 import {
   PassChartGroup,
   RecvChartGroup,
@@ -56,7 +56,7 @@ import {
 } from '@/models/PlayerSeason';
 import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 import { AppState } from '@/store';
-import { toggleTeamPassSeasonModal } from '@/store/appStateSlice';
+import { toggleTeamPassSeasonsModal } from '@/store/appStateSlice';
 import {
   IDBStore,
   IdMap,
@@ -442,7 +442,7 @@ export default function Page({
 
   return (
     <div className={'flex h-full pb-5'}>
-      <TeamComparisonDialog />
+      <TeamPassSeasonsModal />
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
         <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
@@ -462,7 +462,7 @@ export default function Page({
             {/* TODO also ought to just be in the `TeamPanel` */}
             <Typography
               className={'text-2xl w-full text-center cursor-pointer py-4'}
-              onClick={() => dispatch(toggleTeamPassSeasonModal())}
+              onClick={() => dispatch(toggleTeamPassSeasonsModal())}
             >
               {teamPanelHeader}
             </Typography>

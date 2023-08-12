@@ -9,7 +9,7 @@ import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
-import { toggleTeamPassSeasonModal } from '@/store/appStateSlice';
+import { toggleTeamPassSeasonsModal } from '@/store/appStateSlice';
 import { getTeamName } from '@/utils';
 
 function useTeamProjections() {
@@ -28,10 +28,10 @@ function useTeamProjections() {
 
 export default () => {
   const open = useSelector<AppState, boolean>(
-    (state) => state.appState.isTeamPassSeasonModalOpen
+    (state) => state.appState.isTeamPassSeasonsModalOpen
   );
   const dispatch = useDispatch();
-  const onClose = () => dispatch(toggleTeamPassSeasonModal());
+  const onClose = () => dispatch(toggleTeamPassSeasonsModal());
   const teamSeasons = useTeamProjections();
 
   const headers = {

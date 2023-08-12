@@ -1,22 +1,22 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 type AppState = {
-  isTeamPassSeasonModalOpen: boolean;
+  isTeamPassSeasonsModalOpen: boolean;
 };
 
 const initialAppState = {
-  isTeamPassSeasonModalOpen: false,
+  isTeamPassSeasonsModalOpen: false,
 } as AppState;
 
 const appStateSlice = createSlice({
   name: 'appState',
   initialState: initialAppState,
   reducers: {
-    toggleTeamPassSeasonModal(state) {
-      state.isTeamPassSeasonModalOpen = !state.isTeamPassSeasonModalOpen;
+    toggleTeamPassSeasonsModal(state) {
+      state.isTeamPassSeasonsModalOpen = !state.isTeamPassSeasonsModalOpen;
     },
   },
 });
 
-export const { toggleTeamPassSeasonModal } = appStateSlice.actions;
+export const { toggleTeamPassSeasonsModal } = appStateSlice.actions;
 export default appStateSlice;

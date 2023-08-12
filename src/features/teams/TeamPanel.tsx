@@ -8,7 +8,7 @@ import Stack from '@mui/material/Stack';
 import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
 import TeamSeason from '@/models/TeamSeason';
-import { toggleTeamPassSeasonModal } from '@/store/appStateSlice';
+import { toggleTeamPassSeasonsModal } from '@/store/appStateSlice';
 
 const valueLabelFormat = (value: number) => value.toFixed(0);
 
@@ -43,7 +43,7 @@ export default function TeamPanel({
   };
 
   const dispatch = useDispatch();
-  const onClick = () => dispatch(toggleTeamPassSeasonModal());
+  const onClick = () => dispatch(toggleTeamPassSeasonsModal());
 
   return (
     <Stack className={'w-full'}>
