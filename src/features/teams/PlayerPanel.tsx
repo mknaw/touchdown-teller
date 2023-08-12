@@ -17,7 +17,6 @@ import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
-import { settingsAction } from '@/store';
 import { setStatType } from '@/store/settingsSlice';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 

@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 import _ from 'lodash';
 import type { GetStaticPaths, GetStaticProps } from 'next';
@@ -21,6 +21,7 @@ import Card from '@/components/Card';
 import { Position, StatType, TeamKey } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
 import {
+  TeamLastPassSeasonsModal,
   TeamPassSeasonsModal,
   TeamRushSeasonsModal,
 } from '@/features/TeamSeasonsModal';
@@ -59,7 +60,6 @@ import {
 } from '@/models/PlayerSeason';
 import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
 import { AppState } from '@/store';
-import { toggleTeamPassSeasonsModal } from '@/store/appStateSlice';
 import {
   IDBStore,
   IdMap,
@@ -437,7 +437,8 @@ export default function Page({
 
   return (
     <div className={'flex h-full pb-5'}>
-      <TeamPassSeasonsModal />
+      <TeamLastPassSeasonsModal />
+      {/* <TeamPassSeasonsModal /> */}
       <TeamRushSeasonsModal />
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
         <div className={'h-full w-full'}>

@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { AnyAction } from '@reduxjs/toolkit';
+import useSWR from 'swr';
 import { useIndexedDBStore } from 'use-indexeddb';
 
 import Modal from '@/components/Modal';
+import { lastYear } from '@/constants';
 import { setupPersistence, teamStoreKey } from '@/data/persistence';
 import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';
@@ -108,6 +110,34 @@ export const TeamRushSeasonsModal = () => {
       open={open}
       toggle={toggleTeamRushSeasonsModal}
       title={'Team Rushing Projections'}
+      headers={headers}
+      data={data}
+    />
+  );
+};
+
+export const TeamLastPassSeasonsModal = () => {
+  const open = useSelector<AppState, boolean>(
+    (state) => state.appState.isTeamPassSeasonsModalOpen
+  );
+  const headers = {
+    teamName: 'Team',
+    passAtt: 'Pass Attempts',
+    passYds: 'Pass Yards',
+    passTds: 'Pass TDs',
+  } as Record<keyof TeamSeason, string>;
+
+  // TODO probably better for the api to take the year as a param
+  // but not super important for now
+  const { data } = useSWR('/api/teamSeasons', (url) =>
+    fetch(url).then((res) => res.json())
+  );
+
+  return (
+    <TeamSeasonModal
+      open={open}
+      toggle={toggleTeamPassSeasonsModal}
+      title={`${lastYear} Team Passing Stats`}
       headers={headers}
       data={data}
     />

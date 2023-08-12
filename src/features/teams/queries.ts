@@ -6,6 +6,7 @@ import {
   PrismaClient,
   RecvGame,
   RushGame,
+  TeamSeason,
 } from '@prisma/client';
 
 import { lastYear } from '@/constants';
@@ -190,4 +191,15 @@ export async function getPlayerRushAggregates(
         s.player_id, s.team;
     `;
   return _.map(agg, downcastBigInts) as RushAggregate[];
+}
+
+export async function getTeamSeasons(
+  prisma: PrismaClient,
+  year: number
+): Promise<TeamSeason[]> {
+  return await prisma.teamSeason.findMany({
+    where: {
+      season: year,
+    },
+  });
 }
