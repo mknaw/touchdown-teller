@@ -20,7 +20,10 @@ import Typography from '@mui/material/Typography';
 import Card from '@/components/Card';
 import { Position, StatType, TeamKey } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
-import TeamPassSeasonsModal from '@/features/TeamSeasonsModal';
+import {
+  TeamPassSeasonsModal,
+  TeamRushSeasonsModal,
+} from '@/features/TeamSeasonsModal';
 import {
   PassChartGroup,
   RecvChartGroup,
@@ -432,17 +435,10 @@ export default function Page({
     }[statType]
     : [];
 
-  const teamPanelHeader = {
-    [StatType.PASS]: 'Team Passing Stats',
-    [StatType.RECV]: 'Team Receiving Stats',
-    [StatType.RUSH]: 'Team Rushing Stats',
-  }[statType];
-
-  const dispatch = useDispatch();
-
   return (
     <div className={'flex h-full pb-5'}>
       <TeamPassSeasonsModal />
+      <TeamRushSeasonsModal />
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
         <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
@@ -458,14 +454,6 @@ export default function Page({
         </div>
         <div className={'w-full h-full grid grid-flow-row grid-rows-3 gap-8'}>
           <Card className={'row-span-2 h-full relative flex flex-col'}>
-            {/* TODO ought to do a better job of vertical alignment with LHS */}
-            {/* TODO also ought to just be in the `TeamPanel` */}
-            <Typography
-              className={'text-2xl w-full text-center cursor-pointer py-4'}
-              onClick={() => dispatch(toggleTeamPassSeasonsModal())}
-            >
-              {teamPanelHeader}
-            </Typography>
             {teamSeason && team.seasons[0] && (
               <>
                 <TeamPanel

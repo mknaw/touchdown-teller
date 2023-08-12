@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
+import { AnyAction } from '@reduxjs/toolkit';
 import { useIndexedDBStore } from 'use-indexeddb';
 
 import Modal from '@/components/Modal';
@@ -9,10 +10,13 @@ import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
-import { toggleTeamPassSeasonsModal } from '@/store/appStateSlice';
+import {
+  toggleTeamPassSeasonsModal,
+  toggleTeamRushSeasonsModal,
+} from '@/store/appStateSlice';
 import { getTeamName } from '@/utils';
 
-function useTeamProjections() {
+function useTeamProjections(open: boolean) {
   const [teamSeasons, setTeamSeasons] = useState<TeamSeason[]>([]);
   const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
   useEffect(() => {
@@ -22,17 +26,48 @@ function useTeamProjections() {
       setTeamSeasons(teamProjectionData.map((data) => new TeamSeason(data)));
     }
     fetch();
-  }, [teamStore]);
-  return teamSeasons;
+    // TODO seems wasteful to get these when we're closing the modal,
+    // ought to be a better way.
+  }, [teamStore, open]);
+  return teamSeasons.map((teamSeason) => ({
+    teamName: getTeamName(teamSeason.teamName),
+    passAtt: teamSeason.passAtt.toFixed(0),
+    passYds: teamSeason.passYds.toFixed(0),
+    passTds: teamSeason.passTds.toFixed(0),
+    rushAtt: teamSeason.rushAtt.toFixed(0),
+    rushYds: teamSeason.rushYds.toFixed(0),
+    rushTds: teamSeason.rushTds.toFixed(0),
+  }));
 }
 
-export default () => {
+/* Display a comparison of all team aggregate stats or projections over a season */
+function TeamSeasonModal<T>({
+  open,
+  toggle,
+  title,
+  headers,
+  data,
+}: {
+  open: boolean;
+  toggle: () => AnyAction;
+  title: string;
+  headers: Record<keyof T, string>;
+  data: T[];
+}) {
+  const dispatch = useDispatch();
+  const onClose = () => dispatch(toggle());
+
+  return (
+    <Modal open={open} onClose={onClose} title={title}>
+      <StatsTable headers={headers} data={data} />
+    </Modal>
+  );
+}
+
+export const TeamPassSeasonsModal = () => {
   const open = useSelector<AppState, boolean>(
     (state) => state.appState.isTeamPassSeasonsModalOpen
   );
-  const dispatch = useDispatch();
-  const onClose = () => dispatch(toggleTeamPassSeasonsModal());
-  const teamSeasons = useTeamProjections();
 
   const headers = {
     teamName: 'Team',
@@ -41,18 +76,40 @@ export default () => {
     passTds: 'Pass TDs',
   } as Record<keyof TeamSeason, string>;
 
-  const serializedSeasons = teamSeasons.map((teamSeason) => ({
-    teamName: getTeamName(teamSeason.teamName),
-    passAtt: teamSeason.passAtt.toFixed(0),
-    passYds: teamSeason.passYds.toFixed(0),
-    passTds: teamSeason.passTds.toFixed(0),
-  }));
-
-  const title = 'Team Passing Projections';
+  const data = useTeamProjections(open);
 
   return (
-    <Modal open={open} onClose={onClose} title={title}>
-      <StatsTable headers={headers} data={serializedSeasons} />
-    </Modal>
+    <TeamSeasonModal
+      open={open}
+      toggle={toggleTeamPassSeasonsModal}
+      title={'Team Passing Projections'}
+      headers={headers}
+      data={data}
+    />
+  );
+};
+
+export const TeamRushSeasonsModal = () => {
+  const open = useSelector<AppState, boolean>(
+    (state) => state.appState.isTeamRushSeasonsModalOpen
+  );
+
+  const headers = {
+    teamName: 'Team',
+    rushAtt: 'Rush Attempts',
+    rushYds: 'Rush Yards',
+    rushTds: 'Rush TDs',
+  } as Record<keyof TeamSeason, string>;
+
+  const data = useTeamProjections(open);
+
+  return (
+    <TeamSeasonModal
+      open={open}
+      toggle={toggleTeamRushSeasonsModal}
+      title={'Team Rushing Projections'}
+      headers={headers}
+      data={data}
+    />
   );
 };

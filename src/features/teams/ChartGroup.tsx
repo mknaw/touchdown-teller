@@ -1,3 +1,5 @@
+import { useDispatch } from 'react-redux';
+
 import _ from 'lodash';
 
 import { TeamSeason as PrismaTeamSeason } from '@prisma/client';
@@ -15,12 +17,26 @@ import {
   RushSeason,
 } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
+import {
+  toggleTeamPassSeasonsModal,
+  toggleTeamRushSeasonsModal,
+} from '@/store/appStateSlice';
 import { IdMap } from '@/types';
 import { mapMap } from '@/utils';
 
-const HzChart = ({ label, data }: { label: string; data: ChartData[] }) => (
+const HzChart = ({
+  label,
+  data,
+  onClick,
+}: {
+  label: string;
+  data: ChartData[];
+  onClick: () => void;
+}) => (
   <div className={'w-full flex items-center'}>
-    <Typography className={'w-1/4'}>{label}</Typography>
+    <Typography onClick={onClick} className={'w-1/4 cursor-pointer'}>
+      {label}
+    </Typography>
     <div className={'w-full overflow-hidden h-full max-h-full'}>
       <HorizontalChart data={data} />
     </div>
@@ -118,22 +134,29 @@ export const PassChartGroup = ({
     }
   );
 
+  const dispatch = useDispatch();
+  const onClick = () => dispatch(toggleTeamPassSeasonsModal());
+
   return (
     <>
       <HzChart
         label={'Pass Attempts'}
+        onClick={onClick}
         data={chartData.map(({ name, att }) => ({ name, stat: att }))}
       />
       <HzChart
         label={'Completions'}
+        onClick={onClick}
         data={chartData.map(({ name, cmp }) => ({ name, stat: cmp }))}
       />
       <HzChart
         label={'Pass Yards'}
+        onClick={onClick}
         data={chartData.map(({ name, yds }) => ({ name, stat: yds }))}
       />
       <HzChart
-        label={'Pass Touchdowns'}
+        label={'Pass TDs'}
+        onClick={onClick}
         data={chartData.map(({ name, tds }) => ({ name, stat: tds }))}
       />
     </>
@@ -169,22 +192,29 @@ export const RecvChartGroup = ({
     }
   );
 
+  const dispatch = useDispatch();
+  const onClick = () => dispatch(toggleTeamPassSeasonsModal);
+
   return (
     <>
       <HzChart
         label={'Targets'}
+        onClick={onClick}
         data={chartData.map(({ name, tgt }) => ({ name, stat: tgt }))}
       />
       <HzChart
         label={'Receptions'}
+        onClick={onClick}
         data={chartData.map(({ name, rec }) => ({ name, stat: rec }))}
       />
       <HzChart
         label={'Receiving Yards'}
+        onClick={onClick}
         data={chartData.map(({ name, yds }) => ({ name, stat: yds }))}
       />
       <HzChart
-        label={'Receiving Touchdowns'}
+        label={'Receiving TDs'}
+        onClick={onClick}
         data={chartData.map(({ name, tds }) => ({ name, stat: tds }))}
       />
     </>
@@ -218,18 +248,24 @@ export const RushChartGroup = ({
     }
   );
 
+  const dispatch = useDispatch();
+  const onClick = () => dispatch(toggleTeamRushSeasonsModal());
+
   return (
     <>
       <HzChart
-        label={'Carries'}
+        label={'Rush Attempts'}
+        onClick={onClick}
         data={chartData.map(({ name, att }) => ({ name, stat: att }))}
       />
       <HzChart
-        label={'Rushing Yards'}
+        label={'Rush Yards'}
+        onClick={onClick}
         data={chartData.map(({ name, yds }) => ({ name, stat: yds }))}
       />
       <HzChart
-        label={'Rushing Touchdowns'}
+        label={'Rush TDs'}
+        onClick={onClick}
         data={chartData.map(({ name, tds }) => ({ name, stat: tds }))}
       />
     </>

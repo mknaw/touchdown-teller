@@ -16,6 +16,7 @@ export default <T,>({
   const [isDesc, setIsDesc] = useState(true);
   const setSort = (newSort: keyof T) => {
     if (newSort === sortKey) {
+      // TODO would be good to have a chevron in the th
       setIsDesc(!isDesc);
     } else {
       setSortKey(newSort);

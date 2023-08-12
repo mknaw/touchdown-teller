@@ -1,5 +1,3 @@
-// TODO I guess we call it "Modal"
-//
 import classNames from 'classnames';
 
 import { Box, Paper, Typography } from '@mui/material';
@@ -17,7 +15,7 @@ export default ({ children, title, ...props }: TTModalProps) => {
         <Paper className={boxClassName}>
           {title && (
             <Typography className={'flex w-full justify-center text-2xl mb-5'}>
-              Team Passing Projections
+              {title}
             </Typography>
           )}
           {children}
