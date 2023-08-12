@@ -7,7 +7,6 @@ import { useIndexedDBStore } from 'use-indexeddb';
 import { Switch } from '@mui/material';
 
 import Modal from '@/components/Modal';
-import { lastYear } from '@/constants';
 import { setupPersistence, teamStoreKey } from '@/data/persistence';
 import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';

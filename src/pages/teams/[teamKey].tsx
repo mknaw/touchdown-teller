@@ -22,11 +22,6 @@ import Schedule from '@/components/Schedule';
 import { Position, StatType, TeamKey, currentYear } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
 import TeamSeasonsModal from '@/features/TeamSeasonsModal';
-import {
-  PassChartGroup,
-  RecvChartGroup,
-  RushChartGroup,
-} from '@/features/teams/ChartGroup';
 import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
@@ -193,15 +188,6 @@ const getDataHandlers = <T extends PlayerSeason>(
     deleteSeason,
   };
 };
-
-const filterHistoricalPassAggregates = (seasons: PassAggregate[]) =>
-  seasons.filter((s) => s.att > 100);
-
-const filterHistoricalRecvAggregates = (seasons: RecvAggregate[]) =>
-  seasons.filter((s) => s.tgt > 50);
-
-const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
-  seasons.filter((s) => s.att > 50);
 
 export default function Page({
   team,
@@ -451,73 +437,28 @@ export default function Page({
         <div className={'w-full h-full grid grid-flow-row grid-rows-3 gap-8'}>
           <Card className={'row-span-2 h-full relative flex flex-col'}>
             {teamSeason && team.seasons[0] && (
-              <>
-                <TeamPanel
-                  statType={statType}
-                  teamSeason={teamSeason}
-                  setTeamSeason={setTeamSeason}
-                  persistTeamSeason={persistTeamSeason}
-                  lastSeason={lastSeason}
-                />
-                <div
-                  className={
-                    'grid grid-flow-row grid-rows-4 h-full overflow-hidden'
-                  }
-                >
-                  {
-                    {
-                      [StatType.PASS]: (
-                        <PassChartGroup
-                          seasons={passSeasons}
-                          lastSeasons={makeIdMap(
-                            filterHistoricalPassAggregates(
-                              _.filter(
-                                passAggregates,
-                                (agg) => agg.team == team.key
-                              )
-                            ),
-                            'playerId'
-                          )}
-                          teamSeason={teamSeason}
-                          lastSeason={team.seasons[0]}
-                        />
-                      ),
-                      [StatType.RECV]: (
-                        <RecvChartGroup
-                          seasons={recvSeasons}
-                          lastSeasons={makeIdMap(
-                            filterHistoricalRecvAggregates(
-                              _.filter(
-                                recvAggregates,
-                                (agg) => agg.team == team.key
-                              )
-                            ),
-                            'playerId'
-                          )}
-                          teamSeason={teamSeason}
-                          lastSeason={team.seasons[0]}
-                        />
-                      ),
-                      [StatType.RUSH]: (
-                        <RushChartGroup
-                          seasons={rushSeasons}
-                          lastSeasons={makeIdMap(
-                            filterHistoricalRushAggregates(
-                              _.filter(
-                                rushAggregates,
-                                (agg) => agg.team == team.key
-                              )
-                            ),
-                            'playerId'
-                          )}
-                          teamSeason={teamSeason}
-                          lastSeason={team.seasons[0]}
-                        />
-                      ),
-                    }[statType]
-                  }
-                </div>
-              </>
+              <TeamPanel
+                statType={statType}
+                teamSeason={teamSeason}
+                setTeamSeason={setTeamSeason}
+                persistTeamSeason={persistTeamSeason}
+                lastSeason={lastSeason}
+                passSeasons={passSeasons}
+                recvSeasons={recvSeasons}
+                rushSeasons={rushSeasons}
+                passAggregates={_.filter(
+                  passAggregates,
+                  (agg) => agg.team == team.key
+                )}
+                recvAggregates={_.filter(
+                  recvAggregates,
+                  (agg) => agg.team == team.key
+                )}
+                rushAggregates={_.filter(
+                  rushAggregates,
+                  (agg) => agg.team == team.key
+                )}
+              />
             )}
             <Snackbar
               className={'absolute'}

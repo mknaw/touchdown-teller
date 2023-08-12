@@ -8,13 +8,37 @@ import Typography from '@mui/material/Typography';
 
 import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
+import {
+  PassChartGroup,
+  RecvChartGroup,
+  RushChartGroup,
+} from '@/features/teams/ChartGroup';
+import {
+  PassAggregate,
+  PassSeason,
+  RecvAggregate,
+  RecvSeason,
+  RushAggregate,
+  RushSeason,
+} from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
 import {
   toggleTeamRushSeasonsModal,
   toggleTeamSeasonsModal,
 } from '@/store/appStateSlice';
+import { IdMap } from '@/types';
+import { makeIdMap } from '@/utils';
 
 const valueLabelFormat = (value: number) => value.toFixed(0);
+
+const filterHistoricalPassAggregates = (seasons: PassAggregate[]) =>
+  seasons.filter((s) => s.att > 100);
+
+const filterHistoricalRecvAggregates = (seasons: RecvAggregate[]) =>
+  seasons.filter((s) => s.tgt > 50);
+
+const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
+  seasons.filter((s) => s.att > 50);
 
 interface TeamStatsPanelProps {
   statType: StatType;
@@ -22,6 +46,13 @@ interface TeamStatsPanelProps {
   setTeamSeason: Dispatch<SetStateAction<TeamSeason | null>>;
   persistTeamSeason: () => void;
   lastSeason: PrismaTeamSeason;
+  // TODO don't really love taking all this stuff here
+  passSeasons: IdMap<PassSeason>;
+  recvSeasons: IdMap<RecvSeason>;
+  rushSeasons: IdMap<RushSeason>;
+  passAggregates: PassAggregate[];
+  recvAggregates: RecvAggregate[];
+  rushAggregates: RushAggregate[];
 }
 
 export default function TeamPanel({
@@ -30,6 +61,12 @@ export default function TeamPanel({
   setTeamSeason,
   persistTeamSeason,
   lastSeason,
+  passSeasons,
+  recvSeasons,
+  rushSeasons,
+  passAggregates,
+  recvAggregates,
+  rushAggregates,
 }: TeamStatsPanelProps) {
   const handleInputChange = (event: Event) => {
     const { target } = event;
@@ -59,6 +96,42 @@ export default function TeamPanel({
     [StatType.RUSH]: toggleTeamRushSeasonsModal,
   }[statType];
   const onClick = () => dispatch(toggle());
+
+  const chartGroup = {
+    [StatType.PASS]: (
+      <PassChartGroup
+        seasons={passSeasons}
+        lastSeasons={makeIdMap(
+          filterHistoricalPassAggregates(passAggregates),
+          'playerId'
+        )}
+        teamSeason={teamSeason}
+        lastSeason={lastSeason}
+      />
+    ),
+    [StatType.RECV]: (
+      <RecvChartGroup
+        seasons={recvSeasons}
+        lastSeasons={makeIdMap(
+          filterHistoricalRecvAggregates(recvAggregates),
+          'playerId'
+        )}
+        teamSeason={teamSeason}
+        lastSeason={lastSeason}
+      />
+    ),
+    [StatType.RUSH]: (
+      <RushChartGroup
+        seasons={rushSeasons}
+        lastSeasons={makeIdMap(
+          filterHistoricalRushAggregates(rushAggregates),
+          'playerId'
+        )}
+        teamSeason={teamSeason}
+        lastSeason={lastSeason}
+      />
+    ),
+  }[statType];
 
   return (
     <>
@@ -268,6 +341,9 @@ export default function TeamPanel({
           }[statType]
         }
       </Stack>
+      <div className={'grid grid-flow-row grid-rows-4 h-full overflow-hidden'}>
+        {chartGroup}
+      </div>
     </>
   );
 }
