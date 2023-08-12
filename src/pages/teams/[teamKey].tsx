@@ -20,11 +20,7 @@ import Typography from '@mui/material/Typography';
 import Card from '@/components/Card';
 import { Position, StatType, TeamKey } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
-import {
-  TeamLastPassSeasonsModal,
-  TeamPassSeasonsModal,
-  TeamRushSeasonsModal,
-} from '@/features/TeamSeasonsModal';
+import TeamSeasonsModal from '@/features/TeamSeasonsModal';
 import {
   PassChartGroup,
   RecvChartGroup,
@@ -437,9 +433,7 @@ export default function Page({
 
   return (
     <div className={'flex h-full pb-5'}>
-      <TeamLastPassSeasonsModal />
-      {/* <TeamPassSeasonsModal /> */}
-      <TeamRushSeasonsModal />
+      <TeamSeasonsModal />
       <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
         <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>

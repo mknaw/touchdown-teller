@@ -10,8 +10,8 @@ import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
 import TeamSeason from '@/models/TeamSeason';
 import {
-  toggleTeamPassSeasonsModal,
   toggleTeamRushSeasonsModal,
+  toggleTeamSeasonsModal,
 } from '@/store/appStateSlice';
 
 const valueLabelFormat = (value: number) => value.toFixed(0);
@@ -54,8 +54,8 @@ export default function TeamPanel({
   }[statType];
 
   const toggle = {
-    [StatType.PASS]: toggleTeamPassSeasonsModal,
-    [StatType.RECV]: toggleTeamPassSeasonsModal,
+    [StatType.PASS]: toggleTeamSeasonsModal,
+    [StatType.RECV]: toggleTeamSeasonsModal,
     [StatType.RUSH]: toggleTeamRushSeasonsModal,
   }[statType];
   const onClick = () => dispatch(toggle());

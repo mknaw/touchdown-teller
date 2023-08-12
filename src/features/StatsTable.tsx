@@ -4,17 +4,19 @@ import _ from 'lodash';
 
 import { Typography } from '@mui/material';
 
-export default <T,>({
+import { TeamSeasonData } from '@/models/TeamSeason';
+
+export default ({
   headers,
   data,
 }: {
-  headers: Record<keyof T, string>;
-  data: T[];
+  headers: { [key in keyof TeamSeasonData]?: string };
+  data: TeamSeasonData[];
 }) => {
   const defaultSort = Object.keys(headers)[1];
-  const [sortKey, setSortKey] = useState<keyof T>(defaultSort as keyof T);
+  const [sortKey, setSortKey] = useState(defaultSort as keyof TeamSeasonData);
   const [isDesc, setIsDesc] = useState(true);
-  const setSort = (newSort: keyof T) => {
+  const setSort = (newSort: keyof TeamSeasonData) => {
     if (newSort === sortKey) {
       // TODO would be good to have a chevron in the th
       setIsDesc(!isDesc);
@@ -31,7 +33,7 @@ export default <T,>({
           {Object.entries(headers).map(([column, header]) => (
             <th
               key={column}
-              onClick={() => setSort(column as keyof T)}
+              onClick={() => setSort(column as keyof TeamSeasonData)}
               className={'pb-2'}
             >
               <Typography className={'cursor-pointer'}>
@@ -46,7 +48,9 @@ export default <T,>({
           <tr key={i}>
             {Object.keys(headers).map((column) => (
               <td className={'text-center'}>
-                <Typography>{datum[column as keyof T] as string}</Typography>
+                <Typography>
+                  {datum[column as keyof TeamSeasonData] as string}
+                </Typography>
               </td>
             ))}
           </tr>
