@@ -18,7 +18,8 @@ import Snackbar from '@mui/material/Snackbar';
 import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
-import { Position, StatType, TeamKey } from '@/constants';
+import Schedule from '@/components/Schedule';
+import { Position, StatType, TeamKey, currentYear } from '@/constants';
 import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
 import TeamSeasonsModal from '@/features/TeamSeasonsModal';
 import {
@@ -539,9 +540,15 @@ export default function Page({
                 </div>
               </>
             ) : (
-              // TODO replace with schedule grid
-              // Or even message about rookies...
-              <div>No player selected</div>
+              <div className={'flex flex-col h-full'}>
+                <Typography className={'text-center text-2xl mb-5'}>
+                  {`${currentYear} Schedule`}
+                </Typography>
+                <Schedule
+                  teamKey={team.key as TeamKey}
+                  games={[...team.awayGames, ...team.homeGames]}
+                />
+              </div>
             )}
           </Card>
         </div>

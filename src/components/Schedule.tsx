@@ -1,4 +1,4 @@
-'use client';
+import Link from 'next/link';
 
 import { Game } from '@prisma/client';
 
@@ -15,7 +15,11 @@ function GameCell({ teamKey, game }: GameCellProps) {
   const isAway = game.awayName == teamKey;
   const prefix = isAway ? '@' : '';
   const opponent = isAway ? game.homeName : game.awayName;
-  return <td>{`${prefix}${opponent}`}</td>;
+  return (
+    <td>
+      <Link href={`/teams/${opponent}`}>{`${prefix}${opponent}`}</Link>
+    </td>
+  );
 }
 
 interface ScheduleProps {
@@ -24,11 +28,12 @@ interface ScheduleProps {
 }
 
 export default function Schedule({ teamKey, games }: ScheduleProps) {
+  console.log(games);
   const gameMap = new Map(games.map((g) => [g.week, g]));
   const weeks = [...Array(gameCount).keys()].map((i) => i + 1);
   return (
-    <Box justifyContent='center' sx={{ display: 'flex', width: 1 }}>
-      <table>
+    <Box className={'flex w-full justify-center'}>
+      <table className={'w-full'}>
         <thead>
           <tr>
             {weeks.map((week) => (
@@ -43,7 +48,12 @@ export default function Schedule({ teamKey, games }: ScheduleProps) {
               if (game) {
                 return <GameCell key={week} teamKey={teamKey} game={game} />;
               } else {
-                return <td key={week}>BYE</td>;
+                // TODO should get `gray` from theme...
+                return (
+                  <td key={week} className={'text-gray-500'}>
+                    BYE
+                  </td>
+                );
               }
             })}
           </tr>
