@@ -1,9 +1,6 @@
-import {
-  Action,
-  ThunkAction,
-  configureStore,
-  createStore,
-} from '@reduxjs/toolkit';
+import { useDispatch } from 'react-redux';
+
+import { Action, ThunkAction, configureStore } from '@reduxjs/toolkit';
 import { createWrapper } from 'next-redux-wrapper';
 import {
   FLUSH,
@@ -18,6 +15,7 @@ import { persistCombineReducers } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
 import appStateSlice from '@/store/appStateSlice';
+import playerProjectionsSlice from '@/store/playerProjectionSlice';
 import settingsSlice from '@/store/settingsSlice';
 
 const makeStore = () => {
@@ -30,19 +28,19 @@ const makeStore = () => {
   const persistedReducer = persistCombineReducers(persistConfig, {
     [settingsSlice.name]: settingsSlice.reducer,
     [appStateSlice.name]: appStateSlice.reducer,
+    [playerProjectionsSlice.name]: playerProjectionsSlice.reducer,
   });
-  const store = createStore(persistedReducer);
-  // reducer: {
-  //   [settingsSlice.name]: persistedReducer,
-  // },
-  // middleware: (getDefaultMiddleware) =>
-  //   getDefaultMiddleware({
-  //     serializableCheck: {
-  //       ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-  //     },
-  //   }),
-  // devTools: true,
-  // });
+
+  const store = configureStore({
+    reducer: persistedReducer,
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: {
+          ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
+        },
+      }),
+    devTools: true,
+  });
 
   persistStore(store);
 
@@ -57,6 +55,8 @@ export type AppThunk<ReturnType = void> = ThunkAction<
   unknown,
   Action
 >;
+export type AppDispatch = AppStore['dispatch'];
+export const useAppDispatch = () => useDispatch<AppDispatch>();
 
 export const settingsAction = settingsSlice.actions.setStatType;
 

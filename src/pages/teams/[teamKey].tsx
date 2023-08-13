@@ -1,10 +1,10 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
+import { Table } from 'dexie';
 import _ from 'lodash';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
-import { useIndexedDBStore } from 'use-indexeddb';
 
 import {
   PassGame,
@@ -20,7 +20,7 @@ import Typography from '@mui/material/Typography';
 import Card from '@/components/Card';
 import Schedule from '@/components/Schedule';
 import { Position, StatType, TeamKey, currentYear } from '@/constants';
-import { StorageKey, setupPersistence, teamStoreKey } from '@/data/persistence';
+import { db } from '@/data/persistence';
 import TeamSeasonsModal from '@/features/TeamSeasonsModal';
 import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
@@ -42,18 +42,14 @@ import {
 import {
   PassAggregate,
   PassSeason,
-  PassSeasonData,
   RecvAggregate,
   RecvSeason,
-  RecvSeasonData,
   RushAggregate,
   RushSeason,
-  RushSeasonData,
 } from '@/models/PlayerSeason';
-import TeamSeason, { TeamSeasonData } from '@/models/TeamSeason';
+import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
 import {
-  IDBStore,
   IdMap,
   PlayerSeason,
   PlayerSeasonConstructable,
@@ -126,7 +122,7 @@ const getDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
   playerSeasons: IdMap<T>,
   constructor: PlayerSeasonConstructable<T>,
-  store: IDBStore<PlayerSeasonData<T>>,
+  table: Table,
   toStoreData: (s: T) => PlayerSeasonData<T>,
   setSeason: Dispatch<SetStateAction<IdMap<T>>>,
   setValidationMessage: (message: string) => void
@@ -139,7 +135,7 @@ const getDataHandlers = <T extends PlayerSeason>(
     );
 
   const initSeasons = async () => {
-    const data = await store.getManyByKey('team', teamKey);
+    const data = await table.where('team').equals(teamKey).toArray();
     setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
   };
 
@@ -149,8 +145,8 @@ const getDataHandlers = <T extends PlayerSeason>(
       ? _.cloneDeep(lastSeason)
       : constructor.default(player, teamKey as TeamKey);
     season = ensureValid(season, projection);
-    store
-      .add(toStoreData(season), player.id)
+    table
+      .put(toStoreData(season), player.id)
       // TODO would prefer to render optimistically and resolve failure
       // but that could be more complicated... for later
       .then(() => updateSeason(season))
@@ -169,7 +165,7 @@ const getDataHandlers = <T extends PlayerSeason>(
       );
     }
     updateSeason(updatedSeason);
-    store.update(toStoreData(updatedSeason), season.playerId);
+    table.update(season.playerId, toStoreData(updatedSeason));
   };
 
   const deleteSeason = (playerId: number) => {
@@ -177,7 +173,7 @@ const getDataHandlers = <T extends PlayerSeason>(
       season.delete(playerId);
       return season;
     });
-    store.deleteByID(playerId);
+    table.where('id').equals(playerId).delete();
   };
 
   return {
@@ -219,32 +215,29 @@ export default function Page({
   );
 
   const [teamSeason, setTeamSeason] = useState<TeamSeason | null>(null);
-  const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
   const lastSeason = team.seasons[0];
   if (!lastSeason) {
     return null; // Shouldn't happen.
   }
   useEffect(() => {
     async function fetch() {
-      await setupPersistence();
-      const teamProjectionData = await teamStore.getByID(team.key);
+      const teamProjectionData = await db.team.get(team.key as TeamKey);
       if (teamProjectionData) {
         setTeamSeason(new TeamSeason(teamProjectionData));
       } else {
         const newTeamSeason = TeamSeason.fromPrisma(lastSeason);
         setTeamSeason(newTeamSeason);
-        teamStore.add(newTeamSeason, team.key);
+        db.team.add(newTeamSeason, team.key as TeamKey);
       }
     }
     fetch();
-  }, [team, teamStore]);
+  }, [team]);
 
   const [playerSeasonValidationMessage, setPlayerSeasonValidationMessage] =
     useState('');
   const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
     useState('');
 
-  const passStore = useIndexedDBStore<PassSeasonData>(StorageKey.PASS);
   // TODO really embarrassing to WET this up...
   const playerPassSeasons = makeIdMap(
     _.map(_.groupBy(passAggregates, 'playerId'), (agg, playerId) => {
@@ -265,13 +258,12 @@ export default function Page({
     team.key as TeamKey,
     playerPassSeasons,
     PassSeason,
-    passStore,
+    db.pass,
     (s: PassSeason) => s.toStoreData(),
     setPassSeasons,
     setPlayerSeasonValidationMessage
   );
 
-  const recvStore = useIndexedDBStore<RecvSeasonData>(StorageKey.RECV);
   const playerRecvSeasons = makeIdMap(
     _.map(_.groupBy(recvAggregates, 'playerId'), (agg, playerId) => {
       return RecvSeason.fromAggregate({
@@ -291,13 +283,12 @@ export default function Page({
     team.key as TeamKey,
     playerRecvSeasons,
     RecvSeason,
-    recvStore,
+    db.recv,
     (s: RecvSeason) => s.toStoreData(),
     setRecvSeasons,
     setPlayerSeasonValidationMessage
   );
 
-  const rushStore = useIndexedDBStore<RushSeasonData>(StorageKey.RUSH);
   const playerRushSeasons = makeIdMap(
     _.map(_.groupBy(rushAggregates, 'playerId'), (agg, playerId) => {
       return RushSeason.fromAggregate({
@@ -316,7 +307,7 @@ export default function Page({
     team.key as TeamKey,
     playerRushSeasons,
     RushSeason,
-    rushStore,
+    db.rush,
     (s: RushSeason) => s.toStoreData(),
     setRushSeasons,
     setPlayerSeasonValidationMessage
@@ -324,7 +315,6 @@ export default function Page({
 
   useEffect(() => {
     const fetch = async () => {
-      await setupPersistence();
       passDataHandlers.initSeasons();
       recvDataHandlers.initSeasons();
       rushDataHandlers.initSeasons();
@@ -354,7 +344,7 @@ export default function Page({
     setTeamSeason(() => _.cloneDeep(newTeamSeason));
 
     if (wasValid) {
-      teamStore.update(newTeamSeason.toStoreData(), team.key);
+      db.team.update(team.key as TeamKey, newTeamSeason.toStoreData());
     } else {
       setTeamSeasonValidationMessage(
         'Team total limited in accordance with player projection total.'

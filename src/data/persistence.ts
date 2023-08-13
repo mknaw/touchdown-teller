@@ -1,4 +1,12 @@
-import setupIndexedDB from 'use-indexeddb';
+import Dexie, { Table } from 'dexie';
+
+import { TeamKey } from '@/constants';
+import {
+  PassSeasonData,
+  RecvSeasonData,
+  RushSeasonData,
+} from '@/models/PlayerSeason';
+import { TeamSeasonData } from '@/models/TeamSeason';
 
 export const teamStoreKey = 'team';
 export enum StorageKey {
@@ -7,37 +15,21 @@ export enum StorageKey {
   RUSH = 'rush',
 }
 
-const indexedDbConfig = {
-  databaseName: 'touchdown-teller',
-  version: 1,
-  stores: [
-    {
-      name: teamStoreKey,
-      // Keyed by `TeamKey`
-      id: { autoIncrement: false },
-      indices: [],
-    },
-    // TODO these probably should be programmatically generated from the enum iter
-    {
-      name: StorageKey.PASS,
-      id: { autoIncrement: false },
-      indices: [{ name: 'team', keyPath: 'team', options: { unique: false } }],
-    },
-    {
-      name: StorageKey.RUSH,
-      id: { autoIncrement: false },
-      indices: [{ name: 'team', keyPath: 'team', options: { unique: false } }],
-    },
-    {
-      name: StorageKey.RECV,
-      id: { autoIncrement: false },
-      indices: [{ name: 'team', keyPath: 'team', options: { unique: false } }],
-    },
-  ],
-};
+export class TouchdownTellerDatabase extends Dexie {
+  public team!: Table<TeamSeasonData, TeamKey>;
+  public pass!: Table<PassSeasonData, number>;
+  public recv!: Table<RecvSeasonData, number>;
+  public rush!: Table<RushSeasonData, number>;
 
-export const setupPersistence = async () => {
-  setupIndexedDB(indexedDbConfig).catch((e) =>
-    console.error('error / unsupported', e)
-  );
-};
+  public constructor() {
+    super('touchdown-teller');
+    this.version(1).stores({
+      team: '',
+      pass: ',team',
+      recv: ',team',
+      rush: ',team',
+    });
+  }
+}
+
+export const db = new TouchdownTellerDatabase();

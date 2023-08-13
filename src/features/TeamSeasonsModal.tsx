@@ -7,7 +7,7 @@ import { useIndexedDBStore } from 'use-indexeddb';
 import { Switch } from '@mui/material';
 
 import Modal from '@/components/Modal';
-import { setupPersistence, teamStoreKey } from '@/data/persistence';
+import { db, teamStoreKey } from '@/data/persistence';
 import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';
 import TeamSeason from '@/models/TeamSeason';
@@ -26,8 +26,7 @@ function useTeamProjections(open: boolean) {
   const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
   useEffect(() => {
     async function fetch() {
-      await setupPersistence();
-      const teamProjectionData = await teamStore.getAll();
+      const teamProjectionData = await db.team.toArray();
       setTeamSeasons(teamProjectionData.map((data) => new TeamSeason(data)));
     }
     fetch();
