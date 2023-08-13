@@ -15,7 +15,6 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
 
 import { TeamKey } from '@/constants';
 import { titleFont } from '@/styles/fonts';
@@ -41,9 +40,11 @@ function HeaderBar({
             onClick={() => setDrawerOpen(!isDrawerOpen)}
             size='large'
             aria-label='menu'
-            className={
-              'absolute top-1/2 -translate-y-1/2 z-40 text-color-white'
-            }
+            sx={{
+              // Nasty hack since I haven't reconciled tailwind properly
+              position: 'absolute',
+            }}
+            className={'top-1/2 -translate-y-1/2 z-40 text-color-white'}
           >
             <MenuIcon />
           </IconButton>
@@ -59,11 +60,7 @@ function HeaderTitle({ header }: HeaderProps) {
     'grow text-center text-5xl text-white font-semibold',
     titleFont.className
   );
-  return (
-    <Typography variant='h6' component='div' className={className}>
-      {header}
-    </Typography>
-  );
+  return <h6 className={className}>{header}</h6>;
 }
 
 // TODO probably SideDrawer can be in a layout and only need dynamic header?
@@ -82,7 +79,15 @@ function SideDrawer({
       >
         <div className={'w-1/3 h-screen bg-red-500'}>
           <List
-            className={'flex-col h-full justify-space mt-0 pt-0 top-header'}
+            className={'mt-0 pt-0 top-header'}
+            sx={{
+              // TODO remove when I fix the tailwind interop
+              display: 'flex',
+              flexDirection: 'column',
+              height: 1,
+              width: 1,
+              justifyContent: 'space-between',
+            }}
           >
             {Object.keys(TeamKey).map((key) => (
               <ListItem

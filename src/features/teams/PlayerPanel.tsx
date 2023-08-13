@@ -170,7 +170,11 @@ export default function PlayerPanel<T extends PlayerSeason>({
                       deleteSeason(selectedPlayer.id);
                       setSelectedPlayer(undefined);
                     }}
-                    className={'absolute right-0 -translate-x-full'}
+                    sx={{
+                      // Nasty hack since I haven't reconciled tailwind properly
+                      position: 'absolute',
+                    }}
+                    className={'right-0 -translate-x-full'}
                   >
                     <DeleteIcon />
                   </IconButton>

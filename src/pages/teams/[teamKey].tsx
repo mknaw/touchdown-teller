@@ -426,7 +426,7 @@ export default function Page({
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
             <Snackbar
-              className={'absolute'}
+              sx={{ position: 'absolute' }}
               open={!!playerSeasonValidationMessage}
               autoHideDuration={3000}
               message={playerSeasonValidationMessage}
@@ -461,7 +461,7 @@ export default function Page({
               />
             )}
             <Snackbar
-              className={'absolute'}
+              sx={{ position: 'absolute' }}
               open={!!teamSeasonValidationMessage}
               autoHideDuration={3000}
               message={teamSeasonValidationMessage}

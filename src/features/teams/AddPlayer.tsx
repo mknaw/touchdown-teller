@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 
 import { Player } from '@prisma/client';
@@ -35,7 +33,11 @@ export default function AddPlayer({
   return (
     <ClickAwayListener onClickAway={handlePopoverClose}>
       <div>
-        <Fab color='primary' onClick={handlePopoverOpen} className={'z-20'}>
+        <Fab
+          color='primary'
+          onClick={handlePopoverOpen}
+          sx={{ backgroundColor: 'transparent', zIndex: 20 }}
+        >
           <AddCircleIcon />
         </Fab>
         {/* TODO might want to make this scrollable or rearrange, for extreme cases */}
