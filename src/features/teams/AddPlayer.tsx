@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { Player } from '@prisma/client';
 
-import ClickAwayListener from '@mui/base/ClickAwayListener';
+import { ClickAwayListener } from '@mui/base/ClickAwayListener';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import Fab from '@mui/material/Fab';
 import List from '@mui/material/List';

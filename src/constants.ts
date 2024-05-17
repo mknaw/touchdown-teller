@@ -1,7 +1,6 @@
 export const REMAINING_LABEL = 'Remaining';
 
-// TODO could get this from some sort of cfg + calculation.
-export const currentYear = 2023;
+export const currentYear = 2024;
 export const lastYear = currentYear - 1;
 
 export enum TeamKey {

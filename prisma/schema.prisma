@@ -43,10 +43,10 @@ model Team {
   key       String       @id @map("name")
   awayGames Game[]       @relation("game_awayToteam")
   homeGames Game[]       @relation("game_homeToteam")
-  passGames PassGame[]  @relation("passing_game_stats_teamToteam")
+  passGames PassGame[]   @relation("passing_game_stats_teamToteam")
   players   Player[]     @relation("player_teamToteam")
-  recvGames RecvGame[]  @relation("receiving_game_stats_teamToteam")
-  rushGames RushGame[]  @relation("rushing_game_stats_teamToteam")
+  recvGames RecvGame[]   @relation("receiving_game_stats_teamToteam")
+  rushGames RushGame[]   @relation("rushing_game_stats_teamToteam")
   seasons   TeamSeason[] @relation("team_season_teamToteam")
 
   @@map("team")
