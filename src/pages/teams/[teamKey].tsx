@@ -19,7 +19,7 @@ import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
 import Schedule from '@/components/Schedule';
-import { Position, StatType, TeamKey, currentYear } from '@/constants';
+import { Position, StatType, TeamKey, currentYear, lastYear } from '@/constants';
 import { db } from '@/data/persistence';
 import TeamSeasonsModal from '@/features/TeamSeasonsModal';
 import PlayerGameLog from '@/features/teams/PlayerGameLog';
@@ -79,34 +79,34 @@ export const getStaticProps: GetStaticProps<
 > = async (context) => {
   const { teamKey } = context.params as Params;
   const prisma = new PrismaClient();
-  const team = await getTeam(prisma, teamKey);
+  const team = await getTeam(prisma, teamKey, lastYear);
   const playerIds = _.map(team.players, 'id');
   const [
-    passGames,
-    recvGames,
-    rushGames,
-    passAggregates,
-    recvAggregates,
-    rushAggregates,
+    lastYearPassGames,
+    lastYearRecvGames,
+    lastYearRushGames,
+    lastYearPassAggregates,
+    lastYearRecvAggregates,
+    lastYearRushAggregates,
   ] = await Promise.all([
-    getPlayerPassGame(prisma, playerIds),
-    getPlayerRecvGame(prisma, playerIds),
-    getPlayerRushGame(prisma, playerIds),
-    getPlayerPassAggregates(prisma, teamKey, playerIds),
-    getPlayerRecvAggregates(prisma, teamKey, playerIds),
-    getPlayerRushAggregates(prisma, teamKey, playerIds),
+    getPlayerPassGame(prisma, playerIds, lastYear),
+    getPlayerRecvGame(prisma, playerIds, lastYear),
+    getPlayerRushGame(prisma, playerIds, lastYear),
+    getPlayerPassAggregates(prisma, teamKey, playerIds, lastYear),
+    getPlayerRecvAggregates(prisma, teamKey, playerIds, lastYear),
+    getPlayerRushAggregates(prisma, teamKey, playerIds, lastYear),
   ]);
 
   return {
     props: {
       team,
       title: getTeamName(team.key as TeamKey),
-      passGames,
-      recvGames,
-      rushGames,
-      passAggregates,
-      recvAggregates,
-      rushAggregates,
+      lastYearPassGames,
+      lastYearRecvGames,
+      lastYearRushGames,
+      lastYearPassAggregates,
+      lastYearRecvAggregates,
+      lastYearRushAggregates,
     },
   };
 };
@@ -187,20 +187,20 @@ const getDataHandlers = <T extends PlayerSeason>(
 
 export default function Page({
   team,
-  passGames,
-  recvGames,
-  rushGames,
-  passAggregates,
-  recvAggregates,
-  rushAggregates,
+  lastYearPassGames,
+  lastYearRecvGames,
+  lastYearRushGames,
+  lastYearPassAggregates,
+  lastYearRecvAggregates,
+  lastYearRushAggregates,
 }: {
   team: TeamWithExtras;
-  passGames: PassGame[];
-  recvGames: RecvGame[];
-  rushGames: RushGame[];
-  passAggregates: PassAggregate[];
-  recvAggregates: RecvAggregate[];
-  rushAggregates: RushAggregate[];
+  lastYearPassGames: PassGame[];
+  lastYearRecvGames: RecvGame[];
+  lastYearRushGames: RushGame[];
+  lastYearPassAggregates: PassAggregate[];
+  lastYearRecvAggregates: RecvAggregate[];
+  lastYearRushAggregates: RushAggregate[];
 }) {
   const statType = useSelector<AppState, StatType>(
     (state) => state.settings.statType
@@ -240,7 +240,7 @@ export default function Page({
 
   // TODO really embarrassing to WET this up...
   const playerPassSeasons = makeIdMap(
-    _.map(_.groupBy(passAggregates, 'playerId'), (agg, playerId) => {
+    _.map(_.groupBy(lastYearPassAggregates, 'playerId'), (agg, playerId) => {
       return PassSeason.fromAggregate({
         playerId: parseInt(playerId),
         name: agg[0].name,
@@ -265,7 +265,7 @@ export default function Page({
   );
 
   const playerRecvSeasons = makeIdMap(
-    _.map(_.groupBy(recvAggregates, 'playerId'), (agg, playerId) => {
+    _.map(_.groupBy(lastYearRecvAggregates, 'playerId'), (agg, playerId) => {
       return RecvSeason.fromAggregate({
         playerId: parseInt(playerId),
         name: agg[0].name,
@@ -290,7 +290,7 @@ export default function Page({
   );
 
   const playerRushSeasons = makeIdMap(
-    _.map(_.groupBy(rushAggregates, 'playerId'), (agg, playerId) => {
+    _.map(_.groupBy(lastYearRushAggregates, 'playerId'), (agg, playerId) => {
       return RushSeason.fromAggregate({
         playerId: parseInt(playerId),
         name: agg[0].name,
@@ -394,15 +394,15 @@ export default function Page({
   const games = selectedPlayer
     ? {
       [StatType.PASS]: _.filter(
-        passGames,
+        lastYearPassGames,
         (g) => g.player_id == selectedPlayer.id
       ),
       [StatType.RECV]: _.filter(
-        recvGames,
+        lastYearRecvGames,
         (g) => g.player_id == selectedPlayer.id
       ),
       [StatType.RUSH]: _.filter(
-        rushGames,
+        lastYearRushGames,
         (g) => g.player_id == selectedPlayer.id
       ),
     }[statType]
@@ -437,15 +437,15 @@ export default function Page({
                 recvSeasons={recvSeasons}
                 rushSeasons={rushSeasons}
                 passAggregates={_.filter(
-                  passAggregates,
+                  lastYearPassAggregates,
                   (agg) => agg.team == team.key
                 )}
                 recvAggregates={_.filter(
-                  recvAggregates,
+                  lastYearRecvAggregates,
                   (agg) => agg.team == team.key
                 )}
                 rushAggregates={_.filter(
-                  rushAggregates,
+                  lastYearRushAggregates,
                   (agg) => agg.team == team.key
                 )}
               />

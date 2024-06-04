@@ -160,8 +160,6 @@ export default function TeamPanel({
                       value: lastSeason.passAtt,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='passAtt'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -180,8 +178,6 @@ export default function TeamPanel({
                       value: lastSeason.passYds,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='passYds'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -200,8 +196,6 @@ export default function TeamPanel({
                       value: lastSeason.passTds,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='passTds'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -209,7 +203,7 @@ export default function TeamPanel({
                 />
               </>
             ),
-            // TODO should we add receptions here?
+            // TODO should we add receptions here? Otherwise it's kinda the same as before?
             [StatType.RECV]: (
               <>
                 <LabeledSlider
@@ -225,8 +219,6 @@ export default function TeamPanel({
                       value: lastSeason.passAtt,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='passAtt'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -245,8 +237,6 @@ export default function TeamPanel({
                       value: lastSeason.passYds,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='passYds'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -265,8 +255,6 @@ export default function TeamPanel({
                       value: lastSeason.passTds,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='passTds'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -289,8 +277,6 @@ export default function TeamPanel({
                       value: lastSeason.rushAtt,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='rushAtt'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -309,8 +295,6 @@ export default function TeamPanel({
                       value: lastSeason.rushYds,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='rushYds'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}
@@ -329,8 +313,6 @@ export default function TeamPanel({
                       value: lastSeason.rushTds,
                     },
                   ]}
-                  aria-label='Default'
-                  valueLabelDisplay='auto'
                   name='rushTds'
                   onChange={handleInputChange}
                   onChangeCommitted={persistTeamSeason}

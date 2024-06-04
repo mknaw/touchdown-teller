@@ -13,14 +13,13 @@ export default function LabeledSlider({
   ...props
 }: LabeledSliderProps) {
   const className = onClick ? 'cursor-pointer' : '';
-  console.log(onClick);
 
   return (
     <Box sx={{ width: 1 }}>
       <Typography className={className} onClick={onClick}>
         {label}
       </Typography>
-      <Slider {...props} />
+      <Slider valueLabelDisplay={'auto'} aria-label={label} {...props} />
     </Box>
   );
 }

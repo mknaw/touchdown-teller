@@ -28,7 +28,6 @@ interface ScheduleProps {
 }
 
 export default function Schedule({ teamKey, games }: ScheduleProps) {
-  console.log(games);
   const gameMap = new Map(games.map((g) => [g.week, g]));
   const weeks = [...Array(gameCount).keys()].map((i) => i + 1);
   return (

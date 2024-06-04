@@ -9,7 +9,6 @@ import {
   TeamSeason,
 } from '@prisma/client';
 
-import { lastYear } from '@/constants';
 import {
   PassAggregate,
   RecvAggregate,
@@ -19,7 +18,8 @@ import { TeamWithExtras } from '@/types';
 
 export async function getTeam(
   prisma: PrismaClient,
-  teamKey: string
+  teamKey: string,
+  year: number,
 ): Promise<TeamWithExtras> {
   return await prisma.team.findFirstOrThrow({
     where: {
@@ -30,24 +30,24 @@ export async function getTeam(
         include: {
           passGames: {
             where: {
-              season: lastYear,
+              season: year,
             },
           },
           rushGames: {
             where: {
-              season: lastYear,
+              season: year,
             },
           },
           recvGames: {
             where: {
-              season: lastYear,
+              season: year,
             },
           },
         },
       },
       seasons: {
         where: {
-          season: lastYear,
+          season: year,
         },
       },
       homeGames: true,
@@ -58,11 +58,12 @@ export async function getTeam(
 
 export async function getPlayerPassGame(
   prisma: PrismaClient,
-  playerIds: number[]
+  playerIds: number[],
+  year: number,
 ): Promise<PassGame[]> {
   return prisma.passGame.findMany({
     where: {
-      season: lastYear,
+      season: year,
       player_id: {
         in: playerIds,
       },
@@ -72,11 +73,12 @@ export async function getPlayerPassGame(
 
 export async function getPlayerRecvGame(
   prisma: PrismaClient,
-  playerIds: number[]
+  playerIds: number[],
+  year: number,
 ): Promise<RecvGame[]> {
   return prisma.recvGame.findMany({
     where: {
-      season: lastYear,
+      season: year,
       player_id: {
         in: playerIds,
       },
@@ -86,11 +88,12 @@ export async function getPlayerRecvGame(
 
 export async function getPlayerRushGame(
   prisma: PrismaClient,
-  playerIds: number[]
+  playerIds: number[],
+  year: number,
 ): Promise<RushGame[]> {
   return prisma.rushGame.findMany({
     where: {
-      season: lastYear,
+      season: year,
       player_id: {
         in: playerIds,
       },
@@ -104,7 +107,8 @@ const downcastBigInts = (obj: object) =>
 export async function getPlayerPassAggregates(
   prisma: PrismaClient,
   teamKey: string,
-  playerIds: number[]
+  playerIds: number[],
+  year: number,
 ): Promise<PassAggregate[]> {
   const agg: object[] = await prisma.$queryRaw`
     SELECT 
@@ -121,7 +125,7 @@ export async function getPlayerPassAggregates(
     JOIN 
         player p ON p.id = s.player_id
     WHERE
-        s.season = 2022
+        s.season = ${year}
         AND (
           s.team = ${teamKey}
           OR s.player_id IN (${Prisma.join(playerIds)})
@@ -135,7 +139,8 @@ export async function getPlayerPassAggregates(
 export async function getPlayerRecvAggregates(
   prisma: PrismaClient,
   teamKey: string,
-  playerIds: number[]
+  playerIds: number[],
+  year: number,
 ): Promise<RecvAggregate[]> {
   const agg: object[] = await prisma.$queryRaw`
     SELECT 
@@ -152,7 +157,7 @@ export async function getPlayerRecvAggregates(
     JOIN 
         player p ON p.id = s.player_id
     WHERE
-        s.season = 2022
+        s.season = ${year}
         AND (
           s.team = ${teamKey}
           OR s.player_id IN (${Prisma.join(playerIds)})
@@ -166,7 +171,8 @@ export async function getPlayerRecvAggregates(
 export async function getPlayerRushAggregates(
   prisma: PrismaClient,
   teamKey: string,
-  playerIds: number[]
+  playerIds: number[],
+  year: number,
 ): Promise<RushAggregate[]> {
   const agg: object[] = await prisma.$queryRaw`
     SELECT 
@@ -182,7 +188,7 @@ export async function getPlayerRushAggregates(
     JOIN 
         player p ON p.id = s.player_id
     WHERE
-        s.season = 2022
+        s.season = ${year}
         AND (
           s.team = ${teamKey}
           OR s.player_id IN (${Prisma.join(playerIds)})
