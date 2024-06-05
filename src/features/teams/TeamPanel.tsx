@@ -134,7 +134,7 @@ export default function TeamPanel({
   }[statType];
 
   return (
-    <>
+    <div className={'flex flex-col w-full h-full'}>
       {/* TODO ought to do a better job of vertical alignment with LHS */}
       <Typography
         className={'text-2xl w-full text-center cursor-pointer py-4'}
@@ -323,9 +323,14 @@ export default function TeamPanel({
           }[statType]
         }
       </Stack>
+      <div className={'bg-red-500 p-16'}>
+        CHART GOES HERE
+      </div>
+      {/*
       <div className={'grid grid-flow-row grid-rows-4 h-full overflow-hidden'}>
         {chartGroup}
       </div>
-    </>
+      */}
+    </div>
   );
 }
