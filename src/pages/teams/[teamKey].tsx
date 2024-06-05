@@ -411,7 +411,7 @@ export default function Page({
   return (
     <div className={'flex h-full pb-5'}>
       <TeamSeasonsModal />
-      <div className={'flex grid-cols-2 gap-8 h-full w-full'}>
+      <div className={'flex gap-8 h-full w-full flex-col lg:flex-row'}>
         <div className={'h-full w-full'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
@@ -424,7 +424,7 @@ export default function Page({
             />
           </Card>
         </div>
-        <div className={'w-full h-full grid grid-flow-row grid-rows-3 gap-8'}>
+        <div className={'w-full h-full grid lg:grid-flow-row lg:grid-rows-3 gap-8'}>
           <Card className={'row-span-2 h-full relative flex flex-col'}>
             {teamSeason && team.seasons[0] && (
               <TeamPanel

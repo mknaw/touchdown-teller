@@ -135,7 +135,7 @@ export default function Nav({
   return (
     <>
       <SideDrawer isDrawerOpen={isDrawerOpen} setDrawerOpen={setDrawerOpen} />
-      <main className='w-full flex h-screen flex-col justify-stretch px-5 overflow-clip'>
+      <main className='w-full flex h-screen flex-col justify-stretch px-5'>
         <HeaderBar
           isDrawerOpen={isDrawerOpen}
           setDrawerOpen={setDrawerOpen}

@@ -4,7 +4,7 @@ export default function Document() {
   return (
     <Html lang='en'>
       <Head />
-      <body className={'overflow-clip'}>
+      <body className={'lg:overflow-y-clip overflow-x-clip'}>
         <Main />
         <NextScript />
       </body>

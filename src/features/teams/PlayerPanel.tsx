@@ -132,11 +132,11 @@ export default function PlayerPanel<T extends PlayerSeason>({
   const season = selectedPlayer && seasons.get(selectedPlayer.id);
 
   return (
-    <>
+    <div className={'flex h-full flex-col justify-between gap-5'}>
       {/* TODO would be nice here to preload some by default... */}
       {/* Maybe at least everyone whose ADP is <=100 */}
       {stattedPlayers.length ? (
-        <>
+        <div>
           <Select
             className={'w-full text-center text-2xl mb-8'}
             value={selectedPlayer ? `${selectedPlayer.id}` : ''}
@@ -182,19 +182,21 @@ export default function PlayerPanel<T extends PlayerSeason>({
               </Paper>
             </>
           )}
-        </>
+        </div>
       ) : (
         <Typography>Click to add player (TODO)</Typography>
       )}
-      <div className={'absolute bottom-5 left-5'}>
-        <StatTypeToggleButton
-          statType={statType}
-          setStatType={onStatTypeChange}
-        />
+      <div className={'flex flex-row justify-between'}>
+        <div>
+          <StatTypeToggleButton
+            statType={statType}
+            setStatType={onStatTypeChange}
+          />
+        </div>
+        <div>
+          <AddPlayer players={nonStattedPlayers} addPlayer={addPlayer} />
+        </div>
       </div>
-      <div className={'absolute bottom-5 right-5'}>
-        <AddPlayer players={nonStattedPlayers} addPlayer={addPlayer} />
-      </div>
-    </>
+    </div>
   );
 }
