@@ -26,6 +26,8 @@ export default ({
     }
   };
   const orderedData = _.orderBy(data, [sortKey], [isDesc ? 'desc' : 'asc']);
+  console.log(orderedData);
+  
   return (
     <table className={'w-full'}>
       <thead>

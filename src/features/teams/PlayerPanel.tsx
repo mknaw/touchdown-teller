@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
 
 import _ from 'lodash';
@@ -7,12 +7,11 @@ import { Player } from '@prisma/client';
 
 import DeleteIcon from '@mui/icons-material/Delete';
 import { IconButton, Paper } from '@mui/material';
-import MenuItem from '@mui/material/MenuItem';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 
+import PlayerSelect from '@/components/PlayerSelect';
 import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
@@ -100,6 +99,9 @@ export default function PlayerPanel<T extends PlayerSeason>({
     setSelectedPlayer(undefined);
   };
 
+  const [isAddPlayerOpen, setIsAddPlayerOpen] =
+    useState<boolean>(false);
+
   const relevantPlayers = team.players
     .filter((player) => relevantPositions.includes(player.position as Position))
     .sort((a, b) => {
@@ -137,22 +139,12 @@ export default function PlayerPanel<T extends PlayerSeason>({
       {/* Maybe at least everyone whose ADP is <=100 */}
       {stattedPlayers.length ? (
         <div>
-          <Select
-            className={'w-full text-center text-2xl mb-8'}
-            value={selectedPlayer ? `${selectedPlayer.id}` : ''}
-            onChange={(event: SelectChangeEvent) => {
-              setSelectedPlayer(
-                _.find(stattedPlayers, { id: parseInt(event.target.value) })
-              );
-            }}
-          >
-            {stattedPlayers.map((player) => (
-              // TODO group by position.
-              <MenuItem key={player.id} value={player.id}>
-                {`${player.name} (${player.position})`}
-              </MenuItem>
-            ))}
-          </Select>
+          <PlayerSelect
+            selectedPlayer={selectedPlayer}
+            setSelectedPlayer={setSelectedPlayer}
+            stattedPlayers={stattedPlayers}
+            setIsAddPlayerOpen={setIsAddPlayerOpen}
+          />
           {season && (
             <>
               <Paper className={'p-8'}>
@@ -184,18 +176,29 @@ export default function PlayerPanel<T extends PlayerSeason>({
           )}
         </div>
       ) : (
-        <Typography>Click to add player (TODO)</Typography>
+        <div className={'flex w-full-col justify-center items-center py-5'}>
+          <Typography
+            variant='h5'
+            onClick={() => setIsAddPlayerOpen(true)}
+            className={'cursor-pointer'}
+          >
+            Add player
+          </Typography>
+        </div>
       )}
-      <div className={'flex flex-row justify-between'}>
-        <div>
-          <StatTypeToggleButton
-            statType={statType}
-            setStatType={onStatTypeChange}
-          />
-        </div>
-        <div>
-          <AddPlayer players={nonStattedPlayers} addPlayer={addPlayer} />
-        </div>
+
+      <AddPlayer
+        players={nonStattedPlayers}
+        addPlayer={addPlayer}
+        isOpen={isAddPlayerOpen}
+        setIsOpen={setIsAddPlayerOpen}
+      />
+
+      <div className={'flex flex-row justify-start'}>
+        <StatTypeToggleButton
+          statType={statType}
+          setStatType={onStatTypeChange}
+        />
       </div>
     </div>
   );
