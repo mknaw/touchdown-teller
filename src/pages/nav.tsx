@@ -77,7 +77,7 @@ function SideDrawer({
           !isOpen && 'opacity-0'
         )}
       >
-        <div className={'w-1/3 h-screen bg-red-500'}>
+        <div className={'w-1/3 h-screen bg-red-500 overflow-y-auto'}>
           <List
             className={'mt-0 pt-0 top-header'}
             sx={{
@@ -106,6 +106,7 @@ function SideDrawer({
                   >
                     <ListItemText
                       primary={getTeamName(key as TeamKey)}
+                      primaryTypographyProps={{'variant': 'h6'}}
                       className={'my-0 pl-2'}
                     />
                   </ListItemButton>
