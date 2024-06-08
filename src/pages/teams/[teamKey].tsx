@@ -57,7 +57,7 @@ import {
   TeamWithExtras,
   createPlayerSeason,
 } from '@/types';
-import { getTeamName, makeIdMap, setOnClone } from '@/utils';
+import { getTeamName, makeIdMap, setOnClone, toEnumValue } from '@/utils';
 
 interface Params extends ParsedUrlQuery {
   teamKey: TeamKey;
@@ -145,6 +145,10 @@ const getDataHandlers = <T extends PlayerSeason>(
       ? _.cloneDeep(lastSeason)
       : constructor.default(player, teamKey as TeamKey);
     season = ensureValid(season, projection);
+    // Presumably could not have been null to get this far.
+    // TODO still probably could do better to handle mid season switches...
+    // and / or reseting the client DB if a player changes teams...
+    season.team = toEnumValue(TeamKey, player.teamName as string);
     table
       .put(toStoreData(season), player.id)
       // TODO would prefer to render optimistically and resolve failure

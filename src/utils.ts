@@ -1,5 +1,30 @@
 import { TeamKey } from '@/constants';
 
+export function setOnClone<K, V>(map: Map<K, V>, key: K, value: V): Map<K, V> {
+  const clone = new Map(map);
+  clone.set(key, value);
+  return clone;
+}
+
+export function mapMap<K, V, R>(
+  originalMap: Map<K, V>,
+  fn: (value: V) => R
+): Map<K, R> {
+  const result = new Map<K, R>();
+  for (const [key, value] of originalMap.entries()) {
+    result.set(key, fn(value));
+  }
+  return result;
+}
+
+export function makeIdMap<T>(items: T[], idKey: keyof T): Map<number, T> {
+  return new Map(items.map((item) => [item[idKey] as number, item]));
+}
+
+export function toEnumValue(enumType: any, value: string): any {
+    return enumType[value as keyof typeof enumType];
+}
+
 export function getTeamName(teamKey: TeamKey): string {
   const teams: Record<TeamKey, string> = {
     ARI: 'Arizona Cardinals',
@@ -36,25 +61,4 @@ export function getTeamName(teamKey: TeamKey): string {
     WSH: 'Washington Commanders',
   };
   return teams[teamKey];
-}
-
-export function setOnClone<K, V>(map: Map<K, V>, key: K, value: V): Map<K, V> {
-  const clone = new Map(map);
-  clone.set(key, value);
-  return clone;
-}
-
-export function mapMap<K, V, R>(
-  originalMap: Map<K, V>,
-  fn: (value: V) => R
-): Map<K, R> {
-  const result = new Map<K, R>();
-  for (const [key, value] of originalMap.entries()) {
-    result.set(key, fn(value));
-  }
-  return result;
-}
-
-export function makeIdMap<T>(items: T[], idKey: keyof T): Map<number, T> {
-  return new Map(items.map((item) => [item[idKey] as number, item]));
 }
