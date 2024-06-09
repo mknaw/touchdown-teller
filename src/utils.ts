@@ -22,7 +22,7 @@ export function makeIdMap<T>(items: T[], idKey: keyof T): Map<number, T> {
 }
 
 export function toEnumValue(enumType: any, value: string): any {
-    return enumType[value as keyof typeof enumType];
+  return enumType[value as keyof typeof enumType];
 }
 
 export function getTeamName(teamKey: TeamKey): string {

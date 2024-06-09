@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
+import _ from 'lodash';
 import useSWR from 'swr';
 import { useIndexedDBStore } from 'use-indexeddb';
 
-import { Switch } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
 
 import Modal from '@/components/Modal';
+import { lastYear } from '@/constants';
 import { db, teamStoreKey } from '@/data/persistence';
-import StatsTable from '@/features/StatsTable';
 import { TeamSeasonData } from '@/models/TeamSeason';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
@@ -16,9 +17,7 @@ import {
   TeamSeasonsModalState,
   TeamSeasonsModalType,
   toggleTeamSeasonsModal,
-  toggleTeamSeasonsModalYear,
 } from '@/store/appStateSlice';
-import { getTeamName } from '@/utils';
 
 /* Retrieve projections from local storage */
 function useTeamProjections(open: boolean) {
@@ -34,13 +33,13 @@ function useTeamProjections(open: boolean) {
     // ought to be a better way.
   }, [teamStore, open]);
   return teamSeasons.map((teamSeason) => ({
-    teamName: getTeamName(teamSeason.teamName),
-    passAtt: teamSeason.passAtt.toFixed(0),
-    passYds: teamSeason.passYds.toFixed(0),
-    passTds: teamSeason.passTds.toFixed(0),
-    rushAtt: teamSeason.rushAtt.toFixed(0),
-    rushYds: teamSeason.rushYds.toFixed(0),
-    rushTds: teamSeason.rushTds.toFixed(0),
+    teamName: teamSeason.teamName,
+    passAttProj: teamSeason.passAtt.toFixed(0),
+    passYdsProj: teamSeason.passYds.toFixed(0),
+    passTdsProj: teamSeason.passTds.toFixed(0),
+    rushAttProj: teamSeason.rushAtt.toFixed(0),
+    rushYdsProj: teamSeason.rushYds.toFixed(0),
+    rushTdsProj: teamSeason.rushTds.toFixed(0),
   }));
 }
 
@@ -54,54 +53,62 @@ function useTeamSeasons() {
 
 /* Display a comparison of all team aggregate stats or projections over a season */
 export default () => {
-  const { open, type, year } = useSelector<AppState, TeamSeasonsModalState>(
+  const { open, type } = useSelector<AppState, TeamSeasonsModalState>(
     (state) => state.appState.teamSeasonsModalState
   );
 
-  // TODO I think using both here is a smell.
-  // maybe should be separate components after all.
-  const projections = useTeamProjections(open);
-  const teamSeasons = useTeamSeasons();
-  let data, title;
-  const showProjections = year === null;
-  if (showProjections) {
-    data = projections;
-    title = {
-      [TeamSeasonsModalType.Pass]: 'Team Passing Projections',
-      [TeamSeasonsModalType.Rush]: 'Team Rushing Projections',
-    }[type];
-  } else {
-    data = teamSeasons;
-    title = {
-      [TeamSeasonsModalType.Pass]: `${year} Team Passing Stats`,
-      [TeamSeasonsModalType.Rush]: `${year} Team Rushing Stats`,
-    }[type];
-  }
-
-  const headers = {
-    [TeamSeasonsModalType.Pass]: {
-      teamName: 'Team',
-      passAtt: 'Pass Attempts',
-      passYds: 'Pass Yards',
-      passTds: 'Pass TDs',
-    },
-    [TeamSeasonsModalType.Rush]: {
-      teamName: 'Team',
-      rushAtt: 'Rush Attempts',
-      rushYds: 'Rush Yards',
-      rushTds: 'Rush TDs',
-    },
+  const columns = {
+    [TeamSeasonsModalType.Pass]: [
+      { field: 'teamName', headerName: 'Team', flex: 1 },
+      { field: 'passAtt', headerName: `${lastYear} Pass Attempts`, flex: 2 },
+      { field: 'passAttProj', headerName: 'Projected Pass Attempts', flex: 2 },
+      { field: 'passYds', headerName: `${lastYear} Pass Yards`, flex: 2 },
+      { field: 'passYdsProj', headerName: 'Projected Pass Yards', flex: 2 },
+      { field: 'passTds', headerName: `${lastYear} Pass TDs`, flex: 2 },
+      { field: 'passTdsProj', headerName: 'Projected Pass TDs', flex: 2 },
+    ],
+    [TeamSeasonsModalType.Rush]: [
+      { field: 'teamName', headerName: 'Team', flex: 1 },
+      { field: 'rushAtt', headerName: 'Rush Attempts', flex: 2 },
+      { field: 'rushYds', headerName: 'Rush Yards', flex: 2 },
+      { field: 'rushTds', headerName: 'Rush TDs', flex: 2 },
+    ],
   }[type];
+
+  const rows = Object.values(
+    _.mergeWith(
+      _.keyBy(useTeamProjections(open), 'teamName'),
+      _.keyBy(useTeamSeasons(), 'teamName'),
+      (objValue, srcValue) => {
+        if (_.isArray(objValue)) {
+          return objValue.concat(srcValue);
+        }
+      }
+    )
+  );
 
   const dispatch = useDispatch();
   const onClose = () => dispatch(toggleTeamSeasonsModal());
-  const onTypeChange = () => dispatch(toggleTeamSeasonsModalYear());
+
+  const title = {
+    [TeamSeasonsModalType.Pass]: `${lastYear} and Projected Team Passing Stats`,
+    [TeamSeasonsModalType.Rush]: `${lastYear} and Projected Team Rushing Stats`,
+  }[type];
 
   return (
-    <Modal open={open} onClose={onClose} title={title}>
+    <Modal open={open} onClose={onClose} title={title} classnames={'w-10/12'}>
       <>
-        <Switch checked={showProjections} onChange={onTypeChange} />
-        <StatsTable headers={headers} data={data} />
+        <DataGrid
+          rows={rows}
+          getRowId={(row) => row.teamName}
+          columns={columns}
+          initialState={{
+            pagination: {
+              paginationModel: { page: 0, pageSize: 12 },
+            },
+          }}
+          checkboxSelection
+        />
       </>
     </Modal>
   );

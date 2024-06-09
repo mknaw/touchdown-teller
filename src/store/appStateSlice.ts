@@ -1,7 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 
-import { lastYear } from '@/constants';
-
 export enum TeamSeasonsModalType {
   Pass = 'pass',
   Rush = 'rush',
@@ -10,8 +8,6 @@ export enum TeamSeasonsModalType {
 export type TeamSeasonsModalState = {
   open: boolean;
   type: TeamSeasonsModalType;
-  // TODO really shouldn't be just any number...
-  year: number | null;
 };
 
 const initialTeamSeasonsModalState = {
@@ -43,17 +39,17 @@ const appStateSlice = createSlice({
       state.teamSeasonsModalState.open = true;
       state.teamSeasonsModalState.type = TeamSeasonsModalType.Rush;
     },
-    toggleTeamSeasonsModalYear(state) {
-      state.teamSeasonsModalState.year =
-        state.teamSeasonsModalState.year == null ? lastYear : null;
-    },
+    // TODO unused, but maybe I'll use it later to set past years..
+    // toggleTeamSeasonsModalYear(state) {
+    //   state.teamSeasonsModalState.year =
+    //     state.teamSeasonsModalState.year == null ? lastYear : null;
+    // },
   },
 });
 
 export const {
   toggleTeamPassSeasonsModal,
   toggleTeamRushSeasonsModal,
-  toggleTeamSeasonsModalYear,
   toggleTeamSeasonsModal,
 } = appStateSlice.actions;
 export default appStateSlice;
