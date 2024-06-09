@@ -3,14 +3,12 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import _ from 'lodash';
 import useSWR from 'swr';
-import { useIndexedDBStore } from 'use-indexeddb';
 
 import { DataGrid } from '@mui/x-data-grid';
 
 import Modal from '@/components/Modal';
 import { lastYear } from '@/constants';
-import { db, teamStoreKey } from '@/data/persistence';
-import { TeamSeasonData } from '@/models/TeamSeason';
+import { db } from '@/data/persistence';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
 import {
@@ -22,7 +20,6 @@ import {
 /* Retrieve projections from local storage */
 function useTeamProjections(open: boolean) {
   const [teamSeasons, setTeamSeasons] = useState<TeamSeason[]>([]);
-  const teamStore = useIndexedDBStore<TeamSeasonData>(teamStoreKey);
   useEffect(() => {
     async function fetch() {
       const teamProjectionData = await db.team.toArray();
@@ -31,7 +28,7 @@ function useTeamProjections(open: boolean) {
     fetch();
     // TODO seems wasteful to get these when we're closing the modal,
     // ought to be a better way.
-  }, [teamStore, open]);
+  }, [open]);
   return teamSeasons.map((teamSeason) => ({
     teamName: teamSeason.teamName,
     passAttProj: teamSeason.passAtt.toFixed(0),
@@ -76,14 +73,9 @@ export default () => {
   }[type];
 
   const rows = Object.values(
-    _.mergeWith(
+    _.merge(
       _.keyBy(useTeamProjections(open), 'teamName'),
-      _.keyBy(useTeamSeasons(), 'teamName'),
-      (objValue, srcValue) => {
-        if (_.isArray(objValue)) {
-          return objValue.concat(srcValue);
-        }
-      }
+      _.keyBy(useTeamSeasons(), 'teamName')
     )
   );
 
@@ -107,7 +99,6 @@ export default () => {
               paginationModel: { page: 0, pageSize: 12 },
             },
           }}
-          checkboxSelection
         />
       </>
     </Modal>

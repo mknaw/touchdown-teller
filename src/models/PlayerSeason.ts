@@ -115,16 +115,16 @@ export class PassSeason implements PassSeasonData {
 
   labelFor(stat: string): string {
     switch (stat) {
-    case 'gp':
-      return 'Games Played';
-    case 'att':
-      return 'Attempts per Game';
-    case 'cmp':
-      return 'Completion Percentage';
-    case 'ypa':
-      return 'Yards per Attempt';
-    default: // tdp
-      return 'Touchdowns per Attempt';
+      case 'gp':
+        return 'Games Played';
+      case 'att':
+        return 'Attempts per Game';
+      case 'cmp':
+        return 'Completion Percentage';
+      case 'ypa':
+        return 'Yards per Attempt';
+      default: // tdp
+        return 'Touchdowns per Attempt';
     }
   }
 
@@ -238,16 +238,16 @@ export class RecvSeason implements RecvSeasonData {
   // but have to figure out how to appease typescript better
   labelFor(stat: string): string {
     switch (stat) {
-    case 'gp':
-      return 'Games Played';
-    case 'tgt':
-      return 'Targets per Game';
-    case 'rec':
-      return 'Reception Percentage';
-    case 'ypr':
-      return 'Yard per Reception';
-    default: // tdp
-      return 'Touchdown Percentage';
+      case 'gp':
+        return 'Games Played';
+      case 'tgt':
+        return 'Targets per Game';
+      case 'rec':
+        return 'Reception Percentage';
+      case 'ypr':
+        return 'Yard per Reception';
+      default: // tdp
+        return 'Touchdown Percentage';
     }
   }
 
@@ -351,14 +351,14 @@ export class RushSeason implements RushSeasonData {
 
   labelFor(stat: string): string {
     switch (stat) {
-    case 'gp':
-      return 'Games Played';
-    case 'att':
-      return 'Attempts per Game';
-    case 'ypc':
-      return 'Yards per Carry';
-    default: // tdp
-      return 'Touchdown Percentage';
+      case 'gp':
+        return 'Games Played';
+      case 'att':
+        return 'Attempts per Game';
+      case 'ypc':
+        return 'Yards per Carry';
+      default: // tdp
+        return 'Touchdown Percentage';
     }
   }
 
@@ -373,4 +373,11 @@ export class RushSeason implements RushSeasonData {
       tds: this.att * (this.tdp / 100) * this.gp,
     };
   }
+}
+
+export interface PlayerProjection {
+  id: number;
+  pass: Exclude<PassSeasonData, 'playerId' | 'name'>;
+  recv: Exclude<RecvSeasonData, 'playerId' | 'name'>;
+  rush: Exclude<RushSeasonData, 'playerId' | 'name'>;
 }

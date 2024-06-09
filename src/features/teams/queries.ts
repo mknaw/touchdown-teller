@@ -2,6 +2,7 @@ import _ from 'lodash';
 
 import {
   PassGame,
+  Player,
   Prisma,
   PrismaClient,
   RecvGame,
@@ -16,10 +17,14 @@ import {
 } from '@/models/PlayerSeason';
 import { TeamWithExtras } from '@/types';
 
+export async function getAllPlayers(prisma: PrismaClient): Promise<Player[]> {
+  return await prisma.player.findMany();
+}
+
 export async function getTeam(
   prisma: PrismaClient,
   teamKey: string,
-  year: number,
+  year: number
 ): Promise<TeamWithExtras> {
   return await prisma.team.findFirstOrThrow({
     where: {
@@ -59,7 +64,7 @@ export async function getTeam(
 export async function getPlayerPassGame(
   prisma: PrismaClient,
   playerIds: number[],
-  year: number,
+  year: number
 ): Promise<PassGame[]> {
   return prisma.passGame.findMany({
     where: {
@@ -74,7 +79,7 @@ export async function getPlayerPassGame(
 export async function getPlayerRecvGame(
   prisma: PrismaClient,
   playerIds: number[],
-  year: number,
+  year: number
 ): Promise<RecvGame[]> {
   return prisma.recvGame.findMany({
     where: {
@@ -89,7 +94,7 @@ export async function getPlayerRecvGame(
 export async function getPlayerRushGame(
   prisma: PrismaClient,
   playerIds: number[],
-  year: number,
+  year: number
 ): Promise<RushGame[]> {
   return prisma.rushGame.findMany({
     where: {
@@ -108,7 +113,7 @@ export async function getPlayerPassAggregates(
   prisma: PrismaClient,
   teamKey: string,
   playerIds: number[],
-  year: number,
+  year: number
 ): Promise<PassAggregate[]> {
   const agg: object[] = await prisma.$queryRaw`
     SELECT 
@@ -140,7 +145,7 @@ export async function getPlayerRecvAggregates(
   prisma: PrismaClient,
   teamKey: string,
   playerIds: number[],
-  year: number,
+  year: number
 ): Promise<RecvAggregate[]> {
   const agg: object[] = await prisma.$queryRaw`
     SELECT 
@@ -172,7 +177,7 @@ export async function getPlayerRushAggregates(
   prisma: PrismaClient,
   teamKey: string,
   playerIds: number[],
-  year: number,
+  year: number
 ): Promise<RushAggregate[]> {
   const agg: object[] = await prisma.$queryRaw`
     SELECT 

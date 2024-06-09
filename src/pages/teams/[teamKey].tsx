@@ -118,7 +118,7 @@ export type Projection = {
   rushSeasons: RushSeason[];
 };
 
-const getDataHandlers = <T extends PlayerSeason>(
+const getClientDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
   playerSeasons: IdMap<T>,
   constructor: PlayerSeasonConstructable<T>,
@@ -258,7 +258,7 @@ export default function Page({
     }),
     'playerId'
   );
-  const passDataHandlers = getDataHandlers(
+  const passDataHandlers = getClientDataHandlers(
     team.key as TeamKey,
     playerPassSeasons,
     PassSeason,
@@ -283,7 +283,7 @@ export default function Page({
     }),
     'playerId'
   );
-  const recvDataHandlers = getDataHandlers(
+  const recvDataHandlers = getClientDataHandlers(
     team.key as TeamKey,
     playerRecvSeasons,
     RecvSeason,
@@ -307,7 +307,7 @@ export default function Page({
     }),
     'playerId'
   );
-  const rushDataHandlers = getDataHandlers(
+  const rushDataHandlers = getClientDataHandlers(
     team.key as TeamKey,
     playerRushSeasons,
     RushSeason,
