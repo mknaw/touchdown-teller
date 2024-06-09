@@ -8,6 +8,7 @@ import Link from 'next/link';
 import MenuIcon from '@mui/icons-material/Menu';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
 import Fade from '@mui/material/Fade';
 import IconButton from '@mui/material/IconButton';
 import List from '@mui/material/List';
@@ -65,16 +66,49 @@ function HeaderTitle({ header }: HeaderProps) {
 
 // TODO probably SideDrawer can be in a layout and only need dynamic header?
 function SideDrawer({
-  isDrawerOpen: isOpen,
-  setDrawerOpen: setIsOpen,
+  isDrawerOpen,
+  setDrawerOpen,
 }: DrawerProps) {
+  const NavItem = ({
+    key,
+    primary,
+    href,
+  }: {
+    key: string;
+    primary: string;
+    href: string;
+  }) => (
+    <ListItem
+      key={key}
+      disablePadding
+      sx={{ display: 'block' }}
+      onClick={() => setDrawerOpen(false)}
+    >
+      <Link href={href}>
+        <ListItemButton
+          sx={{
+            px: 3,
+            py: 0,
+            my: 0,
+          }}
+        >
+          <ListItemText
+            primary={primary}
+            primaryTypographyProps={{ variant: 'h6' }}
+            className={'my-0 pl-2'}
+          />
+        </ListItemButton>
+      </Link>
+    </ListItem>
+  );
+
   const drawer = (
-    <Fade in={isOpen}>
+    <Fade in={isDrawerOpen}>
       <div
         className={classNames(
           'absolute flex w-screen h-screen z-40',
           'backdrop-blur-sm backdrop-brightness-[.35] backdrop-saturate-[.25]',
-          !isOpen && 'opacity-0'
+          !isDrawerOpen && 'opacity-0'
         )}
       >
         <div className={'w-1/3 h-screen bg-red-500 overflow-y-auto'}>
@@ -89,35 +123,20 @@ function SideDrawer({
               justifyContent: 'space-between',
             }}
           >
+            <NavItem key={'home'} primary={'Home'} href={'/'} />
+            <Divider />
             {Object.keys(TeamKey).map((key) => (
-              <ListItem
+              <NavItem
                 key={key}
-                disablePadding
-                sx={{ display: 'block' }}
-                onClick={() => setIsOpen(false)}
-              >
-                <Link href={`/teams/${key}`}>
-                  <ListItemButton
-                    sx={{
-                      px: 3,
-                      py: 0,
-                      my: 0,
-                    }}
-                  >
-                    <ListItemText
-                      primary={getTeamName(key as TeamKey)}
-                      primaryTypographyProps={{'variant': 'h6'}}
-                      className={'my-0 pl-2'}
-                    />
-                  </ListItemButton>
-                </Link>
-              </ListItem>
+                primary={getTeamName(key as TeamKey)}
+                href={`/teams/${key}`}
+              />
             ))}
           </List>
         </div>
         <div
           className={'w-full h-full z-40'}
-          onClick={() => setIsOpen(false)}
+          onClick={() => setDrawerOpen(false)}
         ></div>
       </div>
     </Fade>
