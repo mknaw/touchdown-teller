@@ -1,17 +1,7 @@
-import { Player, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
-import { TeamKey } from '@/constants';
-import {
-  PassAggregate,
-  PassSeason,
-  PassSeasonData,
-  RecvAggregate,
-  RecvSeason,
-  RecvSeasonData,
-  RushAggregate,
-  RushSeason,
-  RushSeasonData,
-} from '@/models/PlayerSeason';
+import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
+import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 
 export interface IDBStore<T> {
   add(value: T, key?: number): Promise<number>;
@@ -42,27 +32,8 @@ export type TeamWithExtras = Prisma.TeamGetPayload<{
 
 export type PlayerSeason = PassSeason | RecvSeason | RushSeason;
 
-export type PlayerSeasonData<T extends PlayerSeason> = T extends PassSeason
-  ? PassSeasonData
-  : T extends RecvSeason
-  ? RecvSeasonData
-  : RushSeasonData;
-
 export type SeasonAggregate<T extends PlayerSeason> = T extends PassSeason
   ? PassAggregate
   : T extends RecvSeason
   ? RecvAggregate
   : RushAggregate;
-
-export interface PlayerSeasonConstructable<T extends PlayerSeason> {
-  new (data: PlayerSeasonData<T>): T;
-  default(player: Player, team: TeamKey): T;
-  fromAggregate(aggregate: SeasonAggregate<T>): T;
-}
-
-export function createPlayerSeason<T extends PlayerSeason>(
-  Klass: PlayerSeasonConstructable<T>,
-  data: PlayerSeasonData<T>
-): T {
-  return new Klass(data);
-}

@@ -48,20 +48,20 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
 
   const onChange =
     (field: keyof T, persist: boolean) =>
-      (
-        _event: Event | SyntheticEvent<Element, Event>,
-        value: number | number[]
-      ) => {
-        if (typeof value === 'number') {
-          if (persist) {
-            persistSeason(makeNewStats(field, value), field);
-          } else {
-            setSeason(makeNewStats(field, value));
-          }
+    (
+      _event: Event | SyntheticEvent<Element, Event>,
+      value: number | number[]
+    ) => {
+      if (typeof value === 'number') {
+        if (persist) {
+          persistSeason(makeNewStats(field, value), field);
+        } else {
+          setSeason(makeNewStats(field, value));
         }
-      };
+      }
+    };
 
-  const getValue = (field: keyof T) => {
+  const getValue = (field: keyof T): number => {
     if (field in season) {
       const value = season[field as keyof typeof season];
       if (typeof value === 'number') {
@@ -71,15 +71,16 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
     return 0;
   };
 
+  const mkLabel = (
+    field: keyof T,
+    label: string,
+    isPercentField: boolean
+  ): string =>
+    `${label}: ${getValue(field).toFixed(1)}${isPercentField ? '%' : ''}`;
+
   const getCommonProps = (field: keyof T) => {
-    const value = getValue(field);
-    const pct = season.isPercentField(field as string) ? '%' : '';
-    const label = `${season.labelFor(field as string)}: ${value.toFixed(
-      1
-    )}${pct}`;
     return {
-      value,
-      label,
+      value: getValue(field),
       onChange: onChange(field, false),
       onChangeCommitted: onChange(field, true),
       step: 0.1,
@@ -94,34 +95,40 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
     const ps = pastSeason as PassSeason;
     sliders = (
       <>
+        {/*
         <LabeledSlider
           min={1}
           max={17}
           marks={ps && makeMarks(ps.gp, (v) => v.toFixed(0))}
           {...getCommonProps('gp')}
         />
+        */}
         <LabeledSlider
           min={15}
           max={50}
           marks={ps && makeMarks(ps.att, (v) => v.toFixed(1))}
+          label={mkLabel('att' as keyof T, 'Attempts per Game', false)}
           {...getCommonProps('att' as keyof T)}
         />
         <LabeledSlider
           min={20}
           max={75}
           marks={ps && makeMarks(ps.cmp, (v) => `${v.toFixed(1)}%`)}
+          label={mkLabel('cmp' as keyof T, 'Completion Percentage', true)}
           {...getCommonProps('cmp' as keyof T)}
         />
         <LabeledSlider
           min={1}
           max={15}
           marks={ps && makeMarks(ps.ypa, (v) => v.toFixed(1))}
+          label={mkLabel('ypa' as keyof T, 'Yards per Attempt', false)}
           {...getCommonProps('ypa' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={20}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
+          label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
           {...getCommonProps('tdp' as keyof T)}
         />
       </>
@@ -130,34 +137,40 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
     const ps = pastSeason as RecvSeason;
     sliders = (
       <>
+        {/*
         <LabeledSlider
           min={1}
           max={17}
           marks={ps && makeMarks(ps.gp, (v) => v.toFixed(0))}
           {...getCommonProps('gp')}
         />
+        */}
         <LabeledSlider
           min={0}
           max={15}
           marks={ps && makeMarks(ps.tgt, (v) => v.toFixed(0))}
+          label={mkLabel('tgt' as keyof T, 'Targets per Game', false)}
           {...getCommonProps('tgt' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={100}
           marks={ps && makeMarks(ps.rec, (v) => `${v.toFixed(1)}%`)}
+          label={mkLabel('rec' as keyof T, 'Reception Percentage', true)}
           {...getCommonProps('rec' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={20}
           marks={ps && makeMarks(ps.ypr, (v) => v.toFixed(1))}
+          label={mkLabel('ypr' as keyof T, 'Yards per Reception', false)}
           {...getCommonProps('ypr' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={15}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
+          label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
           {...getCommonProps('tdp')}
         />
       </>
@@ -166,28 +179,34 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
     const ps = pastSeason as RushSeason;
     sliders = (
       <>
+        {/*
         <LabeledSlider
           min={1}
           max={17}
           marks={ps && makeMarks(ps.gp, (v) => v.toFixed(0))}
           {...getCommonProps('gp')}
         />
+        */}
         <LabeledSlider
           min={0}
           max={25}
           marks={ps && makeMarks(ps.att, (v) => v.toFixed(0))}
+          label={mkLabel('att' as keyof T, 'Carries per Game', false)}
           {...getCommonProps('att' as keyof T)}
         />
         <LabeledSlider
           min={1}
           max={7}
           marks={ps && makeMarks(ps.ypc, (v) => v.toFixed(1))}
+          // TODO kinda inconsistent with "attempts" before but "carries" here.
+          label={mkLabel('ypc' as keyof T, 'Yards per Carry', false)}
           {...getCommonProps('ypc' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={20}
           marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
+          label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
           {...getCommonProps('tdp' as keyof T)}
         />
       </>

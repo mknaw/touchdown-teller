@@ -19,12 +19,14 @@ import Typography from '@mui/material/Typography';
 
 import Card from '@/components/Card';
 import Schedule from '@/components/Schedule';
-import { Position, StatType, TeamKey, currentYear, lastYear } from '@/constants';
-import { db } from '@/data/persistence';
-import TeamSeasonsModal from '@/features/TeamSeasonsModal';
-import PlayerGameLog from '@/features/teams/PlayerGameLog';
-import PlayerPanel from '@/features/teams/PlayerPanel';
-import TeamPanel from '@/features/teams/TeamPanel';
+import {
+  Position,
+  StatType,
+  TeamKey,
+  currentYear,
+  lastYear,
+} from '@/constants';
+import { db } from '@/data/client';
 import {
   getPlayerPassAggregates,
   getPlayerPassGame,
@@ -33,26 +35,33 @@ import {
   getPlayerRushAggregates,
   getPlayerRushGame,
   getTeam,
-} from '@/features/teams/queries';
+} from '@/data/ssr';
+import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
+import TeamSeasonsModal from '@/features/TeamSeasonsModal';
+import PlayerGameLog from '@/features/teams/PlayerGameLog';
+import PlayerPanel from '@/features/teams/PlayerPanel';
+import TeamPanel from '@/features/teams/TeamPanel';
 import {
   clampPlayerSeason,
   clampTeamSeason,
   ensureValid,
 } from '@/features/teams/validation';
 import {
-  PassAggregate,
   PassSeason,
-  RecvAggregate,
   RecvSeason,
-  RushAggregate,
   RushSeason,
+  mkDefaultPassSeason,
+  mkDefaultRecvSeason,
+  mkDefaultRushSeason,
+  passAggregateToSeason,
+  recvAggregateToSeason,
+  rushAggregateToSeason,
 } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
 import {
   IdMap,
   PlayerSeason,
-  PlayerSeasonConstructable,
   PlayerSeasonData,
   TeamWithExtras,
   createPlayerSeason,
@@ -121,18 +130,13 @@ export type Projection = {
 const getClientDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
   playerSeasons: IdMap<T>,
-  constructor: PlayerSeasonConstructable<T>,
+  mkDefault: (player: Player, team: TeamKey) => T,
   table: Table,
-  toStoreData: (s: T) => PlayerSeasonData<T>,
   setSeason: Dispatch<SetStateAction<IdMap<T>>>,
   setValidationMessage: (message: string) => void
 ) => {
   const fetchedDataToMap = (data: PlayerSeasonData<T>[]): IdMap<T> =>
-    new Map(
-      data
-        .map((d) => createPlayerSeason(constructor, d))
-        .map((p) => [p.playerId, p])
-    );
+    new Map(data.map((ps) => [ps.playerId, ps]));
 
   const initSeasons = async () => {
     const data = await table.where('team').equals(teamKey).toArray();
@@ -143,14 +147,14 @@ const getClientDataHandlers = <T extends PlayerSeason>(
     const lastSeason = playerSeasons.get(player.id);
     let season = lastSeason
       ? _.cloneDeep(lastSeason)
-      : constructor.default(player, teamKey as TeamKey);
+      : mkDefault(player, teamKey as TeamKey);
     season = ensureValid(season, projection);
     // Presumably could not have been null to get this far.
     // TODO still probably could do better to handle mid season switches...
     // and / or reseting the client DB if a player changes teams...
     season.team = toEnumValue(TeamKey, player.teamName as string);
     table
-      .put(toStoreData(season), player.id)
+      .put(season, player.id)
       // TODO would prefer to render optimistically and resolve failure
       // but that could be more complicated... for later
       .then(() => updateSeason(season))
@@ -169,7 +173,7 @@ const getClientDataHandlers = <T extends PlayerSeason>(
       );
     }
     updateSeason(updatedSeason);
-    table.update(season.playerId, toStoreData(updatedSeason));
+    table.update(season.playerId, updatedSeason);
   };
 
   const deleteSeason = (playerId: number) => {
@@ -245,7 +249,7 @@ export default function Page({
   // TODO really embarrassing to WET this up...
   const playerPassSeasons = makeIdMap(
     _.map(_.groupBy(lastYearPassAggregates, 'playerId'), (agg, playerId) => {
-      return PassSeason.fromAggregate({
+      return passAggregateToSeason({
         playerId: parseInt(playerId),
         name: agg[0].name,
         team: agg[0].team,
@@ -261,16 +265,15 @@ export default function Page({
   const passDataHandlers = getClientDataHandlers(
     team.key as TeamKey,
     playerPassSeasons,
-    PassSeason,
+    mkDefaultPassSeason,
     db.pass,
-    (s: PassSeason) => s.toStoreData(),
     setPassSeasons,
     setPlayerSeasonValidationMessage
   );
 
   const playerRecvSeasons = makeIdMap(
     _.map(_.groupBy(lastYearRecvAggregates, 'playerId'), (agg, playerId) => {
-      return RecvSeason.fromAggregate({
+      return recvAggregateToSeason({
         playerId: parseInt(playerId),
         name: agg[0].name,
         team: agg[0].team,
@@ -286,16 +289,15 @@ export default function Page({
   const recvDataHandlers = getClientDataHandlers(
     team.key as TeamKey,
     playerRecvSeasons,
-    RecvSeason,
+    mkDefaultRecvSeason,
     db.recv,
-    (s: RecvSeason) => s.toStoreData(),
     setRecvSeasons,
     setPlayerSeasonValidationMessage
   );
 
   const playerRushSeasons = makeIdMap(
     _.map(_.groupBy(lastYearRushAggregates, 'playerId'), (agg, playerId) => {
-      return RushSeason.fromAggregate({
+      return rushAggregateToSeason({
         playerId: parseInt(playerId),
         name: agg[0].name,
         team: agg[0].team,
@@ -310,9 +312,8 @@ export default function Page({
   const rushDataHandlers = getClientDataHandlers(
     team.key as TeamKey,
     playerRushSeasons,
-    RushSeason,
+    mkDefaultRushSeason,
     db.rush,
-    (s: RushSeason) => s.toStoreData(),
     setRushSeasons,
     setPlayerSeasonValidationMessage
   );
@@ -348,7 +349,7 @@ export default function Page({
     setTeamSeason(() => _.cloneDeep(newTeamSeason));
 
     if (wasValid) {
-      db.team.update(team.key as TeamKey, newTeamSeason.toStoreData());
+      db.team.update(team.key as TeamKey, newTeamSeason);
     } else {
       setTeamSeasonValidationMessage(
         'Team total limited in accordance with player projection total.'
@@ -397,25 +398,29 @@ export default function Page({
 
   const games = selectedPlayer
     ? {
-      [StatType.PASS]: _.filter(
-        lastYearPassGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-      [StatType.RECV]: _.filter(
-        lastYearRecvGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-      [StatType.RUSH]: _.filter(
-        lastYearRushGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-    }[statType]
+        [StatType.PASS]: _.filter(
+          lastYearPassGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+        [StatType.RECV]: _.filter(
+          lastYearRecvGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+        [StatType.RUSH]: _.filter(
+          lastYearRushGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+      }[statType]
     : [];
 
   return (
     <div className={'flex h-full pb-5'}>
       <TeamSeasonsModal />
-      <div className={'flex gap-8 h-full w-full flex-col lg:grid lg:grid-cols-2 lg:grid-flow-col'}>
+      <div
+        className={
+          'flex gap-8 h-full w-full flex-col lg:grid lg:grid-cols-2 lg:grid-flow-col'
+        }
+      >
         <div className={'h-full w-full lg:row-span-2'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
@@ -429,63 +434,63 @@ export default function Page({
           </Card>
         </div>
         {/* <div className={'w-full h-full grid gap-8 lg:grid-flow-row lg:grid-rows-3'}> */}
-          <Card className={'flex flex-col h-full relative'}>
-            {teamSeason && team.seasons[0] && (
-              <TeamPanel
-                statType={statType}
-                teamSeason={teamSeason}
-                setTeamSeason={setTeamSeason}
-                persistTeamSeason={persistTeamSeason}
-                lastSeason={lastSeason}
-                passSeasons={passSeasons}
-                recvSeasons={recvSeasons}
-                rushSeasons={rushSeasons}
-                passAggregates={_.filter(
-                  lastYearPassAggregates,
-                  (agg) => agg.team == team.key
-                )}
-                recvAggregates={_.filter(
-                  lastYearRecvAggregates,
-                  (agg) => agg.team == team.key
-                )}
-                rushAggregates={_.filter(
-                  lastYearRushAggregates,
-                  (agg) => agg.team == team.key
-                )}
-              />
-            )}
-            <Snackbar
-              sx={{ position: 'absolute' }}
-              open={!!teamSeasonValidationMessage}
-              autoHideDuration={3000}
-              message={teamSeasonValidationMessage}
-              onClose={() => setTeamSeasonValidationMessage('')}
+        <Card className={'flex flex-col h-full relative'}>
+          {teamSeason && team.seasons[0] && (
+            <TeamPanel
+              statType={statType}
+              teamSeason={teamSeason}
+              setTeamSeason={setTeamSeason}
+              persistTeamSeason={persistTeamSeason}
+              lastSeason={lastSeason}
+              passSeasons={passSeasons}
+              recvSeasons={recvSeasons}
+              rushSeasons={rushSeasons}
+              passAggregates={_.filter(
+                lastYearPassAggregates,
+                (agg) => agg.team == team.key
+              )}
+              recvAggregates={_.filter(
+                lastYearRecvAggregates,
+                (agg) => agg.team == team.key
+              )}
+              rushAggregates={_.filter(
+                lastYearRushAggregates,
+                (agg) => agg.team == team.key
+              )}
             />
-          </Card>
-          <Card className={'h-full w-full'}>
-            {games.length ? (
-              <>
-                <div className={'flex flex-col h-full'}>
-                  <Typography className={'text-center text-2xl'}>
-                    2022 Gamelog
-                  </Typography>
-                  <div className={'flex w-full h-full'}>
-                    <PlayerGameLog className={'h-full w-full'} games={games} />
-                  </div>
-                </div>
-              </>
-            ) : (
+          )}
+          <Snackbar
+            sx={{ position: 'absolute' }}
+            open={!!teamSeasonValidationMessage}
+            autoHideDuration={3000}
+            message={teamSeasonValidationMessage}
+            onClose={() => setTeamSeasonValidationMessage('')}
+          />
+        </Card>
+        <Card className={'h-full w-full'}>
+          {games.length ? (
+            <>
               <div className={'flex flex-col h-full'}>
-                <Typography className={'text-center text-2xl mb-5'}>
-                  {`${currentYear} Schedule`}
+                <Typography className={'text-center text-2xl'}>
+                  2022 Gamelog
                 </Typography>
-                <Schedule
-                  teamKey={team.key as TeamKey}
-                  games={[...team.awayGames, ...team.homeGames]}
-                />
+                <div className={'flex w-full h-full'}>
+                  <PlayerGameLog className={'h-full w-full'} games={games} />
+                </div>
               </div>
-            )}
-          </Card>
+            </>
+          ) : (
+            <div className={'flex flex-col h-full'}>
+              <Typography className={'text-center text-2xl mb-5'}>
+                {`${currentYear} Schedule`}
+              </Typography>
+              <Schedule
+                teamKey={team.key as TeamKey}
+                games={[...team.awayGames, ...team.homeGames]}
+              />
+            </div>
+          )}
+        </Card>
         {/* </div> */}
       </div>
     </div>

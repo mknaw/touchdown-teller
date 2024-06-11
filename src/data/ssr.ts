@@ -10,11 +10,7 @@ import {
   TeamSeason,
 } from '@prisma/client';
 
-import {
-  PassAggregate,
-  RecvAggregate,
-  RushAggregate,
-} from '@/models/PlayerSeason';
+import { TeamKey } from '@/constants';
 import { TeamWithExtras } from '@/types';
 
 export async function getAllPlayers(prisma: PrismaClient): Promise<Player[]> {
@@ -109,6 +105,17 @@ export async function getPlayerRushGame(
 const downcastBigInts = (obj: object) =>
   _.mapValues(obj, (val) => (typeof val === 'bigint' ? Number(val) : val));
 
+export type PassAggregate = {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  att: number;
+  cmp: number;
+  yds: number;
+  tds: number;
+};
+
 export async function getPlayerPassAggregates(
   prisma: PrismaClient,
   teamKey: string,
@@ -141,6 +148,17 @@ export async function getPlayerPassAggregates(
   return _.map(agg, downcastBigInts) as PassAggregate[];
 }
 
+export type RecvAggregate = {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  tgt: number;
+  rec: number;
+  yds: number;
+  tds: number;
+};
+
 export async function getPlayerRecvAggregates(
   prisma: PrismaClient,
   teamKey: string,
@@ -172,6 +190,16 @@ export async function getPlayerRecvAggregates(
     `;
   return _.map(agg, downcastBigInts) as RecvAggregate[];
 }
+
+export type RushAggregate = {
+  playerId: number;
+  name: string;
+  team: TeamKey;
+  gp: number;
+  att: number;
+  yds: number;
+  tds: number;
+};
 
 export async function getPlayerRushAggregates(
   prisma: PrismaClient,

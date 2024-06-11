@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { PrismaClient } from '@prisma/client';
 
 import { lastYear } from '@/constants';
-import { getTeamSeasons } from '@/features/teams/queries';
+import { getTeamSeasons } from '@/data/ssr';
 
 // TODO probably should take the year from an api param
 export default function handler(_req: NextApiRequest, res: NextApiResponse) {

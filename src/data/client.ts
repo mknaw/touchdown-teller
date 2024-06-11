@@ -3,6 +3,7 @@ import Dexie, { Table } from 'dexie';
 import { TeamKey } from '@/constants';
 import {
   PassSeasonData,
+  PlayerSeasonData,
   RecvSeasonData,
   RushSeasonData,
 } from '@/models/PlayerSeason';
@@ -17,6 +18,7 @@ export enum StorageKey {
 
 export class TouchdownTellerDatabase extends Dexie {
   public team!: Table<TeamSeasonData, TeamKey>;
+  public player!: Table<PlayerSeasonData, TeamKey>;
   public pass!: Table<PassSeasonData, number>;
   public recv!: Table<RecvSeasonData, number>;
   public rush!: Table<RushSeasonData, number>;

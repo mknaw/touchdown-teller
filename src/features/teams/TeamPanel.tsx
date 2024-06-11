@@ -8,19 +8,13 @@ import Typography from '@mui/material/Typography';
 
 import LabeledSlider from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
+import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
 import {
   PassChartGroup,
   RecvChartGroup,
   RushChartGroup,
 } from '@/features/teams/ChartGroup';
-import {
-  PassAggregate,
-  PassSeason,
-  RecvAggregate,
-  RecvSeason,
-  RushAggregate,
-  RushSeason,
-} from '@/models/PlayerSeason';
+import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
 import {
   toggleTeamRushSeasonsModal,
@@ -40,7 +34,7 @@ const filterHistoricalRecvAggregates = (seasons: RecvAggregate[]) =>
 const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
   seasons.filter((s) => s.att > 50);
 
-interface TeamStatsPanelProps {
+interface TeamPanelProps {
   statType: StatType;
   teamSeason: TeamSeason;
   setTeamSeason: Dispatch<SetStateAction<TeamSeason | null>>;
@@ -67,7 +61,7 @@ export default function TeamPanel({
   passAggregates,
   recvAggregates,
   rushAggregates,
-}: TeamStatsPanelProps) {
+}: TeamPanelProps) {
   const handleInputChange = (event: Event) => {
     const { target } = event;
     if (target) {
@@ -323,9 +317,7 @@ export default function TeamPanel({
           }[statType]
         }
       </Stack>
-      <div className={'bg-red-500 p-16'}>
-        CHART GOES HERE
-      </div>
+      <div className={'bg-red-500 p-16'}>CHART GOES HERE</div>
       {/*
       <div className={'grid grid-flow-row grid-rows-4 h-full overflow-hidden'}>
         {chartGroup}

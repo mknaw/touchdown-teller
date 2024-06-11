@@ -7,8 +7,8 @@ import { Player, PrismaClient } from '@prisma/client';
 
 import { DataGrid } from '@mui/x-data-grid';
 
-import { db } from '@/data/persistence';
-import { getAllPlayers } from '@/features/teams/queries';
+import { db } from '@/data/client';
+import { getAllPlayers } from '@/data/ssr';
 import { PlayerProjection } from '@/models/PlayerSeason';
 
 export const getStaticProps = (async () => {

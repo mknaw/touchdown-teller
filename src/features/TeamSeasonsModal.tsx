@@ -8,7 +8,7 @@ import { DataGrid } from '@mui/x-data-grid';
 
 import Modal from '@/components/Modal';
 import { lastYear } from '@/constants';
-import { db } from '@/data/persistence';
+import { db } from '@/data/client';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
 import {

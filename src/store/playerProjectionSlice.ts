@@ -1,7 +1,7 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
-import { db } from '@/data/persistence';
+import { db } from '@/data/client';
 import { PassSeasonData } from '@/models/PlayerSeason';
 import { AppDispatch, AppThunk } from '@/store';
 
