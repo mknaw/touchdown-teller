@@ -2,10 +2,9 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
 import { db } from '@/data/client';
-import { PassSeasonData } from '@/models/PlayerSeason';
-import { AppDispatch, AppThunk } from '@/store';
+import { PassSeason } from '@/models/PlayerSeason';
 
-type PlayerProjections = { [key: string]: PassSeasonData };
+type PlayerProjections = { [key: string]: PassSeason };
 
 type playerProjectionsStore = {
   status: string;
@@ -19,7 +18,7 @@ const playerProjectionsSlice = createSlice({
     projections: {},
   } as playerProjectionsStore,
   reducers: {
-    setPlayerSeason(state, action: PayloadAction<PassSeasonData>) {
+    setPlayerSeason(state, action: PayloadAction<PassSeason>) {
       const passSeason = action.payload;
       state.projections[`${passSeason.playerId}`] = passSeason;
     },

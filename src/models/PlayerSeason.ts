@@ -3,9 +3,12 @@ import { Player } from '@prisma/client';
 import { TeamKey } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
 
-export type PlayerSeasonData = {
-  playerId: number;
+export type GamesPlayed = {
   gp: number;
+}
+
+export type PlayerBaseProjection = GamesPlayed & {
+  playerId: number;
 };
 
 export type PassSeason = {

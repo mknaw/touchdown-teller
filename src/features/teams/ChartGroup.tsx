@@ -8,14 +8,8 @@ import Typography from '@mui/material/Typography';
 
 import HorizontalChart, { ChartData } from '@/components/HorizontalChart';
 import { REMAINING_LABEL } from '@/constants';
-import {
-  PassAggregate,
-  PassSeason,
-  RecvAggregate,
-  RecvSeason,
-  RushAggregate,
-  RushSeason,
-} from '@/models/PlayerSeason';
+import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
+import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
 import {
   toggleTeamPassSeasonsModal,
@@ -47,12 +41,12 @@ const makeChartData = <
   LS extends { name: string },
   S extends { name: string; annualize: () => { [K in keyof LS]?: number } }
 >(
-    seasons: IdMap<S>,
-    lastSeasons: IdMap<LS>,
-    stats: Array<keyof LS>,
-    teamSeason: { [K in keyof LS]?: number },
-    lastSeason: { [K in keyof LS]?: number }
-  ) => {
+  seasons: IdMap<S>,
+  lastSeasons: IdMap<LS>,
+  stats: Array<keyof LS>,
+  teamSeason: { [K in keyof LS]?: number },
+  lastSeason: { [K in keyof LS]?: number }
+) => {
   const allPlayerIds = _.uniq([...seasons.keys(), ...lastSeasons.keys()]);
   _.toArray(seasons.entries());
   const annualizedSeasons = mapMap(seasons, (s) => ({

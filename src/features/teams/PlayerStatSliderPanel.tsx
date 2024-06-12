@@ -6,7 +6,6 @@ import Stack from '@mui/material/Stack';
 
 import LabeledSlider from '@/components/LabeledSlider';
 import { lastYear } from '@/constants';
-import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 import { PlayerSeason, SliderMarks } from '@/types';
 
 function makeMarks(
@@ -90,9 +89,8 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
   // TODO these marks don't look good when they're on the far end -
   // like 0 tds, 17 games played ...
   let sliders;
-  if (season instanceof PassSeason) {
+  if ('ypa' in season) {
     // Appease the type-checker...
-    const ps = pastSeason as PassSeason;
     sliders = (
       <>
         {/*
@@ -106,35 +104,34 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
         <LabeledSlider
           min={15}
           max={50}
-          marks={ps && makeMarks(ps.att, (v) => v.toFixed(1))}
+          marks={makeMarks(season.att, (v) => v.toFixed(1))}
           label={mkLabel('att' as keyof T, 'Attempts per Game', false)}
           {...getCommonProps('att' as keyof T)}
         />
         <LabeledSlider
           min={20}
           max={75}
-          marks={ps && makeMarks(ps.cmp, (v) => `${v.toFixed(1)}%`)}
+          marks={makeMarks(season.cmp, (v) => `${v.toFixed(1)}%`)}
           label={mkLabel('cmp' as keyof T, 'Completion Percentage', true)}
           {...getCommonProps('cmp' as keyof T)}
         />
         <LabeledSlider
           min={1}
           max={15}
-          marks={ps && makeMarks(ps.ypa, (v) => v.toFixed(1))}
+          marks={makeMarks(season.ypa, (v) => v.toFixed(1))}
           label={mkLabel('ypa' as keyof T, 'Yards per Attempt', false)}
           {...getCommonProps('ypa' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={20}
-          marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
+          marks={makeMarks(season.tdp, (v) => `${v.toFixed(1)}%`)}
           label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
           {...getCommonProps('tdp' as keyof T)}
         />
       </>
     );
-  } else if (season instanceof RecvSeason) {
-    const ps = pastSeason as RecvSeason;
+  } else if ('tgt' in season) {
     sliders = (
       <>
         {/*
@@ -148,35 +145,34 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
         <LabeledSlider
           min={0}
           max={15}
-          marks={ps && makeMarks(ps.tgt, (v) => v.toFixed(0))}
+          marks={makeMarks(season.tgt, (v) => v.toFixed(0))}
           label={mkLabel('tgt' as keyof T, 'Targets per Game', false)}
           {...getCommonProps('tgt' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={100}
-          marks={ps && makeMarks(ps.rec, (v) => `${v.toFixed(1)}%`)}
+          marks={makeMarks(season.rec, (v) => `${v.toFixed(1)}%`)}
           label={mkLabel('rec' as keyof T, 'Reception Percentage', true)}
           {...getCommonProps('rec' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={20}
-          marks={ps && makeMarks(ps.ypr, (v) => v.toFixed(1))}
+          marks={makeMarks(season.ypr, (v) => v.toFixed(1))}
           label={mkLabel('ypr' as keyof T, 'Yards per Reception', false)}
           {...getCommonProps('ypr' as keyof T)}
         />
         <LabeledSlider
           min={0}
           max={15}
-          marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
+          marks={makeMarks(season.tdp, (v) => `${v.toFixed(1)}%`)}
           label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
           {...getCommonProps('tdp')}
         />
       </>
     );
   } else {
-    const ps = pastSeason as RushSeason;
     sliders = (
       <>
         {/*
@@ -190,14 +186,14 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
         <LabeledSlider
           min={0}
           max={25}
-          marks={ps && makeMarks(ps.att, (v) => v.toFixed(0))}
+          marks={makeMarks(season.att, (v) => v.toFixed(0))}
           label={mkLabel('att' as keyof T, 'Carries per Game', false)}
           {...getCommonProps('att' as keyof T)}
         />
         <LabeledSlider
           min={1}
           max={7}
-          marks={ps && makeMarks(ps.ypc, (v) => v.toFixed(1))}
+          marks={makeMarks(season.ypc, (v) => v.toFixed(1))}
           // TODO kinda inconsistent with "attempts" before but "carries" here.
           label={mkLabel('ypc' as keyof T, 'Yards per Carry', false)}
           {...getCommonProps('ypc' as keyof T)}
@@ -205,7 +201,7 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
         <LabeledSlider
           min={0}
           max={20}
-          marks={ps && makeMarks(ps.tdp, (v) => `${v.toFixed(1)}%`)}
+          marks={makeMarks(season.tdp, (v) => `${v.toFixed(1)}%`)}
           label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
           {...getCommonProps('tdp' as keyof T)}
         />

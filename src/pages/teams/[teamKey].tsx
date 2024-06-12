@@ -47,6 +47,7 @@ import {
   ensureValid,
 } from '@/features/teams/validation';
 import {
+  GamesPlayed,
   PassSeason,
   RecvSeason,
   RushSeason,
@@ -59,13 +60,7 @@ import {
 } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
 import { AppState } from '@/store';
-import {
-  IdMap,
-  PlayerSeason,
-  PlayerSeasonData,
-  TeamWithExtras,
-  createPlayerSeason,
-} from '@/types';
+import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 import { getTeamName, makeIdMap, setOnClone, toEnumValue } from '@/utils';
 
 interface Params extends ParsedUrlQuery {
@@ -127,20 +122,21 @@ export type Projection = {
   rushSeasons: RushSeason[];
 };
 
+// TODO shouldnt this be somewhere with general client data code?
 const getClientDataHandlers = <T extends PlayerSeason>(
   teamKey: TeamKey,
   playerSeasons: IdMap<T>,
   mkDefault: (player: Player, team: TeamKey) => T,
   table: Table,
-  setSeason: Dispatch<SetStateAction<IdMap<T>>>,
+  setSeasons: Dispatch<SetStateAction<IdMap<T>>>,
   setValidationMessage: (message: string) => void
 ) => {
-  const fetchedDataToMap = (data: PlayerSeasonData<T>[]): IdMap<T> =>
-    new Map(data.map((ps) => [ps.playerId, ps]));
-
-  const initSeasons = async () => {
+  const fetchSeasons = async () => {
+    const fetchedDataToMap = (data: (T & GamesPlayed)[]): IdMap<T & GamesPlayed> =>
+      // TODO actually fetch
+      new Map(data.map((ps) => [ps.playerId, { ...ps, gp: 0 }]));
     const data = await table.where('team').equals(teamKey).toArray();
-    setSeason(fetchedDataToMap(data as PlayerSeasonData<T>[]));
+    setSeasons(fetchedDataToMap(data as (T & GamesPlayed)[]));
   };
 
   const initSeason = (player: Player, projection: Projection) => {
@@ -162,7 +158,7 @@ const getClientDataHandlers = <T extends PlayerSeason>(
   };
 
   const updateSeason = (season: T) => {
-    setSeason((s: IdMap<T>) => setOnClone(s, season.playerId, season));
+    setSeasons((s: IdMap<T>) => setOnClone(s, season.playerId, season));
   };
 
   const persistSeason = (season: T, projection: Projection) => {
@@ -177,7 +173,7 @@ const getClientDataHandlers = <T extends PlayerSeason>(
   };
 
   const deleteSeason = (playerId: number) => {
-    setSeason((season) => {
+    setSeasons((season) => {
       season.delete(playerId);
       return season;
     });
@@ -185,7 +181,7 @@ const getClientDataHandlers = <T extends PlayerSeason>(
   };
 
   return {
-    initSeasons,
+    fetchSeasons,
     initSeason,
     updateSeason,
     persistSeason,
@@ -320,9 +316,9 @@ export default function Page({
 
   useEffect(() => {
     const fetch = async () => {
-      passDataHandlers.initSeasons();
-      recvDataHandlers.initSeasons();
-      rushDataHandlers.initSeasons();
+      passDataHandlers.fetchSeasons();
+      recvDataHandlers.fetchSeasons();
+      rushDataHandlers.fetchSeasons();
     };
     fetch();
   }, [team]);
@@ -398,19 +394,19 @@ export default function Page({
 
   const games = selectedPlayer
     ? {
-        [StatType.PASS]: _.filter(
-          lastYearPassGames,
-          (g) => g.player_id == selectedPlayer.id
-        ),
-        [StatType.RECV]: _.filter(
-          lastYearRecvGames,
-          (g) => g.player_id == selectedPlayer.id
-        ),
-        [StatType.RUSH]: _.filter(
-          lastYearRushGames,
-          (g) => g.player_id == selectedPlayer.id
-        ),
-      }[statType]
+      [StatType.PASS]: _.filter(
+        lastYearPassGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+      [StatType.RECV]: _.filter(
+        lastYearRecvGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+      [StatType.RUSH]: _.filter(
+        lastYearRushGames,
+        (g) => g.player_id == selectedPlayer.id
+      ),
+    }[statType]
     : [];
 
   return (
@@ -433,7 +429,6 @@ export default function Page({
             />
           </Card>
         </div>
-        {/* <div className={'w-full h-full grid gap-8 lg:grid-flow-row lg:grid-rows-3'}> */}
         <Card className={'flex flex-col h-full relative'}>
           {teamSeason && team.seasons[0] && (
             <TeamPanel
@@ -491,7 +486,6 @@ export default function Page({
             </div>
           )}
         </Card>
-        {/* </div> */}
       </div>
     </div>
   );

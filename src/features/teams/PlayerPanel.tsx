@@ -15,29 +15,34 @@ import PlayerSelect from '@/components/PlayerSelect';
 import { Position, StatType } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
-import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
+import {
+  annualizePassSeason,
+  annualizeRecvSeason,
+  annualizeRushSeason,
+} from '@/models/PlayerSeason';
 import { setStatType } from '@/store/settingsSlice';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 
-function SeasonSummary<T extends PlayerSeason>({ season }: { season: T }) {
+function SeasonSummary({ gp, season }: { gp: number; season: PlayerSeason }) {
   const labelledStats: string[] = [];
-  if (season instanceof PassSeason) {
-    const annualized = season.annualize();
+  // TODO maybe try a tagged enum thing.
+  if ('ypa' in season) {
+    const annualized = annualizePassSeason(season, gp);
     labelledStats.push(
       `${annualized.att.toFixed(0)} attempts`,
       `${annualized.yds.toFixed(0)} yards`,
       `${annualized.tds.toFixed(0)} TDs`
     );
-  } else if (season instanceof RecvSeason) {
-    const annualized = season.annualize();
+  } else if ('tgt' in season) {
+    const annualized = annualizeRecvSeason(season, gp);
     labelledStats.push(
       `${annualized.tgt.toFixed(0)} targets`,
       `${annualized.rec.toFixed(0)} receptions`,
       `${annualized.yds.toFixed(0)} yards`,
       `${annualized.tds.toFixed(0)} TDs`
     );
-  } else if (season instanceof RushSeason) {
-    const annualized = season.annualize();
+  } else {
+    const annualized = annualizeRushSeason(season, gp);
     labelledStats.push(
       `${annualized.att.toFixed(0)} carries`,
       `${annualized.yds.toFixed(0)} yards`,
@@ -99,8 +104,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
     setSelectedPlayer(undefined);
   };
 
-  const [isAddPlayerOpen, setIsAddPlayerOpen] =
-    useState<boolean>(false);
+  const [isAddPlayerOpen, setIsAddPlayerOpen] = useState<boolean>(false);
 
   const relevantPlayers = team.players
     .filter((player) => relevantPositions.includes(player.position as Position))
