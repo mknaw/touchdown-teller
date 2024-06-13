@@ -80,7 +80,6 @@ type PlayerPanelProps<T extends PlayerSeason> = {
   seasons: IdMap<T>;
   pastSeasons: IdMap<T>;
   initSeason: (player: Player) => void;
-  updateSeason: (season: T) => void;
   persistSeason: (season: T) => void;
   deleteSeason: (playerId: number) => void;
 };
@@ -94,7 +93,6 @@ export default function PlayerPanel<T extends PlayerSeason>({
   seasons,
   pastSeasons,
   initSeason,
-  updateSeason,
   persistSeason,
   deleteSeason,
 }: PlayerPanelProps<T>) {
@@ -155,7 +153,6 @@ export default function PlayerPanel<T extends PlayerSeason>({
                 <PlayerStatSliderPanel
                   season={season}
                   pastSeason={pastSeasons.get(selectedPlayer.id)}
-                  setSeason={updateSeason}
                   persistSeason={persistSeason}
                 />
                 {/* TODO style this better */}

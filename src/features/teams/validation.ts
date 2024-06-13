@@ -6,9 +6,9 @@ import {
   AnnualizedPassSeason,
   AnnualizedRecvSeason,
   AnnualizedRushSeason,
-  PassSeason,
-  RecvSeason,
-  RushSeason,
+  annualizePassSeason,
+  annualizeRecvSeason,
+  annualizeRushSeason,
 } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
 import { Projection } from '@/pages/teams/[teamKey]';
@@ -19,7 +19,7 @@ const getNegativeStats = (season: { [key: string]: number }): string[] =>
 
 function getPassBudget(projection: Projection): AnnualizedPassSeason {
   const { teamSeason, passSeasons } = projection;
-  const annualized = _.map(passSeasons, (s) => s.annualize());
+  const annualized = _.map(passSeasons, annualizePassSeason);
   return {
     att: teamSeason.passAtt - _.sumBy(annualized, 'att'),
     cmp: teamSeason.passCmp - _.sumBy(annualized, 'cmp'),
@@ -31,7 +31,7 @@ function getPassBudget(projection: Projection): AnnualizedPassSeason {
 function getRecvBudget(projection: Projection): AnnualizedRecvSeason {
   const { teamSeason, recvSeasons } = projection;
 
-  const annualized = _.map(recvSeasons, (s) => s.annualize());
+  const annualized = _.map(recvSeasons, annualizeRecvSeason);
   return {
     tgt: teamSeason.passAtt - _.sumBy(annualized, 'tgt'),
     rec: teamSeason.passCmp - _.sumBy(annualized, 'rec'),
@@ -42,7 +42,7 @@ function getRecvBudget(projection: Projection): AnnualizedRecvSeason {
 
 function getRushBudget(projection: Projection): AnnualizedRushSeason {
   const { teamSeason, rushSeasons } = projection;
-  const annualized = _.map(rushSeasons, (s) => s.annualize());
+  const annualized = _.map(rushSeasons, annualizeRushSeason);
   return {
     att: teamSeason.rushAtt - _.sumBy(annualized, 'att'),
     yds: teamSeason.rushYds - _.sumBy(annualized, 'yds'),
@@ -54,21 +54,21 @@ export function ensureValid<T extends PlayerSeason>(
   season: T,
   projection: Projection
 ): T {
-  if (season instanceof PassSeason) {
+  if ('ypa' in season) {
     projection.passSeasons.push(season);
     const remaining = getPassBudget(projection);
     if (getNegativeStats(remaining).length) {
       // TODO would be nicer to not go to 0 but instead adjust `gp`...
-      season.gp = 0;
+      // season.gp = 0;
       season.att = 0;
       season.ypa = 0;
       season.tdp = 0;
     }
-  } else if (season instanceof RecvSeason) {
+  } else if ('tgt' in season) {
     projection.recvSeasons.push(season);
     const remaining = getRecvBudget(projection);
     if (getNegativeStats(remaining).length) {
-      season.gp = 0;
+      // season.gp = 0;
       season.tgt = 0;
       season.rec = 0;
       season.ypr = 0;
@@ -78,7 +78,7 @@ export function ensureValid<T extends PlayerSeason>(
     projection.rushSeasons.push(season);
     const remaining = getRushBudget(projection);
     if (getNegativeStats(remaining).length) {
-      season.gp = 0;
+      // season.gp = 0;
       season.att = 0;
       season.ypc = 0;
       season.tdp = 0;
@@ -93,7 +93,7 @@ export function clampPlayerSeason<T extends PlayerSeason>(
   projection: Projection
 ): [T, boolean] {
   let valid = true;
-  if (season instanceof PassSeason) {
+  if ('ypa' in season) {
     const remaining = getPassBudget(projection);
     if (!_.isEmpty(getNegativeStats(remaining))) {
       valid = false;
@@ -102,64 +102,64 @@ export function clampPlayerSeason<T extends PlayerSeason>(
     const remainingGp = gameCount - gpTotal;
     if (remainingGp < 0) {
       valid = false;
-      season.gp += remainingGp;
-      season.gp = Math.max(season.gp, 0);
+      // season.gp += remainingGp;
+      // season.gp = Math.max(season.gp, 0);
     }
     if (remaining.att < 0) {
-      season.att += remaining.att / season.gp;
+      // season.att += remaining.att / season.gp;
       season.att = Math.max(season.att, 0);
     }
     if (remaining.cmp < 0) {
-      season.cmp += (100 * remaining.cmp) / (season.att * season.gp);
+      // season.cmp += (100 * remaining.cmp) / (season.att * season.gp);
       season.cmp = Math.max(season.cmp, 0);
     }
     if (remaining.yds < 0) {
-      season.ypa +=
-        remaining.yds / (season.att * season.gp * (season.cmp / 100));
+      // season.ypa +=
+      //   remaining.yds / (season.att * season.gp * (season.cmp / 100));
       season.ypa = Math.max(season.ypa, 0);
     }
     if (remaining.tds < 0) {
-      season.tdp += (100 * remaining.tds) / (season.att * season.gp);
+      // season.tdp += (100 * remaining.tds) / (season.att * season.gp);
       season.tdp = Math.max(season.tdp, 0);
     }
-  } else if (season instanceof RecvSeason) {
+  } else if ('tgt' in season) {
     const remaining = getRecvBudget(projection);
     if (!_.isEmpty(getNegativeStats(remaining))) {
       valid = false;
     }
     if (remaining.tgt < 0) {
-      season.tgt += remaining.tgt / season.gp;
+      // season.tgt += remaining.tgt / season.gp;
       season.tgt = Math.max(season.tgt, 0);
     }
     if (remaining.rec < 0) {
-      season.rec += (100 * remaining.rec) / (season.gp * season.tgt);
+      // season.rec += (100 * remaining.rec) / (season.gp * season.tgt);
       season.rec = Math.max(season.rec, 0);
     }
     if (remaining.yds < 0) {
-      season.ypr +=
-        remaining.yds / (season.tgt * (season.rec / 100) * season.gp);
+      // season.ypr +=
+      //   remaining.yds / (season.tgt * (season.rec / 100) * season.gp);
       season.ypr = Math.max(season.ypr, 0);
     }
     if (remaining.tds < 0) {
-      season.tdp +=
-        (100 * remaining.tds) / (season.tgt * (season.rec / 100) * season.gp);
+      // season.tdp +=
+      //   (100 * remaining.tds) / (season.tgt * (season.rec / 100) * season.gp);
       season.tdp = Math.max(season.tdp, 0);
     }
-  } else if (season instanceof RushSeason) {
+  } else {
     const remaining = getRushBudget(projection);
     if (!_.isEmpty(getNegativeStats(remaining))) {
       valid = false;
     }
     if (remaining.att < 0) {
-      season.att += remaining.att / season.gp;
+      // season.att += remaining.att / season.gp;
       season.att = Math.max(season.att, 0);
     }
     if (remaining.yds < 0) {
-      season.ypc += remaining.yds / (season.att * season.gp);
+      // season.ypc += remaining.yds / (season.att * season.gp);
       season.ypc = Math.max(season.ypc, 0);
     }
     if (remaining.tds < 0) {
-      season.tdp += (100 * remaining.tds) / (season.att * season.gp);
+      // season.tdp += (100 * remaining.tds) / (season.att * season.gp);
       season.tdp = Math.max(season.tdp, 0);
     }
   }

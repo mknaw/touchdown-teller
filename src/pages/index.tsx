@@ -7,7 +7,7 @@ import { Player, PrismaClient } from '@prisma/client';
 
 import { DataGrid } from '@mui/x-data-grid';
 
-import { db } from '@/data/client';
+import { db, getPlayerProjections } from '@/data/client';
 import { getAllPlayers } from '@/data/ssr';
 import { PlayerProjection } from '@/models/PlayerSeason';
 
@@ -22,13 +22,6 @@ export const getStaticProps = (async () => {
   players: Player[];
 }>;
 
-interface hasPlayerIdAndName {
-  // TODO optional to keep the `delete` bit legal, but tbh it's kinda gross
-  playerId?: number;
-  name?: string;
-  team?: string;
-}
-
 export default function Home({
   players,
 }: InferGetStaticPropsType<typeof getStaticProps>) {
@@ -36,29 +29,9 @@ export default function Home({
     useState<(Player & Partial<PlayerProjection>)[]>(players);
 
   useEffect(() => {
-    const getPlayerProjections = async () => {
-      const transform = _.curry((type: string, data: hasPlayerIdAndName[]) =>
-        _(data)
-          .keyBy('playerId')
-          .mapValues((v) => {
-            delete v.playerId;
-            delete v.name;
-            delete v.team;
-            return v;
-          })
-          .mapValues((v) => ({
-            [type]: v,
-          }))
-          .value()
-      );
-
-      const projections = _.merge(
-        ...(await Promise.all([
-          db.pass.toArray().then(transform('pass')),
-          db.recv.toArray().then(transform('recv')),
-          db.rush.toArray().then(transform('rush')),
-        ]))
-      );
+    // TODO replace with the thing from `@/data/client`.
+    const fetch = async () => {
+      const projections = await getPlayerProjections();
 
       // TODO have to put this through a scoring fn to just get a number
 
@@ -70,7 +43,7 @@ export default function Home({
       );
     };
 
-    getPlayerProjections();
+    fetch();
   }, [players]);
 
   return (

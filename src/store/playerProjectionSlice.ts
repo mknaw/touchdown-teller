@@ -1,14 +1,20 @@
 import type { PayloadAction } from '@reduxjs/toolkit';
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import _ from 'lodash';
 
-import { db } from '@/data/client';
-import { PassSeason } from '@/models/PlayerSeason';
+import { getPlayerProjections } from '@/data/client';
+import { PlayerProjection } from '@/models/PlayerSeason';
 
-type PlayerProjections = { [key: string]: PassSeason };
+export type PlayerProjections = { [playerId: number]: Partial<PlayerProjection> };
 
-type playerProjectionsStore = {
+export type PlayerProjectionsStore = {
   status: string;
   projections: PlayerProjections;
+};
+
+export type UpdatePlayerProjection = {
+  playerId: number;
+  projection: Partial<PlayerProjection>;
 };
 
 const playerProjectionsSlice = createSlice({
@@ -16,11 +22,10 @@ const playerProjectionsSlice = createSlice({
   initialState: {
     status: 'idle',
     projections: {},
-  } as playerProjectionsStore,
+  } as PlayerProjectionsStore,
   reducers: {
-    setPlayerSeason(state, action: PayloadAction<PassSeason>) {
-      const passSeason = action.payload;
-      state.projections[`${passSeason.playerId}`] = passSeason;
+    setPlayerSeason(state, action: PayloadAction<PlayerProjections>) {
+      state.projections = _.merge(state.projections, action.payload);
     },
   },
   extraReducers(builder) {
@@ -45,10 +50,6 @@ export default playerProjectionsSlice;
 export const loadPlayerProjections = createAsyncThunk(
   'playerProjections/load',
   async () => {
-    const projections = await db.pass.toArray();
-    return projections.reduce((acc, projection) => {
-      acc[projection.playerId] = projection;
-      return acc;
-    }, {} as PlayerProjections);
+    return await getPlayerProjections();
   }
 );

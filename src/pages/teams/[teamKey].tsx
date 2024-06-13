@@ -59,7 +59,12 @@ import {
   rushAggregateToSeason,
 } from '@/models/PlayerSeason';
 import TeamSeason from '@/models/TeamSeason';
-import { AppState } from '@/store';
+import { AppState, useAppDispatch } from '@/store';
+import {
+  PlayerProjections,
+  PlayerProjectionsStore,
+  loadPlayerProjections,
+} from '@/store/playerProjectionSlice';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 import { getTeamName, makeIdMap, setOnClone, toEnumValue } from '@/utils';
 
@@ -132,7 +137,9 @@ const getClientDataHandlers = <T extends PlayerSeason>(
   setValidationMessage: (message: string) => void
 ) => {
   const fetchSeasons = async () => {
-    const fetchedDataToMap = (data: (T & GamesPlayed)[]): IdMap<T & GamesPlayed> =>
+    const fetchedDataToMap = (
+      data: (T & GamesPlayed)[]
+    ): IdMap<T & GamesPlayed> =>
       // TODO actually fetch
       new Map(data.map((ps) => [ps.playerId, { ...ps, gp: 0 }]));
     const data = await table.where('team').equals(teamKey).toArray();
@@ -168,8 +175,10 @@ const getClientDataHandlers = <T extends PlayerSeason>(
         'Player projection limited in accordance with team total.'
       );
     }
+    // TODO untangle this reference to the other fn
     updateSeason(updatedSeason);
-    table.update(season.playerId, updatedSeason);
+    // TODO unhardcode kirk cousins
+    table.update(20, updatedSeason);
   };
 
   const deleteSeason = (playerId: number) => {
@@ -189,6 +198,20 @@ const getClientDataHandlers = <T extends PlayerSeason>(
   };
 };
 
+// TODO these can go wherever, but probably no need for them here.
+function extractSeasons<T extends PlayerSeason>(
+  type: string,
+  projections: PlayerProjections
+): IdMap<T> {
+  // TODO this is not very elegant, I'm sure there's nicer lodash here
+  const val = _(Object.entries(projections))
+    .filter(([_, p]) => !!p[type])
+    .map(([playerId, p]) => [parseInt(playerId), p[type]])
+    .value();
+
+  return new Map(val);
+}
+
 export default function Page({
   team,
   lastYearPassGames,
@@ -206,13 +229,24 @@ export default function Page({
   lastYearRecvAggregates: RecvAggregate[];
   lastYearRushAggregates: RushAggregate[];
 }) {
+  const dispatch = useAppDispatch();
+
   const statType = useSelector<AppState, StatType>(
     (state) => state.settings.statType
   );
+  const { status, projections } = useSelector<AppState, PlayerProjectionsStore>(
+    (state) => state.playerProjections
+  );
 
-  const [passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
-  const [recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
-  const [rushSeasons, setRushSeasons] = useState<IdMap<RushSeason>>(new Map());
+  useEffect(() => {
+    dispatch(loadPlayerProjections());
+  }, [dispatch]);
+
+  console.log(status, projections);
+
+  const [_passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
+  const [_recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
+  const [_rushSeasons, setRushSeasons] = useState<IdMap<RushSeason>>(new Map());
 
   const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(
     undefined
@@ -333,6 +367,10 @@ export default function Page({
     return null; // Shouldn't happen.
   }
 
+  const passSeasons = extractSeasons<PassSeason>('pass', projections);
+  const recvSeasons = extractSeasons<RecvSeason>('recv', projections);
+  const rushSeasons = extractSeasons<RushSeason>('rush', projections);
+
   const projection = {
     teamSeason,
     passSeasons: [...passSeasons.values()],
@@ -360,8 +398,7 @@ export default function Page({
         relevantPositions={[Position.QB]}
         seasons={passSeasons}
         pastSeasons={playerPassSeasons}
-        initSeason={(p) => passDataHandlers.initSeason(p, projection)}
-        updateSeason={passDataHandlers.updateSeason}
+        initSeason={() => alert('probably dont need this anymore')}
         persistSeason={(s) => passDataHandlers.persistSeason(s, projection)}
         deleteSeason={passDataHandlers.deleteSeason}
       />
@@ -372,8 +409,7 @@ export default function Page({
         relevantPositions={[Position.WR, Position.TE, Position.RB]}
         seasons={recvSeasons}
         pastSeasons={playerRecvSeasons}
-        initSeason={(p) => recvDataHandlers.initSeason(p, projection)}
-        updateSeason={recvDataHandlers.updateSeason}
+        initSeason={() => alert('probably dont need this anymore')}
         persistSeason={(s) => recvDataHandlers.persistSeason(s, projection)}
         deleteSeason={recvDataHandlers.deleteSeason}
       />
@@ -384,8 +420,7 @@ export default function Page({
         relevantPositions={[Position.RB, Position.QB, Position.WR]}
         seasons={rushSeasons}
         pastSeasons={playerRushSeasons}
-        initSeason={(p) => rushDataHandlers.initSeason(p, projection)}
-        updateSeason={rushDataHandlers.updateSeason}
+        initSeason={() => alert('probably dont need this anymore')}
         persistSeason={(s) => rushDataHandlers.persistSeason(s, projection)}
         deleteSeason={rushDataHandlers.deleteSeason}
       />
@@ -394,19 +429,19 @@ export default function Page({
 
   const games = selectedPlayer
     ? {
-      [StatType.PASS]: _.filter(
-        lastYearPassGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-      [StatType.RECV]: _.filter(
-        lastYearRecvGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-      [StatType.RUSH]: _.filter(
-        lastYearRushGames,
-        (g) => g.player_id == selectedPlayer.id
-      ),
-    }[statType]
+        [StatType.PASS]: _.filter(
+          lastYearPassGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+        [StatType.RECV]: _.filter(
+          lastYearRecvGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+        [StatType.RUSH]: _.filter(
+          lastYearRushGames,
+          (g) => g.player_id == selectedPlayer.id
+        ),
+      }[statType]
     : [];
 
   return (
@@ -437,9 +472,9 @@ export default function Page({
               setTeamSeason={setTeamSeason}
               persistTeamSeason={persistTeamSeason}
               lastSeason={lastSeason}
-              passSeasons={passSeasons}
-              recvSeasons={recvSeasons}
-              rushSeasons={rushSeasons}
+              passSeasons={_passSeasons}
+              recvSeasons={_recvSeasons}
+              rushSeasons={_rushSeasons}
               passAggregates={_.filter(
                 lastYearPassAggregates,
                 (agg) => agg.team == team.key

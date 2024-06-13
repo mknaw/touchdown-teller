@@ -13,7 +13,7 @@ export type PlayerBaseProjection = GamesPlayed & {
 
 export type PassSeason = {
   playerId: number;
-  name: string;
+  // name: string;
   team: TeamKey;
   att: number;
   cmp: number;
@@ -26,7 +26,7 @@ export const mkDefaultPassSeason = (
   team: TeamKey
 ): PassSeason => ({
   playerId: player.id,
-  name: player.name,
+  // name: player.name,
   team,
   att: 30,
   cmp: 75,
@@ -45,7 +45,7 @@ export const passAggregateToSeason = ({
   tds,
 }: PassAggregate): PassSeason => ({
   playerId,
-  name,
+  // name,
   team,
   att: att / gp,
   cmp: 100 * (cmp / att),
@@ -75,7 +75,7 @@ export function annualizePassSeason(
 
 export type RecvSeason = {
   playerId: number;
-  name: string;
+  // name: string;
   team: TeamKey;
   tgt: number;
   rec: number;
@@ -88,7 +88,7 @@ export const mkDefaultRecvSeason = (
   team: TeamKey
 ): RecvSeason => ({
   playerId: player.id,
-  name: player.name,
+  // name: player.name,
   team,
   tgt: 6,
   rec: 65,
@@ -107,7 +107,7 @@ export const recvAggregateToSeason = ({
   tds,
 }: RecvAggregate): RecvSeason => ({
   playerId,
-  name,
+  // name,
   team,
   tgt: tgt / gp,
   rec: 100 * (rec / tgt),
@@ -134,7 +134,7 @@ export const annualizeRecvSeason = (
 
 export type RushSeason = {
   playerId: number;
-  name: string;
+  // name: string;
   team: TeamKey;
   att: number;
   ypc: number;
@@ -146,7 +146,7 @@ export const mkDefaultRushSeason = (
   team: TeamKey
 ): RushSeason => ({
   playerId: player.id,
-  name: player.name,
+  // name: player.name,
   team,
   att: 20,
   ypc: 3.5,
@@ -163,7 +163,7 @@ export const rushAggregateToSeason = ({
   tds,
 }: RushAggregate): RushSeason => ({
   playerId,
-  name,
+  // name,
   team,
   att: att / gp,
   ypc: yds / att,

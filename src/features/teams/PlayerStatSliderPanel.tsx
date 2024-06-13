@@ -6,6 +6,8 @@ import Stack from '@mui/material/Stack';
 
 import LabeledSlider from '@/components/LabeledSlider';
 import { lastYear } from '@/constants';
+import { useAppDispatch } from '@/store';
+import { setPlayerSeason } from '@/store/playerProjectionSlice';
 import { PlayerSeason, SliderMarks } from '@/types';
 
 function makeMarks(
@@ -22,18 +24,31 @@ function makeMarks(
 }
 
 type PlayerStatSliderPanelProps<T> = {
+  playerId: number;
   season: T;
   pastSeason: T | undefined;
-  setSeason: (stats: T) => void;
   persistSeason: (stats: T, field: keyof T) => void;
 };
 
 export default function PlayerStatSliderPanel<T extends PlayerSeason>({
+  playerId,
   season,
   pastSeason,
-  setSeason,
   persistSeason,
 }: PlayerStatSliderPanelProps<T>) {
+  const dispatch = useAppDispatch();
+
+  const setSeason = (ps: T) => {
+    // TODO this could certainly afford to be more elegant...
+    if ('ypa' in ps) {
+      dispatch(setPlayerSeason({ [playerId]: { pass: ps } }));
+    } else if ('tgt' in ps) {
+      dispatch(setPlayerSeason({ [playerId]: { recv: ps } }));
+    } else {
+      dispatch(setPlayerSeason({ [playerId]: { rush: ps } }));
+    }
+  };
+
   // TODO this I think is also doable if you annotate as `keyof T` among keys
   // which are numbers...
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
