@@ -35,7 +35,6 @@ const playerProjectionsSlice = createSlice({
       })
       .addCase(loadPlayerProjections.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        // Add any fetched posts to the array
         state.projections = action.payload;
       })
       .addCase(loadPlayerProjections.rejected, (state, action) => {
@@ -49,7 +48,7 @@ export default playerProjectionsSlice;
 
 export const loadPlayerProjections = createAsyncThunk(
   'playerProjections/load',
-  async () => {
-    return await getPlayerProjections();
+  async (team: string | undefined = undefined) => {
+    return await getPlayerProjections(team);
   }
 );

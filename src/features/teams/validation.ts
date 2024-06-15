@@ -10,7 +10,7 @@ import {
   annualizeRecvSeason,
   annualizeRushSeason,
 } from '@/models/PlayerSeason';
-import TeamSeason from '@/models/TeamSeason';
+import { TeamSeason } from '@/models/TeamSeason';
 import { Projection } from '@/pages/teams/[teamKey]';
 import { PlayerSeason } from '@/types';
 

@@ -17,6 +17,7 @@ import storage from 'redux-persist/lib/storage';
 import appStateSlice from '@/store/appStateSlice';
 import playerProjectionsSlice from '@/store/playerProjectionSlice';
 import settingsSlice from '@/store/settingsSlice';
+import teamProjectionSlice from './store/teamProjectionSlice';
 
 const makeStore = () => {
   const persistConfig = {
@@ -28,6 +29,7 @@ const makeStore = () => {
   const persistedReducer = persistCombineReducers(persistConfig, {
     [settingsSlice.name]: settingsSlice.reducer,
     [appStateSlice.name]: appStateSlice.reducer,
+    [teamProjectionSlice.name]: teamProjectionSlice.reducer,
     [playerProjectionsSlice.name]: playerProjectionsSlice.reducer,
   });
 

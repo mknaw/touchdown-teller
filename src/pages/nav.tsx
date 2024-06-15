@@ -70,16 +70,13 @@ function SideDrawer({
   setDrawerOpen,
 }: DrawerProps) {
   const NavItem = ({
-    key,
     primary,
     href,
   }: {
-    key: string;
     primary: string;
     href: string;
   }) => (
     <ListItem
-      key={key}
       disablePadding
       sx={{ display: 'block' }}
       onClick={() => setDrawerOpen(false)}

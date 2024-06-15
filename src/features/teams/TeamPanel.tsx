@@ -15,7 +15,7 @@ import {
   RushChartGroup,
 } from '@/features/teams/ChartGroup';
 import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
-import TeamSeason from '@/models/TeamSeason';
+import { TeamSeason } from '@/models/TeamSeason';
 import {
   toggleTeamRushSeasonsModal,
   toggleTeamSeasonsModal,
@@ -68,11 +68,10 @@ export default function TeamPanel({
       const { name, value } = target as HTMLInputElement;
       setTeamSeason(
         (prevProjection) =>
-          prevProjection &&
-          new TeamSeason({
+          prevProjection && {
             ...prevProjection,
             [name]: value,
-          })
+          }
       );
     }
   };

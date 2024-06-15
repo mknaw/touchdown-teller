@@ -10,7 +10,7 @@ import HorizontalChart, { ChartData } from '@/components/HorizontalChart';
 import { REMAINING_LABEL } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
 import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
-import TeamSeason from '@/models/TeamSeason';
+import { TeamSeason } from '@/models/TeamSeason';
 import {
   toggleTeamPassSeasonsModal,
   toggleTeamRushSeasonsModal,

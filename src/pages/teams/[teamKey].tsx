@@ -26,7 +26,7 @@ import {
   currentYear,
   lastYear,
 } from '@/constants';
-import { db } from '@/data/client';
+import { db, getTeamProjection } from '@/data/client';
 import {
   getPlayerPassAggregates,
   getPlayerPassGame,
@@ -58,13 +58,18 @@ import {
   recvAggregateToSeason,
   rushAggregateToSeason,
 } from '@/models/PlayerSeason';
-import TeamSeason from '@/models/TeamSeason';
+import { TeamSeason, teamSeasonFromPrisma } from '@/models/TeamSeason';
 import { AppState, useAppDispatch } from '@/store';
 import {
   PlayerProjections,
   PlayerProjectionsStore,
   loadPlayerProjections,
 } from '@/store/playerProjectionSlice';
+import {
+  TeamProjectionStore,
+  loadTeamProjection,
+  persistTeamProjection,
+} from '@/store/teamProjectionSlice';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
 import { getTeamName, makeIdMap, setOnClone, toEnumValue } from '@/utils';
 
@@ -231,18 +236,41 @@ export default function Page({
 }) {
   const dispatch = useAppDispatch();
 
+  const lastSeason = team.seasons[0];
+  if (!lastSeason) {
+    return null; // Shouldn't happen.
+  }
+
+  useEffect(() => {
+    dispatch(loadTeamProjection(team.key as TeamKey)).then(({ payload }) => {
+      if (!payload) {
+        const projection = teamSeasonFromPrisma(lastSeason);
+        dispatch(persistTeamProjection(projection));
+      }
+    });
+  }, [dispatch, team]);
+
+  const { projection: teamProjection } = useSelector<
+    AppState,
+    TeamProjectionStore
+  >((state) => state.teamProjection);
+
   const statType = useSelector<AppState, StatType>(
     (state) => state.settings.statType
   );
-  const { status, projections } = useSelector<AppState, PlayerProjectionsStore>(
-    (state) => state.playerProjections
-  );
+
+  const { projections: playerProjections } = useSelector<
+    AppState,
+    PlayerProjectionsStore
+  >((state) => state.playerProjections);
+
+  const passSeasons = extractSeasons<PassSeason>('pass', playerProjections);
+  const recvSeasons = extractSeasons<RecvSeason>('recv', playerProjections);
+  const rushSeasons = extractSeasons<RushSeason>('rush', playerProjections);
 
   useEffect(() => {
-    dispatch(loadPlayerProjections());
+    dispatch(loadPlayerProjections(team.key));
   }, [dispatch]);
-
-  console.log(status, projections);
 
   const [_passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
   const [_recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
@@ -251,25 +279,6 @@ export default function Page({
   const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(
     undefined
   );
-
-  const [teamSeason, setTeamSeason] = useState<TeamSeason | null>(null);
-  const lastSeason = team.seasons[0];
-  if (!lastSeason) {
-    return null; // Shouldn't happen.
-  }
-  useEffect(() => {
-    async function fetch() {
-      const teamProjectionData = await db.team.get(team.key as TeamKey);
-      if (teamProjectionData) {
-        setTeamSeason(new TeamSeason(teamProjectionData));
-      } else {
-        const newTeamSeason = TeamSeason.fromPrisma(lastSeason);
-        setTeamSeason(newTeamSeason);
-        db.team.add(newTeamSeason, team.key as TeamKey);
-      }
-    }
-    fetch();
-  }, [team]);
 
   const [playerSeasonValidationMessage, setPlayerSeasonValidationMessage] =
     useState('');
@@ -363,33 +372,29 @@ export default function Page({
     selectedPlayer,
     setSelectedPlayer,
   };
-  if (!teamSeason) {
+  if (!teamProjection) {
     return null; // Shouldn't happen.
   }
 
-  const passSeasons = extractSeasons<PassSeason>('pass', projections);
-  const recvSeasons = extractSeasons<RecvSeason>('recv', projections);
-  const rushSeasons = extractSeasons<RushSeason>('rush', projections);
-
   const projection = {
-    teamSeason,
+    teamSeason: teamProjection, // TODO rename this
     passSeasons: [...passSeasons.values()],
     recvSeasons: [...recvSeasons.values()],
     rushSeasons: [...rushSeasons.values()],
   };
 
-  const persistTeamSeason = () => {
-    const [newTeamSeason, wasValid] = clampTeamSeason(projection);
-    setTeamSeason(() => _.cloneDeep(newTeamSeason));
-
-    if (wasValid) {
-      db.team.update(team.key as TeamKey, newTeamSeason);
-    } else {
-      setTeamSeasonValidationMessage(
-        'Team total limited in accordance with player projection total.'
-      );
-    }
-  };
+  // const persistTeamSeason = () => {
+  //   const [newTeamSeason, wasValid] = clampTeamSeason(projection);
+  //   setTeamSeason(() => _.cloneDeep(newTeamSeason));
+  //
+  //   if (wasValid) {
+  //     db.team.update(team.key as TeamKey, newTeamSeason);
+  //   } else {
+  //     setTeamSeasonValidationMessage(
+  //       'Team total limited in accordance with player projection total.'
+  //     );
+  //   }
+  // };
 
   const playerPanel = {
     [StatType.PASS]: (
@@ -465,12 +470,12 @@ export default function Page({
           </Card>
         </div>
         <Card className={'flex flex-col h-full relative'}>
-          {teamSeason && team.seasons[0] && (
+          {teamProjection && team.seasons[0] && (
             <TeamPanel
               statType={statType}
-              teamSeason={teamSeason}
-              setTeamSeason={setTeamSeason}
-              persistTeamSeason={persistTeamSeason}
+              teamSeason={teamProjection}
+              setTeamSeason={() => null}
+              persistTeamSeason={() => null}
               lastSeason={lastSeason}
               passSeasons={_passSeasons}
               recvSeasons={_recvSeasons}

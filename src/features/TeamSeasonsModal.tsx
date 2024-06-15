@@ -9,7 +9,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import Modal from '@/components/Modal';
 import { lastYear } from '@/constants';
 import { db } from '@/data/client';
-import TeamSeason from '@/models/TeamSeason';
+import { TeamSeason } from '@/models/TeamSeason';
 import { AppState } from '@/store';
 import {
   TeamSeasonsModalState,
@@ -22,8 +22,8 @@ function useTeamProjections(open: boolean) {
   const [teamSeasons, setTeamSeasons] = useState<TeamSeason[]>([]);
   useEffect(() => {
     async function fetch() {
-      const teamProjectionData = await db.team.toArray();
-      setTeamSeasons(teamProjectionData.map((data) => new TeamSeason(data)));
+      const teamProjections = await db.team.toArray();
+      setTeamSeasons(teamProjections);
     }
     fetch();
     // TODO seems wasteful to get these when we're closing the modal,

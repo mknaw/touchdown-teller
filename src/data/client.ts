@@ -9,10 +9,10 @@ import {
   RecvSeason,
   RushSeason,
 } from '@/models/PlayerSeason';
-import { TeamSeasonData } from '@/models/TeamSeason';
+import { TeamSeason } from '@/models/TeamSeason';
 
 export class TouchdownTellerDatabase extends Dexie {
-  public team!: Table<TeamSeasonData, TeamKey>;
+  public team!: Table<TeamSeason, TeamKey>;
   public player!: Table<PlayerBaseProjection, TeamKey>;
   public pass!: Table<PassSeason, number>;
   public recv!: Table<RecvSeason, number>;
@@ -33,9 +33,12 @@ export class TouchdownTellerDatabase extends Dexie {
 export const db = new TouchdownTellerDatabase();
 
 /// Assemble a `{id: {pass: ..., recv: ..., rush: ...}}` object from the IndexedDB.
-export const getPlayerProjections = async (): Promise<{
+export const getPlayerProjections = async (
+  team: string | undefined = undefined
+): Promise<{
   [id: number]: Partial<PlayerProjection>;
 }> => {
+  console.log(`TODO do something with ${team}`);
   interface hasPlayerIdAndName {
     // TODO `?`s to keep the `delete` bit legal, but tbh it's kinda gross
     playerId?: number;
@@ -66,3 +69,8 @@ export const getPlayerProjections = async (): Promise<{
     ]))
   );
 };
+
+/// Fetch a projection for the given team from the DB.
+export const getTeamProjection = async (
+  team: TeamKey
+): Promise<TeamSeason | undefined> => db.team.get(team);
