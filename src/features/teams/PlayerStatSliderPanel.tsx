@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 
 import LabeledSlider, { LabeledSliderProps } from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
-import { PlayerProjection } from '@/models/PlayerSeason';
+import { LastSeason } from '@/models/PlayerSeason';
 import { AppState, useAppDispatch } from '@/store';
 import {
   PlayerProjectionsStore,
@@ -16,9 +16,10 @@ import {
 import { SliderMarks } from '@/types';
 
 function makeMarks(
-  value: number,
+  value: number | undefined,
   labelFn: (value: number) => string
 ): SliderMarks {
+  if (value === undefined) return [];
   const label = `${lastYear}: ${labelFn(value)}`;
   return [
     {
@@ -32,10 +33,14 @@ const StatSlider = ({
   playerId,
   path,
   label,
+  lastSeason,
+  decimalPlaces = 0,
   ...props
 }: Exclude<LabeledSliderProps, 'value'> & {
   playerId: number;
   path: string;
+  lastSeason?: LastSeason;
+  decimalPlaces?: number;
 }) => {
   const dispatch = useAppDispatch();
 
@@ -67,7 +72,9 @@ const StatSlider = ({
       value={value}
       onChange={(_, v) => onChange(false, path, v)}
       onChangeCommitted={(_, v) => onChange(true, path, v)}
-      marks={makeMarks(value, (v) => v.toFixed(0))}
+      marks={makeMarks(lastSeason && _.get(lastSeason, path), (v) =>
+        v.toFixed(decimalPlaces)
+      )}
       label={`${label}: ${value}${isPercent ? '%' : ''}`}
       {...props}
     />
@@ -77,15 +84,15 @@ const StatSlider = ({
 export default function PlayerStatSliderPanel({
   statType,
   playerId,
-  projection,
+  lastSeason,
 }: {
   statType: StatType;
   playerId: number;
-  projection: PlayerProjection;
+  lastSeason?: LastSeason;
 }) {
   const commonProps = {
-    projection,
     playerId,
+    lastSeason,
   };
   // TODO these marks don't look good when they're on the far end -
   // like 0 tds, 17 games played ...

@@ -248,10 +248,38 @@ export default function Page({
   const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
     useState('');
 
-  // TODO really embarrassing to WET this up...
-  const playerPassSeasons = makeIdMap(
-    _.map(_.groupBy(lastYearPassAggregates, 'playerId'), (agg, playerId) => {
-      return passAggregateToSeason({
+  // TODO still embarrassing to WET this up...
+  const playerBaseSeasons = _.merge(
+    _(lastYearPassAggregates)
+      .groupBy('playerId')
+      .mapValues((agg, playerId) => ({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+      }))
+      .value(),
+    _(lastYearRecvAggregates)
+      .groupBy('playerId')
+      .mapValues((agg, playerId) => ({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+      }))
+      .value(),
+    _(lastYearRushAggregates)
+      .groupBy('playerId')
+      .mapValues((agg, playerId) => ({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+      }))
+      .value()
+  );
+
+  const playerPassSeasons = _(lastYearPassAggregates)
+    .groupBy('playerId')
+    .mapValues((agg, playerId) =>
+      passAggregateToSeason({
         playerId: parseInt(playerId),
         team: agg[0].team,
         gp: _.sumBy(agg, 'gp'),
@@ -259,14 +287,17 @@ export default function Page({
         cmp: _.sumBy(agg, 'cmp'),
         yds: _.sumBy(agg, 'yds'),
         tds: _.sumBy(agg, 'tds'),
-      });
-    }),
-    'playerId'
-  );
+      })
+    )
+    .mapValues((agg, _) => ({
+      pass: agg,
+    }))
+    .value();
 
-  const playerRecvSeasons = makeIdMap(
-    _.map(_.groupBy(lastYearRecvAggregates, 'playerId'), (agg, playerId) => {
-      return recvAggregateToSeason({
+  const playerRecvSeasons = _(lastYearRecvAggregates)
+    .groupBy('playerId')
+    .mapValues((agg, playerId) =>
+      recvAggregateToSeason({
         playerId: parseInt(playerId),
         team: agg[0].team,
         gp: _.sumBy(agg, 'gp'),
@@ -274,24 +305,39 @@ export default function Page({
         rec: _.sumBy(agg, 'rec'),
         yds: _.sumBy(agg, 'yds'),
         tds: _.sumBy(agg, 'tds'),
-      });
-    }),
-    'playerId'
-  );
+      })
+    )
+    .mapValues((agg, _) => ({
+      recv: agg,
+    }))
+    .value();
 
-  const playerRushSeasons = makeIdMap(
-    _.map(_.groupBy(lastYearRushAggregates, 'playerId'), (agg, playerId) => {
-      return rushAggregateToSeason({
+  const playerRushSeasons = _(lastYearRushAggregates)
+    .groupBy('playerId')
+    .mapValues((agg, playerId) =>
+      rushAggregateToSeason({
         playerId: parseInt(playerId),
         team: agg[0].team,
         gp: _.sumBy(agg, 'gp'),
         att: _.sumBy(agg, 'att'),
         yds: _.sumBy(agg, 'yds'),
         tds: _.sumBy(agg, 'tds'),
-      });
-    }),
-    'playerId'
+      })
+    )
+    .mapValues((agg, _) => ({
+      rush: agg,
+    }))
+    .value();
+
+  const lastSeasons = _.merge(
+    _.map(playerBaseSeasons, (v) => ({ base: v })),
+    playerPassSeasons,
+    playerRecvSeasons,
+    playerRushSeasons
   );
+
+  // TODO how tf am I getting a playerId == 0 here?
+  console.log('lastSeasons', lastSeasons);
 
   if (!teamProjection) {
     return null; // Shouldn't happen.
@@ -316,28 +362,23 @@ export default function Page({
     selectedPlayer,
     setSelectedPlayer,
     projections: playerProjections,
+    lastSeasons,
   };
 
   const playerPanel = {
     [StatType.PASS]: (
-      <PlayerPanel<PassSeason>
-        {...commonProps}
-        relevantPositions={[Position.QB]}
-        pastSeasons={playerPassSeasons}
-      />
+      <PlayerPanel {...commonProps} relevantPositions={[Position.QB]} />
     ),
     [StatType.RECV]: (
-      <PlayerPanel<RecvSeason>
+      <PlayerPanel
         {...commonProps}
         relevantPositions={[Position.WR, Position.TE, Position.RB]}
-        pastSeasons={playerRecvSeasons}
       />
     ),
     [StatType.RUSH]: (
-      <PlayerPanel<RushSeason>
+      <PlayerPanel
         {...commonProps}
         relevantPositions={[Position.RB, Position.QB, Position.WR]}
-        pastSeasons={playerRushSeasons}
       />
     ),
   }[statType];

@@ -16,6 +16,7 @@ import { Position, StatType, TeamKey } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import {
+  LastSeasons,
   PlayerBaseProjection,
   PlayerProjections,
   annualizePassSeason,
@@ -93,14 +94,14 @@ const StatTypeToggleButton = ({
   );
 };
 
-export default function PlayerPanel<T extends PlayerSeason>({
+export default function PlayerPanel({
   team,
   statType,
   selectedPlayer,
   setSelectedPlayer,
   relevantPositions,
   projections,
-  pastSeasons,
+  lastSeasons,
 }: {
   team: TeamWithExtras;
   statType: StatType;
@@ -108,7 +109,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
   setSelectedPlayer: (p: Player | undefined) => void;
   relevantPositions: Position[];
   projections: PlayerProjections;
-  pastSeasons: IdMap<T & { base: PlayerBaseProjection }>;
+  lastSeasons: LastSeasons;
 }) {
   const dispatch = useAppDispatch();
 
@@ -147,12 +148,12 @@ export default function PlayerPanel<T extends PlayerSeason>({
   }, [stattedPlayers]);
 
   const addPlayer = (player: Player) => {
-    const lastSeason = pastSeasons.get(player.id);
-    let season = lastSeason
-      //  TOOD would be better to explicitly `pick` the keys of `season`.
-      ? _(lastSeason).omit(['base']).cloneDeep()
-      : // TODO why did we even need `team.key` here...? Indexing I guess?
-        mkDefault(player, team.key as TeamKey);
+    const lastSeason = lastSeasons[player.id];
+    //  TOOD would be better to explicitly `pick` the keys of `season`.
+    // TODO why did we even need `team.key` here...? Indexing I guess?
+    let season =
+      _.cloneDeep(lastSeason[statType]) ||
+      mkDefault(player, team.key as TeamKey);
     // TODO !!!
     // season = ensureValid(season, projection);
     // Presumably could not have been null to get this far.
@@ -199,7 +200,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
                 <PlayerStatSliderPanel
                   statType={statType}
                   playerId={selectedPlayer.id}
-                  projection={projection}
+                  lastSeason={lastSeasons[selectedPlayer.id]}
                 />
                 {/* TODO style this better */}
                 <div className={'flex w-full justify-center items-center pt-5'}>

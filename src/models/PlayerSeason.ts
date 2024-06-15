@@ -52,14 +52,8 @@ export const passAggregateToSeason = ({
   cmp,
   yds,
   tds,
-}: Exclude<PassAggregate, 'name'>): PassSeason & { base: PlayerBaseProjection } => ({
+}: Exclude<PassAggregate, 'name'>): PassSeason => ({
   playerId,
-  base: {
-    // TODO kind of silly!
-    playerId,
-    team,
-    gp,
-  },
   team,
   att: att / gp,
   cmp: 100 * (cmp / att),
@@ -116,13 +110,8 @@ export const recvAggregateToSeason = ({
   rec,
   yds,
   tds,
-}: Exclude<RecvAggregate, 'name'>): RecvSeason & { base: PlayerBaseProjection } => ({
+}: Exclude<RecvAggregate, 'name'>): RecvSeason => ({
   playerId,
-  base: {
-    playerId,
-    team,
-    gp,
-  },
   team,
   tgt: tgt / gp,
   rec: 100 * (rec / tgt),
@@ -173,13 +162,8 @@ export const rushAggregateToSeason = ({
   att,
   yds,
   tds,
-}: Exclude<RushAggregate, 'name'>): RushSeason & { base: PlayerBaseProjection } => ({
+}: Exclude<RushAggregate, 'name'>): RushSeason => ({
   playerId,
-  base: {
-    playerId,
-    team,
-    gp,
-  },
   team,
   att: att / gp,
   ypc: yds / att,
@@ -222,9 +206,13 @@ export interface PlayerProjection {
   rush?: Exclude<RushSeason, 'playerId'>;
 }
 
+export type LastSeason = PlayerProjection;
+
 export type PlayerProjections = {
   [playerId: number]: PlayerProjection;
 };
+
+export type LastSeasons = PlayerProjections;
 
 // TODO not sure there is a real need for it, with better refactoring....
 export function extractSeasons<T extends PlayerSeason>(
