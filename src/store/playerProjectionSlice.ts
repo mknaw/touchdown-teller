@@ -5,11 +5,7 @@ import _ from 'lodash';
 
 import { StatType } from '@/constants';
 import { db, getPlayerProjections } from '@/data/client';
-import { PlayerProjection } from '@/models/PlayerSeason';
-
-export type PlayerProjections = {
-  [playerId: number]: Partial<PlayerProjection>;
-};
+import { PlayerProjection, PlayerProjections } from '@/models/PlayerSeason';
 
 export type PlayerProjectionsStore = {
   status: string;
@@ -71,6 +67,7 @@ export const loadPlayerProjections = createAsyncThunk(
 );
 
 const tables: Partial<Record<keyof PlayerProjection, Table>> = {
+  base: db.player,
   pass: db.pass,
   recv: db.recv,
   rush: db.rush,
@@ -78,12 +75,18 @@ const tables: Partial<Record<keyof PlayerProjection, Table>> = {
 
 export const persistPlayerProjections = createAsyncThunk(
   'playerProjectionss/persist',
-  async (projections: PlayerProjections, thunkAPI) => {
-    // TODO switch to a Promise.all
+  async (update: PlayerProjections, thunkAPI) => {
+    const {
+      playerProjections: { projections: oldProjections },
+    } = thunkAPI.getState() as { playerProjections: PlayerProjectionsStore };
+    const projections = _.merge(_.cloneDeep(oldProjections), update);
+
     for (const [playerId, projection] of Object.entries(projections)) {
       thunkAPI.dispatch(setPlayerSeason({ [playerId]: projection }));
+
+      // TODO switch to a Promise.all
       // TODO probably some nicer lodash way to do this
-      const keys: (keyof PlayerProjection)[] = ['pass', 'recv', 'rush'];
+      const keys: (keyof PlayerProjection)[] = ['base', 'pass', 'recv', 'rush'];
       for (const key of keys) {
         if (!!projection[key]) {
           await (tables[key] as Table).put(

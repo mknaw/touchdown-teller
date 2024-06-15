@@ -22,7 +22,7 @@ export class TouchdownTellerDatabase extends Dexie {
     super('touchdown-teller');
     this.version(1).stores({
       team: '',
-      player: '',
+      player: ',team',
       pass: ',team',
       recv: ',team',
       rush: ',team',
@@ -38,11 +38,9 @@ export const getPlayerProjections = async (
 ): Promise<{
   [id: number]: Partial<PlayerProjection>;
 }> => {
-  console.log(`TODO do something with ${team}`);
   interface hasPlayerIdAndName {
     // TODO `?`s to keep the `delete` bit legal, but tbh it's kinda gross
     playerId?: number;
-    name?: string;
     team?: string;
   }
 
@@ -51,8 +49,6 @@ export const getPlayerProjections = async (
       .keyBy('playerId')
       .mapValues((v) => {
         delete v.playerId;
-        delete v.name;
-        delete v.team;
         return v;
       })
       .mapValues((v) => ({
@@ -61,13 +57,26 @@ export const getPlayerProjections = async (
       .value()
   );
 
-  return _.merge(
-    ...(await Promise.all([
-      db.pass.toArray().then(transform('pass')),
-      db.recv.toArray().then(transform('recv')),
-      db.rush.toArray().then(transform('rush')),
-    ]))
-  );
+  // TODO a little yucky
+  if (team) {
+    return _.merge(
+      ...(await Promise.all([
+        db.player.where({ team }).toArray().then(transform('base')),
+        db.pass.where({ team }).toArray().then(transform('pass')),
+        db.recv.where({ team }).toArray().then(transform('recv')),
+        db.rush.where({ team }).toArray().then(transform('rush')),
+      ]))
+    );
+  } else {
+    return _.merge(
+      ...(await Promise.all([
+        db.player.toArray().then(transform('base')),
+        db.pass.toArray().then(transform('pass')),
+        db.recv.toArray().then(transform('recv')),
+        db.rush.toArray().then(transform('rush')),
+      ]))
+    );
+  }
 };
 
 /// Fetch a projection for the given team from the DB.

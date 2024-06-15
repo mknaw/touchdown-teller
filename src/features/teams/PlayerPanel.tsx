@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
-import { useSelector } from 'react-redux';
 
 import _ from 'lodash';
 
@@ -17,9 +16,13 @@ import { Position, StatType, TeamKey } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import {
+  PlayerBaseProjection,
+  PlayerProjections,
   annualizePassSeason,
   annualizeRecvSeason,
   annualizeRushSeason,
+  extractSeasons,
+  mkDefaultBase,
   mkDefaultPassSeason,
   mkDefaultRecvSeason,
   mkDefaultRushSeason,
@@ -96,7 +99,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
   selectedPlayer,
   setSelectedPlayer,
   relevantPositions,
-  seasons,
+  projections,
   pastSeasons,
 }: {
   team: TeamWithExtras;
@@ -104,8 +107,8 @@ export default function PlayerPanel<T extends PlayerSeason>({
   selectedPlayer: Player | undefined;
   setSelectedPlayer: (p: Player | undefined) => void;
   relevantPositions: Position[];
-  seasons: IdMap<T>;
-  pastSeasons: IdMap<T>;
+  projections: PlayerProjections;
+  pastSeasons: IdMap<T & { base: PlayerBaseProjection }>;
 }) {
   const dispatch = useAppDispatch();
 
@@ -127,6 +130,8 @@ export default function PlayerPanel<T extends PlayerSeason>({
       return positionCmp || adpCmp;
     });
 
+  const seasons = extractSeasons(statType, projections);
+
   const [stattedPlayers, nonStattedPlayers]: [
     stattedPlayers: Player[],
     nonStattedPlayers: Player[]
@@ -144,7 +149,8 @@ export default function PlayerPanel<T extends PlayerSeason>({
   const addPlayer = (player: Player) => {
     const lastSeason = pastSeasons.get(player.id);
     let season = lastSeason
-      ? _.cloneDeep(lastSeason)
+      //  TOOD would be better to explicitly `pick` the keys of `season`.
+      ? _(lastSeason).omit(['base']).cloneDeep()
       : // TODO why did we even need `team.key` here...? Indexing I guess?
         mkDefault(player, team.key as TeamKey);
     // TODO !!!
@@ -155,9 +161,13 @@ export default function PlayerPanel<T extends PlayerSeason>({
     season.team = toEnumValue(TeamKey, player.teamName as string);
 
     dispatch(
-      persistPlayerProjections({ [player.id]: { [statType]: season } })
+      persistPlayerProjections({
+        [player.id]: {
+          base: lastSeason?.base || mkDefaultBase(player, team.key as TeamKey),
+          [statType]: season,
+        },
+      })
     ).then(() => setSelectedPlayer(player));
-    // setSelectedPlayer(player);
   };
 
   const onDeleteIconClick = () => {
@@ -166,7 +176,10 @@ export default function PlayerPanel<T extends PlayerSeason>({
     ).then(() => setSelectedPlayer(undefined));
   };
 
-  const season = selectedPlayer && seasons.get(selectedPlayer.id);
+  const projection = selectedPlayer && projections[selectedPlayer.id];
+  // TODO SeasonSummary also should just take `projection`.
+  const base = projection?.base;
+  const season = projection?.[statType];
 
   return (
     <div className={'flex h-full flex-col justify-between gap-5'}>
@@ -180,17 +193,17 @@ export default function PlayerPanel<T extends PlayerSeason>({
             stattedPlayers={stattedPlayers}
             setIsAddPlayerOpen={setIsAddPlayerOpen}
           />
-          {season && (
+          {selectedPlayer && base && season && (
             <>
               <Paper className={'p-8'}>
                 <PlayerStatSliderPanel
+                  statType={statType}
                   playerId={selectedPlayer.id}
-                  season={season}
-                  pastSeason={pastSeasons.get(selectedPlayer.id)}
+                  projection={projection}
                 />
                 {/* TODO style this better */}
                 <div className={'flex w-full justify-center items-center pt-5'}>
-                  <SeasonSummary season={season} />
+                  <SeasonSummary gp={base.gp} season={season} />
                   <IconButton
                     onClick={onDeleteIconClick}
                     sx={{
@@ -226,7 +239,10 @@ export default function PlayerPanel<T extends PlayerSeason>({
       />
 
       <div className={'flex flex-row justify-start'}>
-        <StatTypeToggleButton statType={statType} />
+        <StatTypeToggleButton
+          statType={statType}
+          setSelectedPlayer={setSelectedPlayer}
+        />
       </div>
     </div>
   );

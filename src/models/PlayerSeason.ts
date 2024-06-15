@@ -2,19 +2,29 @@ import { Player } from '@prisma/client';
 
 import { StatType, TeamKey } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
-import { PlayerSeason } from '@/types';
+import { IdMap, PlayerSeason } from '@/types';
 
-export type GamesPlayed = {
-  gp: number;
-}
+// TODO all of these have `team` to use in a indexed + filtered IndexedDB query,
+// but tbh it literally doesn't even matter, we could load all the players, or,
+// if we really care, do a "fetch players with id in ..."
 
-export type PlayerBaseProjection = GamesPlayed & {
+export type PlayerBaseProjection = {
   playerId: number;
+  team: TeamKey;
+  gp: number;
 };
+
+export const mkDefaultBase = (
+  player: Player,
+  team: TeamKey
+): PlayerBaseProjection => ({
+  playerId: player.id,
+  team,
+  gp: 17,
+});
 
 export type PassSeason = {
   playerId: number;
-  // name: string;
   team: TeamKey;
   att: number;
   cmp: number;
@@ -27,7 +37,6 @@ export const mkDefaultPassSeason = (
   team: TeamKey
 ): PassSeason => ({
   playerId: player.id,
-  // name: player.name,
   team,
   att: 30,
   cmp: 75,
@@ -37,16 +46,20 @@ export const mkDefaultPassSeason = (
 
 export const passAggregateToSeason = ({
   playerId,
-  name,
   team,
   gp,
   att,
   cmp,
   yds,
   tds,
-}: PassAggregate): PassSeason => ({
+}: Exclude<PassAggregate, 'name'>): PassSeason & { base: PlayerBaseProjection } => ({
   playerId,
-  // name,
+  base: {
+    // TODO kind of silly!
+    playerId,
+    team,
+    gp,
+  },
   team,
   att: att / gp,
   cmp: 100 * (cmp / att),
@@ -76,7 +89,6 @@ export function annualizePassSeason(
 
 export type RecvSeason = {
   playerId: number;
-  // name: string;
   team: TeamKey;
   tgt: number;
   rec: number;
@@ -89,7 +101,6 @@ export const mkDefaultRecvSeason = (
   team: TeamKey
 ): RecvSeason => ({
   playerId: player.id,
-  // name: player.name,
   team,
   tgt: 6,
   rec: 65,
@@ -99,16 +110,19 @@ export const mkDefaultRecvSeason = (
 
 export const recvAggregateToSeason = ({
   playerId,
-  name,
   team,
   gp,
   tgt,
   rec,
   yds,
   tds,
-}: RecvAggregate): RecvSeason => ({
+}: Exclude<RecvAggregate, 'name'>): RecvSeason & { base: PlayerBaseProjection } => ({
   playerId,
-  // name,
+  base: {
+    playerId,
+    team,
+    gp,
+  },
   team,
   tgt: tgt / gp,
   rec: 100 * (rec / tgt),
@@ -135,7 +149,6 @@ export const annualizeRecvSeason = (
 
 export type RushSeason = {
   playerId: number;
-  // name: string;
   team: TeamKey;
   att: number;
   ypc: number;
@@ -147,7 +160,6 @@ export const mkDefaultRushSeason = (
   team: TeamKey
 ): RushSeason => ({
   playerId: player.id,
-  // name: player.name,
   team,
   att: 20,
   ypc: 3.5,
@@ -156,15 +168,18 @@ export const mkDefaultRushSeason = (
 
 export const rushAggregateToSeason = ({
   playerId,
-  name,
   team,
   gp,
   att,
   yds,
   tds,
-}: RushAggregate): RushSeason => ({
+}: Exclude<RushAggregate, 'name'>): RushSeason & { base: PlayerBaseProjection } => ({
   playerId,
-  // name,
+  base: {
+    playerId,
+    team,
+    gp,
+  },
   team,
   att: att / gp,
   ypc: yds / att,
@@ -195,11 +210,32 @@ export const typeOfSeason = (season: PlayerSeason): StatType => {
   } else {
     return StatType.RUSH;
   }
-}
+};
 
 export interface PlayerProjection {
   id: number;
-  pass: Exclude<PassSeason, 'playerId' | 'name'>;
-  recv: Exclude<RecvSeason, 'playerId' | 'name'>;
-  rush: Exclude<RushSeason, 'playerId' | 'name'>;
+  // TODO tbh don't know if it's even worth normalizing so hard here, so what if we dupe it,
+  // easier to write that back straight to the IndexedDB without having to fuck with it.
+  base: Exclude<PlayerBaseProjection, 'playerId'>;
+  pass?: Exclude<PassSeason, 'playerId'>;
+  recv?: Exclude<RecvSeason, 'playerId'>;
+  rush?: Exclude<RushSeason, 'playerId'>;
+}
+
+export type PlayerProjections = {
+  [playerId: number]: PlayerProjection;
+};
+
+// TODO not sure there is a real need for it, with better refactoring....
+export function extractSeasons<T extends PlayerSeason>(
+  type: string,
+  projections: PlayerProjections
+): IdMap<T> {
+  // TODO this is not very elegant, I'm sure there's nicer lodash here
+  const val = _(Object.entries(projections))
+    .filter(([_, p]) => !!p[type])
+    .map(([playerId, p]) => [parseInt(playerId), p[type]])
+    .value();
+
+  return new Map(val);
 }

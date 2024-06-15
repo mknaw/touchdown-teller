@@ -47,13 +47,10 @@ import {
   ensureValid,
 } from '@/features/teams/validation';
 import {
-  GamesPlayed,
   PassSeason,
   RecvSeason,
   RushSeason,
-  mkDefaultPassSeason,
-  mkDefaultRecvSeason,
-  mkDefaultRushSeason,
+  extractSeasons,
   passAggregateToSeason,
   recvAggregateToSeason,
   rushAggregateToSeason,
@@ -61,7 +58,6 @@ import {
 import { TeamSeason, teamSeasonFromPrisma } from '@/models/TeamSeason';
 import { AppState, useAppDispatch } from '@/store';
 import {
-  PlayerProjections,
   PlayerProjectionsStore,
   loadPlayerProjections,
 } from '@/store/playerProjectionSlice';
@@ -192,20 +188,6 @@ export type Projection = {
 //   };
 // };
 
-// TODO these can go wherever, but probably no need for them here.
-function extractSeasons<T extends PlayerSeason>(
-  type: string,
-  projections: PlayerProjections
-): IdMap<T> {
-  // TODO this is not very elegant, I'm sure there's nicer lodash here
-  const val = _(Object.entries(projections))
-    .filter(([_, p]) => !!p[type])
-    .map(([playerId, p]) => [parseInt(playerId), p[type]])
-    .value();
-
-  return new Map(val);
-}
-
 export default function Page({
   team,
   lastYearPassGames,
@@ -253,10 +235,6 @@ export default function Page({
     PlayerProjectionsStore
   >((state) => state.playerProjections);
 
-  const passSeasons = extractSeasons<PassSeason>('pass', playerProjections);
-  const recvSeasons = extractSeasons<RecvSeason>('recv', playerProjections);
-  const rushSeasons = extractSeasons<RushSeason>('rush', playerProjections);
-
   useEffect(() => {
     dispatch(loadPlayerProjections(team.key));
   }, [dispatch]);
@@ -275,7 +253,6 @@ export default function Page({
     _.map(_.groupBy(lastYearPassAggregates, 'playerId'), (agg, playerId) => {
       return passAggregateToSeason({
         playerId: parseInt(playerId),
-        name: agg[0].name,
         team: agg[0].team,
         gp: _.sumBy(agg, 'gp'),
         att: _.sumBy(agg, 'att'),
@@ -291,7 +268,6 @@ export default function Page({
     _.map(_.groupBy(lastYearRecvAggregates, 'playerId'), (agg, playerId) => {
       return recvAggregateToSeason({
         playerId: parseInt(playerId),
-        name: agg[0].name,
         team: agg[0].team,
         gp: _.sumBy(agg, 'gp'),
         tgt: _.sumBy(agg, 'tgt'),
@@ -307,7 +283,6 @@ export default function Page({
     _.map(_.groupBy(lastYearRushAggregates, 'playerId'), (agg, playerId) => {
       return rushAggregateToSeason({
         playerId: parseInt(playerId),
-        name: agg[0].name,
         team: agg[0].team,
         gp: _.sumBy(agg, 'gp'),
         att: _.sumBy(agg, 'att'),
@@ -321,13 +296,6 @@ export default function Page({
   if (!teamProjection) {
     return null; // Shouldn't happen.
   }
-
-  const projection = {
-    teamSeason: teamProjection, // TODO rename this
-    passSeasons: [...passSeasons.values()],
-    recvSeasons: [...recvSeasons.values()],
-    rushSeasons: [...rushSeasons.values()],
-  };
 
   // const persistTeamSeason = () => {
   //   const [newTeamSeason, wasValid] = clampTeamSeason(projection);
@@ -347,6 +315,7 @@ export default function Page({
     statType,
     selectedPlayer,
     setSelectedPlayer,
+    projections: playerProjections,
   };
 
   const playerPanel = {
@@ -354,7 +323,6 @@ export default function Page({
       <PlayerPanel<PassSeason>
         {...commonProps}
         relevantPositions={[Position.QB]}
-        seasons={passSeasons}
         pastSeasons={playerPassSeasons}
       />
     ),
@@ -362,7 +330,6 @@ export default function Page({
       <PlayerPanel<RecvSeason>
         {...commonProps}
         relevantPositions={[Position.WR, Position.TE, Position.RB]}
-        seasons={recvSeasons}
         pastSeasons={playerRecvSeasons}
       />
     ),
@@ -370,7 +337,6 @@ export default function Page({
       <PlayerPanel<RushSeason>
         {...commonProps}
         relevantPositions={[Position.RB, Position.QB, Position.WR]}
-        seasons={rushSeasons}
         pastSeasons={playerRushSeasons}
       />
     ),
@@ -421,9 +387,18 @@ export default function Page({
               setTeamSeason={() => null}
               persistTeamSeason={() => null}
               lastSeason={lastSeason}
-              passSeasons={passSeasons}
-              recvSeasons={recvSeasons}
-              rushSeasons={rushSeasons}
+              passSeasons={extractSeasons<PassSeason>(
+                'pass',
+                playerProjections
+              )}
+              recvSeasons={extractSeasons<RecvSeason>(
+                'recv',
+                playerProjections
+              )}
+              rushSeasons={extractSeasons<RushSeason>(
+                'rush',
+                playerProjections
+              )}
               passAggregates={_.filter(
                 lastYearPassAggregates,
                 (agg) => agg.team == team.key

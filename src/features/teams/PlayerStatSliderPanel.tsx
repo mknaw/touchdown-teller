@@ -1,18 +1,19 @@
-import { SyntheticEvent } from 'react';
+import { useSelector } from 'react-redux';
 
 import _ from 'lodash';
 
 import Stack from '@mui/material/Stack';
 
-import LabeledSlider from '@/components/LabeledSlider';
-import { lastYear } from '@/constants';
-import { useAppDispatch } from '@/store';
+import LabeledSlider, { LabeledSliderProps } from '@/components/LabeledSlider';
+import { StatType, lastYear } from '@/constants';
+import { PlayerProjection } from '@/models/PlayerSeason';
+import { AppState, useAppDispatch } from '@/store';
 import {
-  PlayerProjections,
+  PlayerProjectionsStore,
   persistPlayerProjections,
   setPlayerSeason,
 } from '@/store/playerProjectionSlice';
-import { PlayerSeason, SliderMarks } from '@/types';
+import { SliderMarks } from '@/types';
 
 function makeMarks(
   value: number,
@@ -27,203 +28,191 @@ function makeMarks(
   ];
 }
 
-export default function PlayerStatSliderPanel<T extends PlayerSeason>({
+const StatSlider = ({
   playerId,
-  season,
-  pastSeason,
-}: {
+  path,
+  label,
+  ...props
+}: Exclude<LabeledSliderProps, 'value'> & {
   playerId: number;
-  season: T;
-  pastSeason: T | undefined;
-}) {
+  path: string;
+}) => {
   const dispatch = useAppDispatch();
 
-  const makePlayerProjections = (season: T): PlayerProjections => {
-    if ('ypa' in season) {
-      return { [playerId]: { pass: season } };
-    } else if ('tgt' in season) {
-      return { [playerId]: { recv: season } };
-    } else {
-      return { [playerId]: { rush: season } };
-    }
-  };
+  const { projections } = useSelector<AppState, PlayerProjectionsStore>(
+    (state) => state.playerProjections
+  );
+  const projection = projections[playerId];
 
-  // TODO this I think is also doable if you annotate as `keyof T` among keys
-  // which are numbers...
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const makeNewStats = (field: keyof T, value: any): T => {
-    const cloned = _.cloneDeep(season);
-    if (field in cloned) {
-      cloned[field] = value;
-    }
-    return cloned;
-  };
+  if (!projection) {
+    // Shouldn't happen.
+    return null;
+  }
 
-  const onChange =
-    (field: keyof T, persist: boolean) =>
-    (
-      _event: Event | SyntheticEvent<Element, Event>,
-      value: number | number[]
-    ) => {
-      console.log(playerId, field, value);
-      if (typeof value === 'number') {
-        const newProjection = makePlayerProjections(makeNewStats(field, value));
-        if (persist) {
-          dispatch(persistPlayerProjections(newProjection));
-        } else {
-          dispatch(setPlayerSeason(newProjection));
-        }
-      }
+  const onChange = (persist: boolean, field: string, value: any) => {
+    const updated = {
+      [playerId]: _.set(_.cloneDeep(projections[playerId]), field, value),
     };
-
-  const getValue = (field: keyof T): number => {
-    if (field in season) {
-      const value = season[field as keyof typeof season];
-      if (typeof value === 'number') {
-        return value;
-      }
-    }
-    return 0;
+    persist
+      ? dispatch(persistPlayerProjections(updated))
+      : dispatch(setPlayerSeason(updated));
   };
 
-  const mkLabel = (
-    field: keyof T,
-    label: string,
-    isPercentField: boolean
-  ): string =>
-    `${label}: ${getValue(field).toFixed(1)}${isPercentField ? '%' : ''}`;
+  const value = _.get(projection, path) as number;
 
-  const getCommonProps = (field: keyof T) => {
-    return {
-      value: getValue(field),
-      onChange: onChange(field, false),
-      onChangeCommitted: onChange(field, true),
-      step: 0.1,
-    };
+  const isPercent = label.toLowerCase().includes('percent');
+
+  return (
+    <LabeledSlider
+      value={value}
+      onChange={(_, v) => onChange(false, path, v)}
+      onChangeCommitted={(_, v) => onChange(true, path, v)}
+      marks={makeMarks(value, (v) => v.toFixed(0))}
+      label={`${label}: ${value}${isPercent ? '%' : ''}`}
+      {...props}
+    />
+  );
+};
+
+export default function PlayerStatSliderPanel({
+  statType,
+  playerId,
+  projection,
+}: {
+  statType: StatType;
+  playerId: number;
+  projection: PlayerProjection;
+}) {
+  const commonProps = {
+    projection,
+    playerId,
   };
-
   // TODO these marks don't look good when they're on the far end -
   // like 0 tds, 17 games played ...
-  let sliders;
-  if ('ypa' in season) {
+  const sliders = {
     // Appease the type-checker...
-    sliders = (
+    [StatType.PASS]: (
       <>
-        {/*
-        <LabeledSlider
+        <StatSlider
+          label={'Games Played'}
+          path={'base.gp'}
           min={1}
           max={17}
-          marks={ps && makeMarks(ps.gp, (v) => v.toFixed(0))}
-          {...getCommonProps('gp')}
+          step={0.1}
+          {...commonProps}
         />
-        */}
-        <LabeledSlider
+        <StatSlider
+          label={'Attempts per Game'}
+          path={'pass.att'}
           min={15}
           max={50}
-          marks={makeMarks(season.att, (v) => v.toFixed(1))}
-          label={mkLabel('att' as keyof T, 'Attempts per Game', false)}
-          {...getCommonProps('att' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Completion Percentage'}
+          path={'pass.cmp'}
           min={20}
           max={75}
-          marks={makeMarks(season.cmp, (v) => `${v.toFixed(1)}%`)}
-          label={mkLabel('cmp' as keyof T, 'Completion Percentage', true)}
-          {...getCommonProps('cmp' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Yards per Attempt'}
+          path={'pass.ypa'}
           min={1}
           max={15}
-          marks={makeMarks(season.ypa, (v) => v.toFixed(1))}
-          label={mkLabel('ypa' as keyof T, 'Yards per Attempt', false)}
-          {...getCommonProps('ypa' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Touchdown Percentage'}
+          path={'pass.tdp'}
           min={0}
           max={20}
-          marks={makeMarks(season.tdp, (v) => `${v.toFixed(1)}%`)}
-          label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
-          {...getCommonProps('tdp' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
       </>
-    );
-  } else if ('tgt' in season) {
-    sliders = (
+    ),
+    [StatType.RECV]: (
       <>
-        {/*
-        <LabeledSlider
+        <StatSlider
+          label={'Games Played'}
+          path={'base.gp'}
           min={1}
           max={17}
-          marks={ps && makeMarks(ps.gp, (v) => v.toFixed(0))}
-          {...getCommonProps('gp')}
+          step={0.1}
+          {...commonProps}
         />
-        */}
-        <LabeledSlider
+        <StatSlider
+          label={'Targets per Game'}
+          path={'recv.tgt'}
           min={0}
           max={15}
-          marks={makeMarks(season.tgt, (v) => v.toFixed(0))}
-          label={mkLabel('tgt' as keyof T, 'Targets per Game', false)}
-          {...getCommonProps('tgt' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Reception Percentage'}
+          path={'recv.rec'}
           min={0}
           max={100}
-          marks={makeMarks(season.rec, (v) => `${v.toFixed(1)}%`)}
-          label={mkLabel('rec' as keyof T, 'Reception Percentage', true)}
-          {...getCommonProps('rec' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Yards per Reception'}
+          path={'recv.ypr'}
           min={0}
           max={20}
-          marks={makeMarks(season.ypr, (v) => v.toFixed(1))}
-          label={mkLabel('ypr' as keyof T, 'Yards per Reception', false)}
-          {...getCommonProps('ypr' as keyof T)}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Touchdown Percentage'}
+          path={'recv.tdp'}
           min={0}
           max={15}
-          marks={makeMarks(season.tdp, (v) => `${v.toFixed(1)}%`)}
-          label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
-          {...getCommonProps('tdp')}
+          {...commonProps}
         />
       </>
-    );
-  } else {
-    sliders = (
+    ),
+    [StatType.RUSH]: (
       <>
-        {/*
-        <LabeledSlider
+        <StatSlider
+          label={'Games Played'}
+          path={'base.gp'}
           min={1}
           max={17}
-          marks={ps && makeMarks(ps.gp, (v) => v.toFixed(0))}
-          {...getCommonProps('gp')}
+          step={0.1}
+          {...commonProps}
         />
-        */}
-        <LabeledSlider
+        <StatSlider
+          label={'Carries per Game'}
+          path={'rush.att'}
           min={0}
           max={25}
-          marks={makeMarks(season.att, (v) => v.toFixed(0))}
-          label={mkLabel('att' as keyof T, 'Carries per Game', false)}
-          {...getCommonProps('att' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Yards per Carry'}
+          path={'rush.ypc'}
           min={1}
           max={7}
-          marks={makeMarks(season.ypc, (v) => v.toFixed(1))}
-          // TODO kinda inconsistent with "attempts" before but "carries" here.
-          label={mkLabel('ypc' as keyof T, 'Yards per Carry', false)}
-          {...getCommonProps('ypc' as keyof T)}
+          step={0.1}
+          {...commonProps}
         />
-        <LabeledSlider
+        <StatSlider
+          label={'Touchdown Percentage'}
+          path={'rush.tdp'}
           min={0}
           max={20}
-          marks={makeMarks(season.tdp, (v) => `${v.toFixed(1)}%`)}
-          label={mkLabel('tdp' as keyof T, 'Touchdown Percentage', true)}
-          {...getCommonProps('tdp' as keyof T)}
+          {...commonProps}
         />
       </>
-    );
-  }
+    ),
+  }[statType];
 
   return <Stack>{sliders}</Stack>;
 }

@@ -2,7 +2,7 @@ import Box from '@mui/material/Box';
 import Slider, { SliderProps } from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 
-type LabeledSliderProps = {
+export type LabeledSliderProps = {
   label: string;
   onClick?: () => void;
 } & SliderProps;
