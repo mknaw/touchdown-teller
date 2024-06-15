@@ -133,75 +133,64 @@ export type Projection = {
 };
 
 // TODO shouldnt this be somewhere with general client data code?
-const getClientDataHandlers = <T extends PlayerSeason>(
-  teamKey: TeamKey,
-  playerSeasons: IdMap<T>,
-  mkDefault: (player: Player, team: TeamKey) => T,
-  table: Table,
-  setSeasons: Dispatch<SetStateAction<IdMap<T>>>,
-  setValidationMessage: (message: string) => void
-) => {
-  const fetchSeasons = async () => {
-    const fetchedDataToMap = (
-      data: (T & GamesPlayed)[]
-    ): IdMap<T & GamesPlayed> =>
-      // TODO actually fetch
-      new Map(data.map((ps) => [ps.playerId, { ...ps, gp: 0 }]));
-    const data = await table.where('team').equals(teamKey).toArray();
-    setSeasons(fetchedDataToMap(data as (T & GamesPlayed)[]));
-  };
-
-  const initSeason = (player: Player, projection: Projection) => {
-    const lastSeason = playerSeasons.get(player.id);
-    let season = lastSeason
-      ? _.cloneDeep(lastSeason)
-      : mkDefault(player, teamKey as TeamKey);
-    season = ensureValid(season, projection);
-    // Presumably could not have been null to get this far.
-    // TODO still probably could do better to handle mid season switches...
-    // and / or reseting the client DB if a player changes teams...
-    season.team = toEnumValue(TeamKey, player.teamName as string);
-    table
-      .put(season, player.id)
-      // TODO would prefer to render optimistically and resolve failure
-      // but that could be more complicated... for later
-      .then(() => updateSeason(season))
-      .catch(alert);
-  };
-
-  const updateSeason = (season: T) => {
-    setSeasons((s: IdMap<T>) => setOnClone(s, season.playerId, season));
-  };
-
-  const persistSeason = (season: T, projection: Projection) => {
-    const [updatedSeason, wasValid] = clampPlayerSeason(season, projection);
-    if (!wasValid) {
-      setValidationMessage(
-        'Player projection limited in accordance with team total.'
-      );
-    }
-    // TODO untangle this reference to the other fn
-    updateSeason(updatedSeason);
-    // TODO unhardcode kirk cousins
-    table.update(20, updatedSeason);
-  };
-
-  const deleteSeason = (playerId: number) => {
-    setSeasons((season) => {
-      season.delete(playerId);
-      return season;
-    });
-    table.where('id').equals(playerId).delete();
-  };
-
-  return {
-    fetchSeasons,
-    initSeason,
-    updateSeason,
-    persistSeason,
-    deleteSeason,
-  };
-};
+// const getClientDataHandlers = <T extends PlayerSeason>(
+//   teamKey: TeamKey,
+//   playerSeasons: IdMap<T>,
+//   mkDefault: (player: Player, team: TeamKey) => T,
+//   table: Table,
+//   setValidationMessage: (message: string) => void
+// ) => {
+//   const initSeason = (player: Player, projection: Projection) => {
+//     const lastSeason = playerSeasons.get(player.id);
+//     let season = lastSeason
+//       ? _.cloneDeep(lastSeason)
+//       : mkDefault(player, teamKey as TeamKey);
+//     season = ensureValid(season, projection);
+//     // Presumably could not have been null to get this far.
+//     // TODO still probably could do better to handle mid season switches...
+//     // and / or reseting the client DB if a player changes teams...
+//     season.team = toEnumValue(TeamKey, player.teamName as string);
+//     table
+//       .put(season, player.id)
+//       // TODO would prefer to render optimistically and resolve failure
+//       // but that could be more complicated... for later
+//       .then(() => updateSeason(season))
+//       .catch(alert);
+//   };
+//
+//   const updateSeason = (season: T) => {
+//     setSeasons((s: IdMap<T>) => setOnClone(s, season.playerId, season));
+//   };
+//
+//   const persistSeason = (season: T, projection: Projection) => {
+//     const [updatedSeason, wasValid] = clampPlayerSeason(season, projection);
+//     if (!wasValid) {
+//       setValidationMessage(
+//         'Player projection limited in accordance with team total.'
+//       );
+//     }
+//     // TODO untangle this reference to the other fn
+//     updateSeason(updatedSeason);
+//     // TODO unhardcode kirk cousins
+//     table.update(20, updatedSeason);
+//   };
+//
+//   const deleteSeason = (playerId: number) => {
+//     setSeasons((season) => {
+//       season.delete(playerId);
+//       return season;
+//     });
+//     table.where('id').equals(playerId).delete();
+//   };
+//
+//   return {
+//     fetchSeasons,
+//     initSeason,
+//     updateSeason,
+//     persistSeason,
+//     deleteSeason,
+//   };
+// };
 
 // TODO these can go wherever, but probably no need for them here.
 function extractSeasons<T extends PlayerSeason>(
@@ -272,10 +261,6 @@ export default function Page({
     dispatch(loadPlayerProjections(team.key));
   }, [dispatch]);
 
-  const [_passSeasons, setPassSeasons] = useState<IdMap<PassSeason>>(new Map());
-  const [_recvSeasons, setRecvSeasons] = useState<IdMap<RecvSeason>>(new Map());
-  const [_rushSeasons, setRushSeasons] = useState<IdMap<RushSeason>>(new Map());
-
   const [selectedPlayer, setSelectedPlayer] = useState<Player | undefined>(
     undefined
   );
@@ -301,14 +286,6 @@ export default function Page({
     }),
     'playerId'
   );
-  const passDataHandlers = getClientDataHandlers(
-    team.key as TeamKey,
-    playerPassSeasons,
-    mkDefaultPassSeason,
-    db.pass,
-    setPassSeasons,
-    setPlayerSeasonValidationMessage
-  );
 
   const playerRecvSeasons = makeIdMap(
     _.map(_.groupBy(lastYearRecvAggregates, 'playerId'), (agg, playerId) => {
@@ -325,14 +302,6 @@ export default function Page({
     }),
     'playerId'
   );
-  const recvDataHandlers = getClientDataHandlers(
-    team.key as TeamKey,
-    playerRecvSeasons,
-    mkDefaultRecvSeason,
-    db.recv,
-    setRecvSeasons,
-    setPlayerSeasonValidationMessage
-  );
 
   const playerRushSeasons = makeIdMap(
     _.map(_.groupBy(lastYearRushAggregates, 'playerId'), (agg, playerId) => {
@@ -348,30 +317,7 @@ export default function Page({
     }),
     'playerId'
   );
-  const rushDataHandlers = getClientDataHandlers(
-    team.key as TeamKey,
-    playerRushSeasons,
-    mkDefaultRushSeason,
-    db.rush,
-    setRushSeasons,
-    setPlayerSeasonValidationMessage
-  );
 
-  useEffect(() => {
-    const fetch = async () => {
-      passDataHandlers.fetchSeasons();
-      recvDataHandlers.fetchSeasons();
-      rushDataHandlers.fetchSeasons();
-    };
-    fetch();
-  }, [team]);
-
-  const commonProps = {
-    team,
-    statType,
-    selectedPlayer,
-    setSelectedPlayer,
-  };
   if (!teamProjection) {
     return null; // Shouldn't happen.
   }
@@ -396,6 +342,13 @@ export default function Page({
   //   }
   // };
 
+  const commonProps = {
+    team,
+    statType,
+    selectedPlayer,
+    setSelectedPlayer,
+  };
+
   const playerPanel = {
     [StatType.PASS]: (
       <PlayerPanel<PassSeason>
@@ -403,9 +356,6 @@ export default function Page({
         relevantPositions={[Position.QB]}
         seasons={passSeasons}
         pastSeasons={playerPassSeasons}
-        initSeason={() => alert('probably dont need this anymore')}
-        persistSeason={(s) => passDataHandlers.persistSeason(s, projection)}
-        deleteSeason={passDataHandlers.deleteSeason}
       />
     ),
     [StatType.RECV]: (
@@ -414,9 +364,6 @@ export default function Page({
         relevantPositions={[Position.WR, Position.TE, Position.RB]}
         seasons={recvSeasons}
         pastSeasons={playerRecvSeasons}
-        initSeason={() => alert('probably dont need this anymore')}
-        persistSeason={(s) => recvDataHandlers.persistSeason(s, projection)}
-        deleteSeason={recvDataHandlers.deleteSeason}
       />
     ),
     [StatType.RUSH]: (
@@ -425,9 +372,6 @@ export default function Page({
         relevantPositions={[Position.RB, Position.QB, Position.WR]}
         seasons={rushSeasons}
         pastSeasons={playerRushSeasons}
-        initSeason={() => alert('probably dont need this anymore')}
-        persistSeason={(s) => rushDataHandlers.persistSeason(s, projection)}
-        deleteSeason={rushDataHandlers.deleteSeason}
       />
     ),
   }[statType];
@@ -477,9 +421,9 @@ export default function Page({
               setTeamSeason={() => null}
               persistTeamSeason={() => null}
               lastSeason={lastSeason}
-              passSeasons={_passSeasons}
-              recvSeasons={_recvSeasons}
-              rushSeasons={_rushSeasons}
+              passSeasons={passSeasons}
+              recvSeasons={recvSeasons}
+              rushSeasons={rushSeasons}
               passAggregates={_.filter(
                 lastYearPassAggregates,
                 (agg) => agg.team == team.key

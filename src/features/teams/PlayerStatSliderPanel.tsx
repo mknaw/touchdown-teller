@@ -7,7 +7,11 @@ import Stack from '@mui/material/Stack';
 import LabeledSlider from '@/components/LabeledSlider';
 import { lastYear } from '@/constants';
 import { useAppDispatch } from '@/store';
-import { setPlayerSeason } from '@/store/playerProjectionSlice';
+import {
+  PlayerProjections,
+  persistPlayerProjections,
+  setPlayerSeason,
+} from '@/store/playerProjectionSlice';
 import { PlayerSeason, SliderMarks } from '@/types';
 
 function makeMarks(
@@ -23,29 +27,24 @@ function makeMarks(
   ];
 }
 
-type PlayerStatSliderPanelProps<T> = {
-  playerId: number;
-  season: T;
-  pastSeason: T | undefined;
-  persistSeason: (stats: T, field: keyof T) => void;
-};
-
 export default function PlayerStatSliderPanel<T extends PlayerSeason>({
   playerId,
   season,
   pastSeason,
-  persistSeason,
-}: PlayerStatSliderPanelProps<T>) {
+}: {
+  playerId: number;
+  season: T;
+  pastSeason: T | undefined;
+}) {
   const dispatch = useAppDispatch();
 
-  const setSeason = (ps: T) => {
-    // TODO this could certainly afford to be more elegant...
-    if ('ypa' in ps) {
-      dispatch(setPlayerSeason({ [playerId]: { pass: ps } }));
-    } else if ('tgt' in ps) {
-      dispatch(setPlayerSeason({ [playerId]: { recv: ps } }));
+  const makePlayerProjections = (season: T): PlayerProjections => {
+    if ('ypa' in season) {
+      return { [playerId]: { pass: season } };
+    } else if ('tgt' in season) {
+      return { [playerId]: { recv: season } };
     } else {
-      dispatch(setPlayerSeason({ [playerId]: { rush: ps } }));
+      return { [playerId]: { rush: season } };
     }
   };
 
@@ -66,11 +65,13 @@ export default function PlayerStatSliderPanel<T extends PlayerSeason>({
       _event: Event | SyntheticEvent<Element, Event>,
       value: number | number[]
     ) => {
+      console.log(playerId, field, value);
       if (typeof value === 'number') {
+        const newProjection = makePlayerProjections(makeNewStats(field, value));
         if (persist) {
-          persistSeason(makeNewStats(field, value), field);
+          dispatch(persistPlayerProjections(newProjection));
         } else {
-          setSeason(makeNewStats(field, value));
+          dispatch(setPlayerSeason(newProjection));
         }
       }
     };

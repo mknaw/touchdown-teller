@@ -1,7 +1,8 @@
 import { Player } from '@prisma/client';
 
-import { TeamKey } from '@/constants';
+import { StatType, TeamKey } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
+import { PlayerSeason } from '@/types';
 
 export type GamesPlayed = {
   gp: number;
@@ -184,6 +185,17 @@ export const annualizeRushSeason = (
   yds: season.att * season.ypc * gp,
   tds: season.att * (season.tdp / 100) * gp,
 });
+
+export const typeOfSeason = (season: PlayerSeason): StatType => {
+  // TODO maybe try a tagged enum thing.
+  if ('ypa' in season) {
+    return StatType.PASS;
+  } else if ('tgt' in season) {
+    return StatType.RECV;
+  } else {
+    return StatType.RUSH;
+  }
+}
 
 export interface PlayerProjection {
   id: number;

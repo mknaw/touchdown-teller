@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 import _ from 'lodash';
 
@@ -12,16 +13,25 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 
 import PlayerSelect from '@/components/PlayerSelect';
-import { Position, StatType } from '@/constants';
+import { Position, StatType, TeamKey } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import {
   annualizePassSeason,
   annualizeRecvSeason,
   annualizeRushSeason,
+  mkDefaultPassSeason,
+  mkDefaultRecvSeason,
+  mkDefaultRushSeason,
 } from '@/models/PlayerSeason';
+import { useAppDispatch } from '@/store';
+import {
+  deletePlayerSeason,
+  persistPlayerProjections,
+} from '@/store/playerProjectionSlice';
 import { setStatType } from '@/store/settingsSlice';
 import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
+import { toEnumValue } from '@/utils';
 
 function SeasonSummary({ gp, season }: { gp: number; season: PlayerSeason }) {
   const labelledStats: string[] = [];
@@ -54,34 +64,30 @@ function SeasonSummary({ gp, season }: { gp: number; season: PlayerSeason }) {
 
 const StatTypeToggleButton = ({
   statType,
-  setStatType,
+  setSelectedPlayer, // TODO even this may be better thrown in redux...
 }: {
   statType: StatType;
-  setStatType: (s: StatType) => void;
-}) => (
-  <ToggleButtonGroup
-    color='primary'
-    value={statType}
-    exclusive
-    onChange={(_e, v) => v && setStatType(v)}
-  >
-    <ToggleButton value={StatType.PASS}>Passing</ToggleButton>
-    <ToggleButton value={StatType.RECV}>Receiving</ToggleButton>
-    <ToggleButton value={StatType.RUSH}>Rushing</ToggleButton>
-  </ToggleButtonGroup>
-);
-
-type PlayerPanelProps<T extends PlayerSeason> = {
-  team: TeamWithExtras;
-  statType: StatType;
-  selectedPlayer: Player | undefined;
   setSelectedPlayer: (p: Player | undefined) => void;
-  relevantPositions: Position[];
-  seasons: IdMap<T>;
-  pastSeasons: IdMap<T>;
-  initSeason: (player: Player) => void;
-  persistSeason: (season: T) => void;
-  deleteSeason: (playerId: number) => void;
+}) => {
+  const dispatch = useDispatch();
+
+  const onChange = (statType: StatType) => {
+    dispatch(setStatType(statType));
+    setSelectedPlayer(undefined);
+  };
+
+  return (
+    <ToggleButtonGroup
+      color='primary'
+      value={statType}
+      exclusive
+      onChange={(_e, v) => v && onChange(v)}
+    >
+      <ToggleButton value={StatType.PASS}>Passing</ToggleButton>
+      <ToggleButton value={StatType.RECV}>Receiving</ToggleButton>
+      <ToggleButton value={StatType.RUSH}>Rushing</ToggleButton>
+    </ToggleButtonGroup>
+  );
 };
 
 export default function PlayerPanel<T extends PlayerSeason>({
@@ -92,15 +98,22 @@ export default function PlayerPanel<T extends PlayerSeason>({
   relevantPositions,
   seasons,
   pastSeasons,
-  initSeason,
-  persistSeason,
-  deleteSeason,
-}: PlayerPanelProps<T>) {
-  const dispatch = useDispatch();
-  const onStatTypeChange = (statType: StatType) => {
-    dispatch(setStatType(statType));
-    setSelectedPlayer(undefined);
-  };
+}: {
+  team: TeamWithExtras;
+  statType: StatType;
+  selectedPlayer: Player | undefined;
+  setSelectedPlayer: (p: Player | undefined) => void;
+  relevantPositions: Position[];
+  seasons: IdMap<T>;
+  pastSeasons: IdMap<T>;
+}) {
+  const dispatch = useAppDispatch();
+
+  const mkDefault = {
+    [StatType.PASS]: mkDefaultPassSeason,
+    [StatType.RECV]: mkDefaultRecvSeason,
+    [StatType.RUSH]: mkDefaultRushSeason,
+  }[statType];
 
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState<boolean>(false);
 
@@ -129,8 +142,28 @@ export default function PlayerPanel<T extends PlayerSeason>({
   }, [stattedPlayers]);
 
   const addPlayer = (player: Player) => {
-    initSeason(player);
-    setSelectedPlayer(player);
+    const lastSeason = pastSeasons.get(player.id);
+    let season = lastSeason
+      ? _.cloneDeep(lastSeason)
+      : // TODO why did we even need `team.key` here...? Indexing I guess?
+        mkDefault(player, team.key as TeamKey);
+    // TODO !!!
+    // season = ensureValid(season, projection);
+    // Presumably could not have been null to get this far.
+    // TODO still probably could do better to handle mid season switches...
+    // and / or reseting the client DB if a player changes teams...
+    season.team = toEnumValue(TeamKey, player.teamName as string);
+
+    dispatch(
+      persistPlayerProjections({ [player.id]: { [statType]: season } })
+    ).then(() => setSelectedPlayer(player));
+    // setSelectedPlayer(player);
+  };
+
+  const onDeleteIconClick = () => {
+    dispatch(
+      deletePlayerSeason({ playerId: selectedPlayer!.id, statType })
+    ).then(() => setSelectedPlayer(undefined));
   };
 
   const season = selectedPlayer && seasons.get(selectedPlayer.id);
@@ -151,18 +184,15 @@ export default function PlayerPanel<T extends PlayerSeason>({
             <>
               <Paper className={'p-8'}>
                 <PlayerStatSliderPanel
+                  playerId={selectedPlayer.id}
                   season={season}
                   pastSeason={pastSeasons.get(selectedPlayer.id)}
-                  persistSeason={persistSeason}
                 />
                 {/* TODO style this better */}
                 <div className={'flex w-full justify-center items-center pt-5'}>
                   <SeasonSummary season={season} />
                   <IconButton
-                    onClick={() => {
-                      deleteSeason(selectedPlayer.id);
-                      setSelectedPlayer(undefined);
-                    }}
+                    onClick={onDeleteIconClick}
                     sx={{
                       // Nasty hack since I haven't reconciled tailwind properly
                       position: 'absolute',
@@ -196,10 +226,7 @@ export default function PlayerPanel<T extends PlayerSeason>({
       />
 
       <div className={'flex flex-row justify-start'}>
-        <StatTypeToggleButton
-          statType={statType}
-          setStatType={onStatTypeChange}
-        />
+        <StatTypeToggleButton statType={statType} />
       </div>
     </div>
   );
