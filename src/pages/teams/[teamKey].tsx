@@ -1,7 +1,6 @@
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 
-import { Table } from 'dexie';
 import _ from 'lodash';
 import type { GetStaticPaths, GetStaticProps } from 'next';
 import { ParsedUrlQuery } from 'querystring';
@@ -26,7 +25,6 @@ import {
   currentYear,
   lastYear,
 } from '@/constants';
-import { db, getTeamProjection } from '@/data/client';
 import {
   getPlayerPassAggregates,
   getPlayerPassGame,
@@ -35,6 +33,7 @@ import {
   getPlayerRushAggregates,
   getPlayerRushGame,
   getTeam,
+  mergeStats,
 } from '@/data/ssr';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
 import TeamSeasonsModal from '@/features/TeamSeasonsModal';
@@ -42,18 +41,10 @@ import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
 import {
-  clampPlayerSeason,
-  clampTeamSeason,
-  ensureValid,
-} from '@/features/teams/validation';
-import {
   PassSeason,
   RecvSeason,
   RushSeason,
   extractSeasons,
-  passAggregateToSeason,
-  recvAggregateToSeason,
-  rushAggregateToSeason,
 } from '@/models/PlayerSeason';
 import { TeamSeason, teamSeasonFromPrisma } from '@/models/TeamSeason';
 import { AppState, useAppDispatch } from '@/store';
@@ -66,8 +57,8 @@ import {
   loadTeamProjection,
   persistTeamProjection,
 } from '@/store/teamProjectionSlice';
-import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
-import { getTeamName, makeIdMap, setOnClone, toEnumValue } from '@/utils';
+import { TeamWithExtras } from '@/types';
+import { getTeamName } from '@/utils';
 
 interface Params extends ParsedUrlQuery {
   teamKey: TeamKey;
@@ -127,66 +118,6 @@ export type Projection = {
   recvSeasons: RecvSeason[];
   rushSeasons: RushSeason[];
 };
-
-// TODO shouldnt this be somewhere with general client data code?
-// const getClientDataHandlers = <T extends PlayerSeason>(
-//   teamKey: TeamKey,
-//   playerSeasons: IdMap<T>,
-//   mkDefault: (player: Player, team: TeamKey) => T,
-//   table: Table,
-//   setValidationMessage: (message: string) => void
-// ) => {
-//   const initSeason = (player: Player, projection: Projection) => {
-//     const lastSeason = playerSeasons.get(player.id);
-//     let season = lastSeason
-//       ? _.cloneDeep(lastSeason)
-//       : mkDefault(player, teamKey as TeamKey);
-//     season = ensureValid(season, projection);
-//     // Presumably could not have been null to get this far.
-//     // TODO still probably could do better to handle mid season switches...
-//     // and / or reseting the client DB if a player changes teams...
-//     season.team = toEnumValue(TeamKey, player.teamName as string);
-//     table
-//       .put(season, player.id)
-//       // TODO would prefer to render optimistically and resolve failure
-//       // but that could be more complicated... for later
-//       .then(() => updateSeason(season))
-//       .catch(alert);
-//   };
-//
-//   const updateSeason = (season: T) => {
-//     setSeasons((s: IdMap<T>) => setOnClone(s, season.playerId, season));
-//   };
-//
-//   const persistSeason = (season: T, projection: Projection) => {
-//     const [updatedSeason, wasValid] = clampPlayerSeason(season, projection);
-//     if (!wasValid) {
-//       setValidationMessage(
-//         'Player projection limited in accordance with team total.'
-//       );
-//     }
-//     // TODO untangle this reference to the other fn
-//     updateSeason(updatedSeason);
-//     // TODO unhardcode kirk cousins
-//     table.update(20, updatedSeason);
-//   };
-//
-//   const deleteSeason = (playerId: number) => {
-//     setSeasons((season) => {
-//       season.delete(playerId);
-//       return season;
-//     });
-//     table.where('id').equals(playerId).delete();
-//   };
-//
-//   return {
-//     fetchSeasons,
-//     initSeason,
-//     updateSeason,
-//     persistSeason,
-//     deleteSeason,
-//   };
-// };
 
 export default function Page({
   team,
@@ -248,113 +179,15 @@ export default function Page({
   const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
     useState('');
 
-  // TODO still embarrassing to WET this up...
-  const playerBaseSeasons = _.merge(
-    _(lastYearPassAggregates)
-      .groupBy('playerId')
-      .mapValues((agg, playerId) => ({
-        playerId: parseInt(playerId),
-        team: agg[0].team,
-        gp: _.sumBy(agg, 'gp'),
-      }))
-      .value(),
-    _(lastYearRecvAggregates)
-      .groupBy('playerId')
-      .mapValues((agg, playerId) => ({
-        playerId: parseInt(playerId),
-        team: agg[0].team,
-        gp: _.sumBy(agg, 'gp'),
-      }))
-      .value(),
-    _(lastYearRushAggregates)
-      .groupBy('playerId')
-      .mapValues((agg, playerId) => ({
-        playerId: parseInt(playerId),
-        team: agg[0].team,
-        gp: _.sumBy(agg, 'gp'),
-      }))
-      .value()
+  const lastSeasons = mergeStats(
+    lastYearPassAggregates,
+    lastYearRecvAggregates,
+    lastYearRushAggregates
   );
-
-  const playerPassSeasons = _(lastYearPassAggregates)
-    .groupBy('playerId')
-    .mapValues((agg, playerId) =>
-      passAggregateToSeason({
-        playerId: parseInt(playerId),
-        team: agg[0].team,
-        gp: _.sumBy(agg, 'gp'),
-        att: _.sumBy(agg, 'att'),
-        cmp: _.sumBy(agg, 'cmp'),
-        yds: _.sumBy(agg, 'yds'),
-        tds: _.sumBy(agg, 'tds'),
-      })
-    )
-    .mapValues((agg, _) => ({
-      pass: agg,
-    }))
-    .value();
-
-  const playerRecvSeasons = _(lastYearRecvAggregates)
-    .groupBy('playerId')
-    .mapValues((agg, playerId) =>
-      recvAggregateToSeason({
-        playerId: parseInt(playerId),
-        team: agg[0].team,
-        gp: _.sumBy(agg, 'gp'),
-        tgt: _.sumBy(agg, 'tgt'),
-        rec: _.sumBy(agg, 'rec'),
-        yds: _.sumBy(agg, 'yds'),
-        tds: _.sumBy(agg, 'tds'),
-      })
-    )
-    .mapValues((agg, _) => ({
-      recv: agg,
-    }))
-    .value();
-
-  const playerRushSeasons = _(lastYearRushAggregates)
-    .groupBy('playerId')
-    .mapValues((agg, playerId) =>
-      rushAggregateToSeason({
-        playerId: parseInt(playerId),
-        team: agg[0].team,
-        gp: _.sumBy(agg, 'gp'),
-        att: _.sumBy(agg, 'att'),
-        yds: _.sumBy(agg, 'yds'),
-        tds: _.sumBy(agg, 'tds'),
-      })
-    )
-    .mapValues((agg, _) => ({
-      rush: agg,
-    }))
-    .value();
-
-  const lastSeasons = _.merge(
-    _.map(playerBaseSeasons, (v) => ({ base: v })),
-    playerPassSeasons,
-    playerRecvSeasons,
-    playerRushSeasons
-  );
-
-  // TODO how tf am I getting a playerId == 0 here?
-  console.log('lastSeasons', lastSeasons);
 
   if (!teamProjection) {
     return null; // Shouldn't happen.
   }
-
-  // const persistTeamSeason = () => {
-  //   const [newTeamSeason, wasValid] = clampTeamSeason(projection);
-  //   setTeamSeason(() => _.cloneDeep(newTeamSeason));
-  //
-  //   if (wasValid) {
-  //     db.team.update(team.key as TeamKey, newTeamSeason);
-  //   } else {
-  //     setTeamSeasonValidationMessage(
-  //       'Team total limited in accordance with player projection total.'
-  //     );
-  //   }
-  // };
 
   const commonProps = {
     team,
@@ -428,18 +261,9 @@ export default function Page({
               setTeamSeason={() => null}
               persistTeamSeason={() => null}
               lastSeason={lastSeason}
-              passSeasons={extractSeasons<PassSeason>(
-                'pass',
-                playerProjections
-              )}
-              recvSeasons={extractSeasons<RecvSeason>(
-                'recv',
-                playerProjections
-              )}
-              rushSeasons={extractSeasons<RushSeason>(
-                'rush',
-                playerProjections
-              )}
+              passSeasons={extractSeasons('pass', playerProjections)}
+              recvSeasons={extractSeasons('recv', playerProjections)}
+              rushSeasons={extractSeasons('rush', playerProjections)}
               passAggregates={_.filter(
                 lastYearPassAggregates,
                 (agg) => agg.team == team.key

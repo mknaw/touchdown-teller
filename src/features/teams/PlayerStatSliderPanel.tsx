@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 
 import LabeledSlider, { LabeledSliderProps } from '@/components/LabeledSlider';
 import { StatType, lastYear } from '@/constants';
-import { LastSeason } from '@/models/PlayerSeason';
+import { MergedStat } from '@/data/ssr';
 import { AppState, useAppDispatch } from '@/store';
 import {
   PlayerProjectionsStore,
@@ -29,18 +29,29 @@ function makeMarks(
   ];
 }
 
+function getDecimalPlaces(num: number) {
+  if (!isFinite(num)) return 0; // Handle non-finite numbers
+  if (Math.floor(num) === num) return 0; // Handle integers
+
+  const numStr = num.toString();
+  const parts = numStr.split('.');
+  return parts.length > 1 ? parts[1].length : 0;
+}
+
 const StatSlider = ({
   playerId,
   path,
   label,
   lastSeason,
-  decimalPlaces = 0,
+  step,
+  decimalPlacesMark,
   ...props
 }: Exclude<LabeledSliderProps, 'value'> & {
   playerId: number;
   path: string;
-  lastSeason?: LastSeason;
-  decimalPlaces?: number;
+  step: number;
+  lastSeason?: MergedStat;
+  decimalPlacesMark?: number;
 }) => {
   const dispatch = useAppDispatch();
 
@@ -66,6 +77,7 @@ const StatSlider = ({
   const value = _.get(projection, path) as number;
 
   const isPercent = label.toLowerCase().includes('percent');
+  const decimalPlaces = getDecimalPlaces(step);
 
   return (
     <LabeledSlider
@@ -73,9 +85,12 @@ const StatSlider = ({
       onChange={(_, v) => onChange(false, path, v)}
       onChangeCommitted={(_, v) => onChange(true, path, v)}
       marks={makeMarks(lastSeason && _.get(lastSeason, path), (v) =>
-        v.toFixed(decimalPlaces)
+        v.toFixed(
+          decimalPlacesMark === undefined ? decimalPlaces : decimalPlacesMark
+        )
       )}
-      label={`${label}: ${value}${isPercent ? '%' : ''}`}
+      label={`${label}: ${value.toFixed(decimalPlaces)}${isPercent ? '%' : ''}`}
+      step={step}
       {...props}
     />
   );
@@ -88,7 +103,7 @@ export default function PlayerStatSliderPanel({
 }: {
   statType: StatType;
   playerId: number;
-  lastSeason?: LastSeason;
+  lastSeason?: MergedStat;
 }) {
   const commonProps = {
     playerId,
@@ -106,6 +121,7 @@ export default function PlayerStatSliderPanel({
           min={1}
           max={17}
           step={0.1}
+          decimalPlacesMark={0}
           {...commonProps}
         />
         <StatSlider
@@ -150,6 +166,7 @@ export default function PlayerStatSliderPanel({
           min={1}
           max={17}
           step={0.1}
+          decimalPlacesMark={0}
           {...commonProps}
         />
         <StatSlider
@@ -173,6 +190,7 @@ export default function PlayerStatSliderPanel({
           path={'recv.ypr'}
           min={0}
           max={20}
+          step={0.1}
           {...commonProps}
         />
         <StatSlider
@@ -180,6 +198,7 @@ export default function PlayerStatSliderPanel({
           path={'recv.tdp'}
           min={0}
           max={15}
+          step={0.1}
           {...commonProps}
         />
       </>
@@ -192,6 +211,7 @@ export default function PlayerStatSliderPanel({
           min={1}
           max={17}
           step={0.1}
+          decimalPlacesMark={0}
           {...commonProps}
         />
         <StatSlider
@@ -215,6 +235,7 @@ export default function PlayerStatSliderPanel({
           path={'rush.tdp'}
           min={0}
           max={20}
+          step={0.1}
           {...commonProps}
         />
       </>

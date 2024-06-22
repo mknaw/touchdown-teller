@@ -4,8 +4,12 @@ import { Table } from 'dexie';
 import _ from 'lodash';
 
 import { StatType } from '@/constants';
-import { db, getPlayerProjections } from '@/data/client';
-import { PlayerProjection, PlayerProjections } from '@/models/PlayerSeason';
+import { getPlayerProjections, tables } from '@/data/client';
+import {
+  PlayerProjection,
+  PlayerProjections,
+  SeasonTypeMap,
+} from '@/models/PlayerSeason';
 
 export type PlayerProjectionsStore = {
   status: string;
@@ -40,58 +44,45 @@ const playerProjectionsSlice = createSlice({
   },
   extraReducers(builder) {
     builder
-      .addCase(loadPlayerProjections.pending, (state) => ({
-        ...state,
-        status: 'loading',
-      }))
-      .addCase(loadPlayerProjections.fulfilled, (state, action) => ({
-        ...state,
-        status: 'succeeded',
-        projections: action.payload,
-      }))
-      .addCase(loadPlayerProjections.rejected, (state) => ({
-        ...state,
-        status: 'failed',
-      }));
+      .addCase(loadPlayerProjections.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(loadPlayerProjections.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.projections = action.payload;
+      })
+      .addCase(loadPlayerProjections.rejected, (state) => {
+        state.status = 'failed';
+      });
   },
 });
 
-export const { setPlayerSeason } = playerProjectionsSlice.actions;
+export const { setPlayerSeason, removePlayerSeason } =
+  playerProjectionsSlice.actions;
 export default playerProjectionsSlice;
 
-export const loadPlayerProjections = createAsyncThunk(
-  'playerProjections/load',
-  async (team: string | undefined = undefined) => {
-    return await getPlayerProjections(team);
-  }
-);
-
-const tables: Partial<Record<keyof PlayerProjection, Table>> = {
-  base: db.player,
-  pass: db.pass,
-  recv: db.recv,
-  rush: db.rush,
-};
+export const loadPlayerProjections = createAsyncThunk<
+  PlayerProjections,
+  string | undefined
+>('playerProjections/load', async (team: string | undefined = undefined) => {
+  return await getPlayerProjections(team);
+});
 
 export const persistPlayerProjections = createAsyncThunk(
-  'playerProjectionss/persist',
+  'playerProjections/persist',
   async (update: PlayerProjections, thunkAPI) => {
-    const {
-      playerProjections: { projections: oldProjections },
-    } = thunkAPI.getState() as { playerProjections: PlayerProjectionsStore };
-    const projections = _.merge(_.cloneDeep(oldProjections), update);
+    console.log(update);
 
-    for (const [playerId, projection] of Object.entries(projections)) {
+    for (const [playerId, projection] of Object.entries(update)) {
       thunkAPI.dispatch(setPlayerSeason({ [playerId]: projection }));
 
-      // TODO switch to a Promise.all
-      // TODO probably some nicer lodash way to do this
-      const keys: (keyof PlayerProjection)[] = ['base', 'pass', 'recv', 'rush'];
+      const keys: (keyof SeasonTypeMap)[] = ['base', 'pass', 'recv', 'rush'];
       for (const key of keys) {
-        if (!!projection[key]) {
+        if (projection[key]) {
+          const stat = projection[key] as Object;
           await (tables[key] as Table).put(
-            { playerId, ...projection[key] },
-            playerId
+            { playerId: Number(playerId), ...stat },
+            Number(playerId)
           );
         }
       }
@@ -100,14 +91,12 @@ export const persistPlayerProjections = createAsyncThunk(
 );
 
 export const deletePlayerSeason = createAsyncThunk(
-  'playerProjectionss/persist',
+  'playerProjections/delete',
   async (
     { playerId, statType }: { playerId: number; statType: StatType },
     thunkAPI
   ) => {
-    thunkAPI.dispatch(
-      playerProjectionsSlice.actions.removePlayerSeason({ playerId, statType })
-    );
+    thunkAPI.dispatch(removePlayerSeason({ playerId, statType }));
 
     await (tables[statType] as Table).where('id').equals(playerId).delete();
   }

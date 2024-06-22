@@ -13,11 +13,10 @@ import Typography from '@mui/material/Typography';
 
 import PlayerSelect from '@/components/PlayerSelect';
 import { Position, StatType, TeamKey } from '@/constants';
+import { MergedStat } from '@/data/ssr';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import {
-  LastSeasons,
-  PlayerBaseProjection,
   PlayerProjections,
   annualizePassSeason,
   annualizeRecvSeason,
@@ -34,7 +33,7 @@ import {
   persistPlayerProjections,
 } from '@/store/playerProjectionSlice';
 import { setStatType } from '@/store/settingsSlice';
-import { IdMap, PlayerSeason, TeamWithExtras } from '@/types';
+import { PlayerSeason, TeamWithExtras } from '@/types';
 import { toEnumValue } from '@/utils';
 
 function SeasonSummary({ gp, season }: { gp: number; season: PlayerSeason }) {
@@ -109,7 +108,7 @@ export default function PlayerPanel({
   setSelectedPlayer: (p: Player | undefined) => void;
   relevantPositions: Position[];
   projections: PlayerProjections;
-  lastSeasons: LastSeasons;
+  lastSeasons: Record<number, MergedStat>;
 }) {
   const dispatch = useAppDispatch();
 
@@ -149,10 +148,13 @@ export default function PlayerPanel({
 
   const addPlayer = (player: Player) => {
     const lastSeason = lastSeasons[player.id];
+    let base = lastSeason?.base || mkDefaultBase(player, team.key as TeamKey);
+    // TODO this is not very elegant...
+    base.team = toEnumValue(TeamKey, player.teamName as string);
     //  TOOD would be better to explicitly `pick` the keys of `season`.
     // TODO why did we even need `team.key` here...? Indexing I guess?
     let season =
-      _.cloneDeep(lastSeason[statType]) ||
+      _.cloneDeep(lastSeason?.[statType]) ??
       mkDefault(player, team.key as TeamKey);
     // TODO !!!
     // season = ensureValid(season, projection);
@@ -164,7 +166,7 @@ export default function PlayerPanel({
     dispatch(
       persistPlayerProjections({
         [player.id]: {
-          base: lastSeason?.base || mkDefaultBase(player, team.key as TeamKey),
+          base,
           [statType]: season,
         },
       })
@@ -181,6 +183,8 @@ export default function PlayerPanel({
   // TODO SeasonSummary also should just take `projection`.
   const base = projection?.base;
   const season = projection?.[statType];
+
+  console.log(projection);
 
   return (
     <div className={'flex h-full flex-col justify-between gap-5'}>
@@ -204,7 +208,9 @@ export default function PlayerPanel({
                 />
                 {/* TODO style this better */}
                 <div className={'flex w-full justify-center items-center pt-5'}>
-                  <SeasonSummary gp={base.gp} season={season} />
+                  {/* TODO kind of silly to pass it playerId given it's not really needed */}
+                  {/* but was momentarily expedient from a TS perspective. */}
+                  <SeasonSummary gp={base.gp} season={{ playerId: selectedPlayer.id, ...season }} />
                   <IconButton
                     onClick={onDeleteIconClick}
                     sx={{

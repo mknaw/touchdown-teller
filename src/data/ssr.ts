@@ -11,6 +11,15 @@ import {
 } from '@prisma/client';
 
 import { TeamKey } from '@/constants';
+import {
+  PassSeason,
+  PlayerBaseProjection,
+  RecvSeason,
+  RushSeason,
+  passAggregateToSeason,
+  recvAggregateToSeason,
+  rushAggregateToSeason,
+} from '@/models/PlayerSeason';
 import { TeamWithExtras } from '@/types';
 
 export async function getAllPlayers(prisma: PrismaClient): Promise<Player[]> {
@@ -242,3 +251,107 @@ export async function getTeamSeasons(
     },
   });
 }
+
+// TODO kinda similar to the other iterations of this.
+export type MergedStat = {
+  base: PlayerBaseProjection;
+  pass?: PassSeason;
+  recv?: RecvSeason;
+  rush?: RushSeason;
+};
+
+export type MergedStats = Record<number, MergedStat>;
+
+export const mergeStats = (
+  passAggregates: PassAggregate[],
+  recvAggregates: RecvAggregate[],
+  rushAggregates: RushAggregate[]
+): MergedStats => {
+  // TODO still not a very elegant function!
+  const playerBaseSeasons = _.merge(
+    _(passAggregates)
+      .groupBy('playerId')
+      .mapValues((agg, playerId) => ({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+      }))
+      .value(),
+    _(recvAggregates)
+      .groupBy('playerId')
+      .mapValues((agg, playerId) => ({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+      }))
+      .value(),
+    _(rushAggregates)
+      .groupBy('playerId')
+      .mapValues((agg, playerId) => ({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+      }))
+      .value()
+  );
+
+  const playerPassSeasons = _(passAggregates)
+    .groupBy('playerId')
+    .mapValues((agg, playerId) =>
+      passAggregateToSeason({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+        att: _.sumBy(agg, 'att'),
+        cmp: _.sumBy(agg, 'cmp'),
+        yds: _.sumBy(agg, 'yds'),
+        tds: _.sumBy(agg, 'tds'),
+      })
+    )
+    .mapValues((agg, _) => ({
+      pass: agg,
+    }))
+    .value();
+
+  const playerRecvSeasons = _(recvAggregates)
+    .groupBy('playerId')
+    .mapValues((agg, playerId) =>
+      recvAggregateToSeason({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+        tgt: _.sumBy(agg, 'tgt'),
+        rec: _.sumBy(agg, 'rec'),
+        yds: _.sumBy(agg, 'yds'),
+        tds: _.sumBy(agg, 'tds'),
+      })
+    )
+    .mapValues((agg, _) => ({
+      recv: agg,
+    }))
+    .value();
+
+  const playerRushSeasons = _(rushAggregates)
+    .groupBy('playerId')
+    .mapValues((agg, playerId) =>
+      rushAggregateToSeason({
+        playerId: parseInt(playerId),
+        team: agg[0].team,
+        gp: _.sumBy(agg, 'gp'),
+        att: _.sumBy(agg, 'att'),
+        yds: _.sumBy(agg, 'yds'),
+        tds: _.sumBy(agg, 'tds'),
+      })
+    )
+    .mapValues((agg, _) => ({
+      rush: agg,
+    }))
+    .value();
+
+  return _.merge(
+    _.mapValues(playerBaseSeasons, (v) => ({ base: v })),
+    playerPassSeasons,
+    playerRecvSeasons,
+    playerRushSeasons
+  );
+};

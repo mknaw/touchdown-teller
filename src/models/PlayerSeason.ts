@@ -1,4 +1,7 @@
+import _ from 'lodash';
+
 import { Player } from '@prisma/client';
+import { Omit } from '@prisma/client/runtime/library';
 
 import { StatType, TeamKey } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
@@ -52,7 +55,7 @@ export const passAggregateToSeason = ({
   cmp,
   yds,
   tds,
-}: Exclude<PassAggregate, 'name'>): PassSeason => ({
+}: Omit<PassAggregate, 'name'>): PassSeason => ({
   playerId,
   team,
   att: att / gp,
@@ -70,7 +73,7 @@ export type AnnualizedPassSeason = {
 };
 
 export function annualizePassSeason(
-  season: PassSeason,
+  season: Pick<PassSeason, 'att' | 'cmp' | 'ypa' | 'tdp'>,
   gp: number
 ): AnnualizedPassSeason {
   return {
@@ -110,7 +113,7 @@ export const recvAggregateToSeason = ({
   rec,
   yds,
   tds,
-}: Exclude<RecvAggregate, 'name'>): RecvSeason => ({
+}: Omit<RecvAggregate, 'name'>): RecvSeason => ({
   playerId,
   team,
   tgt: tgt / gp,
@@ -162,7 +165,7 @@ export const rushAggregateToSeason = ({
   att,
   yds,
   tds,
-}: Exclude<RushAggregate, 'name'>): RushSeason => ({
+}: Omit<RushAggregate, 'name'>): RushSeason => ({
   playerId,
   team,
   att: att / gp,
@@ -200,30 +203,41 @@ export interface PlayerProjection {
   id: number;
   // TODO tbh don't know if it's even worth normalizing so hard here, so what if we dupe it,
   // easier to write that back straight to the IndexedDB without having to fuck with it.
-  base: Exclude<PlayerBaseProjection, 'playerId'>;
-  pass?: Exclude<PassSeason, 'playerId'>;
-  recv?: Exclude<RecvSeason, 'playerId'>;
-  rush?: Exclude<RushSeason, 'playerId'>;
+  base: Omit<PlayerBaseProjection, 'playerId'>;
+  pass?: Omit<PassSeason, 'playerId'>;
+  recv?: Omit<RecvSeason, 'playerId'>;
+  rush?: Omit<RushSeason, 'playerId'>;
 }
 
 export type LastSeason = PlayerProjection;
 
 export type PlayerProjections = {
-  [playerId: number]: PlayerProjection;
+  [playerId: number]: Omit<PlayerProjection, 'id'>;
 };
 
-export type LastSeasons = PlayerProjections;
+export type SeasonTypeMap = {
+  base: PlayerBaseProjection;
+  pass: PassSeason;
+  recv: RecvSeason;
+  rush: RushSeason;
+};
 
-// TODO not sure there is a real need for it, with better refactoring....
-export function extractSeasons<T extends PlayerSeason>(
-  type: string,
+export function extractSeasons<T extends keyof SeasonTypeMap>(
+  type: T,
   projections: PlayerProjections
-): IdMap<T> {
-  // TODO this is not very elegant, I'm sure there's nicer lodash here
-  const val = _(Object.entries(projections))
-    .filter(([_, p]) => !!p[type])
-    .map(([playerId, p]) => [parseInt(playerId), p[type]])
-    .value();
+): IdMap<SeasonTypeMap[T]> {
+  const entries = Object.entries(projections)
+    .map(([playerId, projection]) => {
+      const season = projection[type];
+      if (season) {
+        return [
+          Number(playerId),
+          { ...season, playerId: Number(playerId) },
+        ] as [number, SeasonTypeMap[T]];
+      }
+      return null;
+    })
+    .filter((entry): entry is [number, SeasonTypeMap[T]] => entry !== null);
 
-  return new Map(val);
+  return new Map(entries);
 }

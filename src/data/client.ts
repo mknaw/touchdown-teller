@@ -5,9 +5,10 @@ import { TeamKey } from '@/constants';
 import {
   PassSeason,
   PlayerBaseProjection,
-  PlayerProjection,
+  PlayerProjections,
   RecvSeason,
   RushSeason,
+  SeasonTypeMap,
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
 
@@ -32,51 +33,45 @@ export class TouchdownTellerDatabase extends Dexie {
 
 export const db = new TouchdownTellerDatabase();
 
+export const tables: Record<keyof SeasonTypeMap, Table> = {
+  base: db.player,
+  pass: db.pass,
+  recv: db.recv,
+  rush: db.rush,
+};
+
 /// Assemble a `{id: {pass: ..., recv: ..., rush: ...}}` object from the IndexedDB.
 export const getPlayerProjections = async (
   team: string | undefined = undefined
-): Promise<{
-  [id: number]: Partial<PlayerProjection>;
-}> => {
-  interface hasPlayerIdAndName {
-    // TODO `?`s to keep the `delete` bit legal, but tbh it's kinda gross
-    playerId?: number;
-    team?: string;
-  }
-
-  const transform = _.curry((type: string, data: hasPlayerIdAndName[]) =>
-    _(data)
-      .keyBy('playerId')
-      .mapValues((v) => {
-        delete v.playerId;
-        return v;
-      })
-      .mapValues((v) => ({
-        [type]: v,
-      }))
-      .value()
+): Promise<PlayerProjections> => {
+  const transform = _.curry(
+    <T extends keyof SeasonTypeMap>(
+      type: T,
+      data: SeasonTypeMap[T][]
+    ): {
+      [playerId: number]: { [K in T]?: Omit<SeasonTypeMap[T], 'playerId'> };
+    } =>
+      _(data)
+        .keyBy('playerId')
+        .mapValues((v) => {
+          const { playerId, ...rest } = v;
+          return { [type]: rest } as {
+            [K in T]: Omit<SeasonTypeMap[T], 'playerId'>;
+          };
+        })
+        .mapKeys((_, k) => parseInt(k))
+        .value()
   );
 
-  // TODO a little yucky
-  if (team) {
-    return _.merge(
-      ...(await Promise.all([
-        db.player.where({ team }).toArray().then(transform('base')),
-        db.pass.where({ team }).toArray().then(transform('pass')),
-        db.recv.where({ team }).toArray().then(transform('recv')),
-        db.rush.where({ team }).toArray().then(transform('rush')),
-      ]))
-    );
-  } else {
-    return _.merge(
-      ...(await Promise.all([
-        db.player.toArray().then(transform('base')),
-        db.pass.toArray().then(transform('pass')),
-        db.recv.toArray().then(transform('recv')),
-        db.rush.toArray().then(transform('rush')),
-      ]))
-    );
-  }
+  const fetchData = async (type: keyof SeasonTypeMap) => {
+    const table = tables[type];
+    const query = team ? table.where({ team }) : table;
+    return query.toArray().then(transform(type));
+  };
+
+  const types = ['base', 'pass', 'recv', 'rush'] as (keyof SeasonTypeMap)[];
+  const projections = await Promise.all(types.map(fetchData));
+  return _.merge({}, ...projections) as PlayerProjections;
 };
 
 /// Fetch a projection for the given team from the DB.
