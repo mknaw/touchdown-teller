@@ -18,6 +18,7 @@ import appStateSlice from '@/store/appStateSlice';
 import playerProjectionsSlice from '@/store/playerProjectionSlice';
 import settingsSlice from '@/store/settingsSlice';
 import teamProjectionSlice from './store/teamProjectionSlice';
+import { validationMiddleware } from './features/teams/validation';
 
 const makeStore = () => {
   const persistConfig = {
@@ -40,7 +41,7 @@ const makeStore = () => {
         serializableCheck: {
           ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         },
-      }),
+      }).concat(validationMiddleware),
     devTools: true,
   });
 

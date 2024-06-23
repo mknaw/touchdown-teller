@@ -130,7 +130,7 @@ export type AnnualizedRecvSeason = {
 };
 
 export const annualizeRecvSeason = (
-  season: RecvSeason,
+  season: Pick<RecvSeason, 'tgt' | 'rec' | 'ypr' | 'tdp'>,
   gp: number
 ): AnnualizedRecvSeason => ({
   tgt: season.tgt * gp,
@@ -180,7 +180,7 @@ export type AnnualizedRushSeason = {
 };
 
 export const annualizeRushSeason = (
-  season: RushSeason,
+  season: Pick<RushSeason, 'att' | 'ypc' | 'tdp'>,
   gp: number
 ): AnnualizedRushSeason => ({
   att: season.att * gp,
@@ -208,8 +208,6 @@ export interface PlayerProjection {
   recv?: Omit<RecvSeason, 'playerId'>;
   rush?: Omit<RushSeason, 'playerId'>;
 }
-
-export type LastSeason = PlayerProjection;
 
 export type PlayerProjections = {
   [playerId: number]: Omit<PlayerProjection, 'id'>;

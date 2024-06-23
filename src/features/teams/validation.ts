@@ -1,4 +1,10 @@
 // TODO maybe this should move to the `/models/` directory
+import {
+  AnyAction,
+  Dispatch,
+  Middleware,
+  MiddlewareAPI,
+} from '@reduxjs/toolkit';
 import _ from 'lodash';
 
 import { gameCount } from '@/constants';
@@ -7,6 +13,7 @@ import {
   AnnualizedRecvSeason,
   AnnualizedRushSeason,
   PassSeason,
+  PlayerProjections,
   RecvSeason,
   RushSeason,
   annualizePassSeason,
@@ -14,6 +21,7 @@ import {
   annualizeRushSeason,
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
+import { AppState } from '@/store';
 import { PlayerSeason } from '@/types';
 
 export type Projection = {
@@ -23,8 +31,60 @@ export type Projection = {
   rushSeasons: RushSeason[];
 };
 
+type AggregatePlayerProjections = {
+  pass?: AnnualizedPassSeason;
+  recv?: AnnualizedRecvSeason;
+  rush?: AnnualizedRushSeason;
+};
+
+const annualizePlayerProjections = (
+  projections: PlayerProjections
+): AggregatePlayerProjections =>
+  _(projections)
+    .values()
+    .map((p) => ({
+      pass: p?.pass ? annualizePassSeason(p.pass, p.base.gp) : {},
+      recv: p?.recv ? annualizeRecvSeason(p.recv, p.base.gp) : {},
+      rush: p?.rush ? annualizeRushSeason(p.rush, p.base.gp) : {},
+    }))
+    .thru((arr) =>
+      _.mergeWith({}, ...arr, (prev: Object, next: Object) =>
+        _.mergeWith(
+          prev,
+          next,
+          (a: number | undefined, b: number | undefined) => (a || 0) + (b || 0)
+        )
+      )
+    )
+    .value();
+
 const getNegativeStats = (season: { [key: string]: number }): string[] =>
   _.keys(_.filter(season, (v) => v < 0));
+
+function getBudget(
+  playerProjections: AggregatePlayerProjections,
+  teamProjection: TeamSeason
+): AggregatePlayerProjections {
+  return {
+    pass: {
+      att: teamProjection.passAtt - (playerProjections.pass?.att || 0),
+      cmp: teamProjection.passCmp - (playerProjections.pass?.cmp || 0),
+      yds: teamProjection.passYds - (playerProjections.pass?.yds || 0),
+      tds: teamProjection.passTds - (playerProjections.pass?.tds || 0),
+    },
+    recv: {
+      tgt: teamProjection.passAtt - (playerProjections.recv?.tgt || 0),
+      rec: teamProjection.passCmp - (playerProjections.recv?.rec || 0),
+      yds: teamProjection.passYds - (playerProjections.recv?.yds || 0),
+      tds: teamProjection.passTds - (playerProjections.recv?.tds || 0),
+    },
+    rush: {
+      att: teamProjection.rushAtt - (playerProjections.rush?.att || 0),
+      yds: teamProjection.rushYds - (playerProjections.rush?.yds || 0),
+      tds: teamProjection.rushTds - (playerProjections.rush?.tds || 0),
+    },
+  };
+}
 
 function getPassBudget(projection: Projection): AnnualizedPassSeason {
   const { teamSeason, passSeasons } = projection;
@@ -201,3 +261,51 @@ export function clampTeamSeason(projection: Projection): [TeamSeason, boolean] {
   // TODO probably could have some more descriptive messaging.
   return [teamSeason, false];
 }
+
+export const validationMiddleware: Middleware =
+  (store: MiddlewareAPI) => (next: Dispatch) => (action: AnyAction) => {
+    const state = store.getState() as AppState;
+
+    if (
+      state.playerProjections.status != 'succeeded' ||
+      state.teamProjection.status != 'succeeded'
+    ) {
+      return next(action);
+    }
+
+    const { projections: playerProjections } = state.playerProjections;
+    const annualizedProjections = annualizePlayerProjections(playerProjections);
+    const { projection: teamProjection } = state.teamProjection;
+    console.log(annualizedProjections);
+
+    // // List of actions that should trigger validation
+    // const actionsToValidate = [
+    //   'UPDATE_PLAYER_STATS',
+    //   'UPDATE_TEAM_STATS',
+    //   'PERSIST_SLIDER_VALUE',
+    // ];
+    //
+    // if (actionsToValidate.includes(action.type)) {
+    //   // Run the action first
+    //   const result = next(action);
+    //
+    //   // Then validate the new state
+    //   const newState = store.getState();
+    //   const validationResult = validateGlobalState(newState);
+    //
+    //   if (!validationResult.isValid) {
+    //     // Dispatch an invalidation action
+    //     store.dispatch({
+    //       type: 'INVALIDATE_CHANGE',
+    //       payload: {
+    //         originalAction: action,
+    //         error: validationResult.error,
+    //       },
+    //     });
+    //   }
+    //
+    //   return result;
+    // }
+
+    return next(action);
+  };
