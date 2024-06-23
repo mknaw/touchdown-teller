@@ -18,7 +18,7 @@ const teamProjectionSlice = createSlice({
     projection: undefined,
   } as TeamProjectionStore,
   reducers: {
-    setTeamSeason(state, action: PayloadAction<Partial<TeamSeason>>) {
+    setTeamProjection(state, action: PayloadAction<Partial<TeamSeason>>) {
       state.projection = _.merge(state.projection, action.payload);
     },
   },
@@ -52,7 +52,7 @@ const teamProjectionSlice = createSlice({
   },
 });
 
-export const { setTeamSeason } = teamProjectionSlice.actions;
+export const { setTeamProjection } = teamProjectionSlice.actions;
 export default teamProjectionSlice;
 
 export const loadTeamProjection = createAsyncThunk(
@@ -70,7 +70,7 @@ export const persistTeamProjection = createAsyncThunk(
     // Maybe this should be the only way.
 
     // TODO why are these "out of line keys"? I would have expected teamName to work.
-    thunkAPI.dispatch(setTeamSeason(projection));
+    thunkAPI.dispatch(setTeamProjection(projection));
     return await db.team.put(projection, projection.teamName);
   }
 );

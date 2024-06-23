@@ -6,13 +6,22 @@ import {
   AnnualizedPassSeason,
   AnnualizedRecvSeason,
   AnnualizedRushSeason,
+  PassSeason,
+  RecvSeason,
+  RushSeason,
   annualizePassSeason,
   annualizeRecvSeason,
   annualizeRushSeason,
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
-import { Projection } from '@/pages/teams/[teamKey]';
 import { PlayerSeason } from '@/types';
+
+export type Projection = {
+  teamSeason: TeamSeason;
+  passSeasons: PassSeason[];
+  recvSeasons: RecvSeason[];
+  rushSeasons: RushSeason[];
+};
 
 const getNegativeStats = (season: { [key: string]: number }): string[] =>
   _.keys(_.filter(season, (v) => v < 0));

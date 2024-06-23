@@ -40,23 +40,12 @@ import TeamSeasonsModal from '@/features/TeamSeasonsModal';
 import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
-import {
-  PassSeason,
-  RecvSeason,
-  RushSeason,
-  extractSeasons,
-} from '@/models/PlayerSeason';
-import { TeamSeason, teamSeasonFromPrisma } from '@/models/TeamSeason';
+import { extractSeasons } from '@/models/PlayerSeason';
 import { AppState, useAppDispatch } from '@/store';
 import {
   PlayerProjectionsStore,
   loadPlayerProjections,
 } from '@/store/playerProjectionSlice';
-import {
-  TeamProjectionStore,
-  loadTeamProjection,
-  persistTeamProjection,
-} from '@/store/teamProjectionSlice';
 import { TeamWithExtras } from '@/types';
 import { getTeamName } from '@/utils';
 
@@ -112,13 +101,6 @@ export const getStaticProps: GetStaticProps<
   };
 };
 
-export type Projection = {
-  teamSeason: TeamSeason;
-  passSeasons: PassSeason[];
-  recvSeasons: RecvSeason[];
-  rushSeasons: RushSeason[];
-};
-
 export default function Page({
   team,
   lastYearPassGames,
@@ -142,20 +124,6 @@ export default function Page({
   if (!lastSeason) {
     return null; // Shouldn't happen.
   }
-
-  useEffect(() => {
-    dispatch(loadTeamProjection(team.key as TeamKey)).then(({ payload }) => {
-      if (!payload) {
-        const projection = teamSeasonFromPrisma(lastSeason);
-        dispatch(persistTeamProjection(projection));
-      }
-    });
-  }, [dispatch, team]);
-
-  const { projection: teamProjection } = useSelector<
-    AppState,
-    TeamProjectionStore
-  >((state) => state.teamProjection);
 
   const statType = useSelector<AppState, StatType>(
     (state) => state.settings.statType
@@ -184,10 +152,6 @@ export default function Page({
     lastYearRecvAggregates,
     lastYearRushAggregates
   );
-
-  if (!teamProjection) {
-    return null; // Shouldn't happen.
-  }
 
   const commonProps = {
     team,
@@ -254,12 +218,10 @@ export default function Page({
           </Card>
         </div>
         <Card className={'flex flex-col h-full relative'}>
-          {teamProjection && team.seasons[0] && (
+          {team.seasons[0] && (
             <TeamPanel
+              teamKey={team.key as TeamKey}
               statType={statType}
-              teamSeason={teamProjection}
-              setTeamSeason={() => null}
-              persistTeamSeason={() => null}
               lastSeason={lastSeason}
               passSeasons={extractSeasons('pass', playerProjections)}
               recvSeasons={extractSeasons('recv', playerProjections)}

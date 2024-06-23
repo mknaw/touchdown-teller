@@ -14,6 +14,7 @@ import { TeamKey } from '@/constants';
 import {
   PassSeason,
   PlayerBaseProjection,
+  PlayerProjections,
   RecvSeason,
   RushSeason,
   passAggregateToSeason,
@@ -252,21 +253,11 @@ export async function getTeamSeasons(
   });
 }
 
-// TODO kinda similar to the other iterations of this.
-export type MergedStat = {
-  base: PlayerBaseProjection;
-  pass?: PassSeason;
-  recv?: RecvSeason;
-  rush?: RushSeason;
-};
-
-export type MergedStats = Record<number, MergedStat>;
-
 export const mergeStats = (
   passAggregates: PassAggregate[],
   recvAggregates: RecvAggregate[],
   rushAggregates: RushAggregate[]
-): MergedStats => {
+): PlayerProjections => {
   // TODO still not a very elegant function!
   const playerBaseSeasons = _.merge(
     _(passAggregates)

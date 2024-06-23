@@ -13,7 +13,6 @@ import Typography from '@mui/material/Typography';
 
 import PlayerSelect from '@/components/PlayerSelect';
 import { Position, StatType, TeamKey } from '@/constants';
-import { MergedStat } from '@/data/ssr';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import {
@@ -108,7 +107,7 @@ export default function PlayerPanel({
   setSelectedPlayer: (p: Player | undefined) => void;
   relevantPositions: Position[];
   projections: PlayerProjections;
-  lastSeasons: Record<number, MergedStat>;
+  lastSeasons: PlayerProjections;
 }) {
   const dispatch = useAppDispatch();
 
@@ -148,9 +147,12 @@ export default function PlayerPanel({
 
   const addPlayer = (player: Player) => {
     const lastSeason = lastSeasons[player.id];
-    let base = lastSeason?.base || mkDefaultBase(player, team.key as TeamKey);
+    let base =
+      projections[player.id]?.base ??
+      lastSeason?.base ??
+      mkDefaultBase(player, team.key as TeamKey);
     // TODO this is not very elegant...
-    base.team = toEnumValue(TeamKey, player.teamName as string);
+    _.set(base, 'team', toEnumValue(TeamKey, player.teamName as string));
     //  TOOD would be better to explicitly `pick` the keys of `season`.
     // TODO why did we even need `team.key` here...? Indexing I guess?
     let season =
@@ -161,7 +163,7 @@ export default function PlayerPanel({
     // Presumably could not have been null to get this far.
     // TODO still probably could do better to handle mid season switches...
     // and / or reseting the client DB if a player changes teams...
-    season.team = toEnumValue(TeamKey, player.teamName as string);
+    _.set(season, 'team', toEnumValue(TeamKey, player.teamName as string));
 
     dispatch(
       persistPlayerProjections({
@@ -184,8 +186,6 @@ export default function PlayerPanel({
   const base = projection?.base;
   const season = projection?.[statType];
 
-  console.log(projection);
-
   return (
     <div className={'flex h-full flex-col justify-between gap-5'}>
       {/* TODO would be nice here to preload some by default... */}
@@ -204,13 +204,16 @@ export default function PlayerPanel({
                 <PlayerStatSliderPanel
                   statType={statType}
                   playerId={selectedPlayer.id}
-                  lastSeason={lastSeasons[selectedPlayer.id]}
+                  lastSeasons={lastSeasons}
                 />
                 {/* TODO style this better */}
                 <div className={'flex w-full justify-center items-center pt-5'}>
                   {/* TODO kind of silly to pass it playerId given it's not really needed */}
                   {/* but was momentarily expedient from a TS perspective. */}
-                  <SeasonSummary gp={base.gp} season={{ playerId: selectedPlayer.id, ...season }} />
+                  <SeasonSummary
+                    gp={base.gp}
+                    season={{ playerId: selectedPlayer.id, ...season }}
+                  />
                   <IconButton
                     onClick={onDeleteIconClick}
                     sx={{

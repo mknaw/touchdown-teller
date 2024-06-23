@@ -28,7 +28,7 @@ const playerProjectionsSlice = createSlice({
     projections: {},
   } as PlayerProjectionsStore,
   reducers: {
-    setPlayerSeason(state, action: PayloadAction<PlayerProjections>) {
+    setPlayerProjections(state, action: PayloadAction<PlayerProjections>) {
       state.projections = _.merge(state.projections, action.payload);
     },
     removePlayerSeason(
@@ -57,7 +57,7 @@ const playerProjectionsSlice = createSlice({
   },
 });
 
-export const { setPlayerSeason, removePlayerSeason } =
+export const { setPlayerProjections, removePlayerSeason } =
   playerProjectionsSlice.actions;
 export default playerProjectionsSlice;
 
@@ -71,10 +71,8 @@ export const loadPlayerProjections = createAsyncThunk<
 export const persistPlayerProjections = createAsyncThunk(
   'playerProjections/persist',
   async (update: PlayerProjections, thunkAPI) => {
-    console.log(update);
-
     for (const [playerId, projection] of Object.entries(update)) {
-      thunkAPI.dispatch(setPlayerSeason({ [playerId]: projection }));
+      thunkAPI.dispatch(setPlayerProjections({ [playerId]: projection }));
 
       const keys: (keyof SeasonTypeMap)[] = ['base', 'pass', 'recv', 'rush'];
       for (const key of keys) {

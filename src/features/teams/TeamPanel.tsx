@@ -1,13 +1,15 @@
-import React, { Dispatch, SetStateAction } from 'react';
-import { useDispatch } from 'react-redux';
+import React, { useEffect } from 'react';
+import { useSelector } from 'react-redux';
+
+import _ from 'lodash';
 
 import { TeamSeason as PrismaTeamSeason } from '@prisma/client';
 
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import LabeledSlider from '@/components/LabeledSlider';
-import { StatType, lastYear } from '@/constants';
+import StatSlider from '@/components/StatSlider';
+import { StatType, TeamKey } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
 import {
   PassChartGroup,
@@ -16,14 +18,20 @@ import {
 } from '@/features/teams/ChartGroup';
 import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
+import { teamSeasonFromPrisma } from '@/models/TeamSeason';
+import { AppState, useAppDispatch } from '@/store';
 import {
   toggleTeamRushSeasonsModal,
   toggleTeamSeasonsModal,
 } from '@/store/appStateSlice';
+import {
+  TeamProjectionStore,
+  loadTeamProjection,
+  persistTeamProjection,
+  setTeamProjection,
+} from '@/store/teamProjectionSlice';
 import { IdMap } from '@/types';
 import { makeIdMap } from '@/utils';
-
-const valueLabelFormat = (value: number) => value.toFixed(0);
 
 const filterHistoricalPassAggregates = (seasons: PassAggregate[]) =>
   seasons.filter((s) => s.att > 100);
@@ -34,11 +42,19 @@ const filterHistoricalRecvAggregates = (seasons: RecvAggregate[]) =>
 const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
   seasons.filter((s) => s.att > 50);
 
-interface TeamPanelProps {
+export default function TeamPanel({
+  teamKey,
+  statType,
+  lastSeason,
+  passSeasons,
+  recvSeasons,
+  rushSeasons,
+  passAggregates,
+  recvAggregates,
+  rushAggregates,
+}: {
+  teamKey: TeamKey;
   statType: StatType;
-  teamSeason: TeamSeason;
-  setTeamSeason: Dispatch<SetStateAction<TeamSeason | null>>;
-  persistTeamSeason: () => void;
   lastSeason: PrismaTeamSeason;
   // TODO don't really love taking all this stuff here
   passSeasons: IdMap<PassSeason>;
@@ -47,36 +63,28 @@ interface TeamPanelProps {
   passAggregates: PassAggregate[];
   recvAggregates: RecvAggregate[];
   rushAggregates: RushAggregate[];
-}
+}) {
+  const dispatch = useAppDispatch();
 
-export default function TeamPanel({
-  statType,
-  teamSeason,
-  setTeamSeason,
-  persistTeamSeason,
-  lastSeason,
-  passSeasons,
-  recvSeasons,
-  rushSeasons,
-  passAggregates,
-  recvAggregates,
-  rushAggregates,
-}: TeamPanelProps) {
-  const handleInputChange = (event: Event) => {
-    const { target } = event;
-    if (target) {
-      const { name, value } = target as HTMLInputElement;
-      setTeamSeason(
-        (prevProjection) =>
-          prevProjection && {
-            ...prevProjection,
-            [name]: value,
-          }
-      );
-    }
-  };
+  useEffect(() => {
+    dispatch(loadTeamProjection(teamKey as TeamKey)).then(({ payload }) => {
+      if (!payload) {
+        const projection = teamSeasonFromPrisma(lastSeason);
+        dispatch(persistTeamProjection(projection));
+      }
+    });
+  }, [dispatch, teamKey]);
 
-  const dispatch = useDispatch();
+  const { projection: teamProjection } = useSelector<
+    AppState,
+    TeamProjectionStore
+  >((state) => state.teamProjection);
+
+  if (!teamProjection) {
+    // Shouldn't happen.
+    return null;
+  }
+
   const teamPanelHeader = {
     [StatType.PASS]: 'Team Passing Stats',
     [StatType.RECV]: 'Team Receiving Stats',
@@ -98,7 +106,7 @@ export default function TeamPanel({
           filterHistoricalPassAggregates(passAggregates),
           'playerId'
         )}
-        teamSeason={teamSeason}
+        teamSeason={teamProjection}
         lastSeason={lastSeason}
       />
     ),
@@ -109,7 +117,7 @@ export default function TeamPanel({
           filterHistoricalRecvAggregates(recvAggregates),
           'playerId'
         )}
-        teamSeason={teamSeason}
+        teamSeason={teamProjection}
         lastSeason={lastSeason}
       />
     ),
@@ -120,11 +128,19 @@ export default function TeamPanel({
           filterHistoricalRushAggregates(rushAggregates),
           'playerId'
         )}
-        teamSeason={teamSeason}
+        teamSeason={teamProjection}
         lastSeason={lastSeason}
       />
     ),
   }[statType];
+
+  const commonSliderProps = {
+    current: teamProjection,
+    persist: (v: TeamSeason) => dispatch(persistTeamProjection(v)),
+    set: (v: TeamSeason) => dispatch(setTeamProjection(v)),
+    previous: teamSeasonFromPrisma(lastSeason),
+    onClick,
+  };
 
   return (
     <div className={'flex flex-col w-full h-full'}>
@@ -140,176 +156,86 @@ export default function TeamPanel({
           {
             [StatType.PASS]: (
               <>
-                <LabeledSlider
-                  label={`Pass Attempts: ${teamSeason.passAtt.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.passAtt}
+                <StatSlider
+                  label={'Pass Attempts'}
+                  path={'passAtt'}
                   min={255}
                   max={850}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.passAtt.toFixed(0)}`,
-                      value: lastSeason.passAtt,
-                    },
-                  ]}
-                  name='passAtt'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
-                <LabeledSlider
-                  label={`Pass Yards: ${teamSeason.passYds.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.passYds}
+                <StatSlider
+                  label={'Passing Yards'}
+                  path={'passYds'}
                   min={2000}
                   max={5500}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.passYds.toFixed(0)}`,
-                      value: lastSeason.passYds,
-                    },
-                  ]}
-                  name='passYds'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
-                <LabeledSlider
-                  label={`Pass Touchdowns: ${teamSeason.passTds.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.passTds}
+                <StatSlider
+                  label={'Passing Touchdowns'}
+                  path={'passTds'}
                   min={0}
                   max={70}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.passTds.toFixed(0)}`,
-                      value: lastSeason.passTds,
-                    },
-                  ]}
-                  name='passTds'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
               </>
             ),
             // TODO should we add receptions here? Otherwise it's kinda the same as before?
             [StatType.RECV]: (
               <>
-                <LabeledSlider
-                  label={`Pass Attempts: ${teamSeason.passAtt.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.passAtt}
+                <StatSlider
+                  label={'Pass Attempts'}
+                  path={'passAtt'}
                   min={255}
                   max={850}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.passAtt.toFixed(0)}`,
-                      value: lastSeason.passAtt,
-                    },
-                  ]}
-                  name='passAtt'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
-                <LabeledSlider
-                  label={`Pass Yards: ${teamSeason.passYds.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.passYds}
+                <StatSlider
+                  label={'Passing Yards'}
+                  path={'passYds'}
                   min={2000}
                   max={5500}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.passYds.toFixed(0)}`,
-                      value: lastSeason.passYds,
-                    },
-                  ]}
-                  name='passYds'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
-                <LabeledSlider
-                  label={`Pass Touchdowns: ${teamSeason.passTds.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.passTds}
+                <StatSlider
+                  label={'Passing Touchdowns'}
+                  path={'passTds'}
                   min={0}
                   max={70}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.passTds.toFixed(0)}`,
-                      value: lastSeason.passTds,
-                    },
-                  ]}
-                  name='passTds'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
               </>
             ),
             [StatType.RUSH]: (
               <>
-                <LabeledSlider
-                  label={`Rush Attempts: ${teamSeason.rushAtt.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.rushAtt}
+                <StatSlider
+                  label={'Rush Attempts'}
+                  path={'rushAtt'}
                   min={255}
                   max={850}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.rushAtt.toFixed(0)}`,
-                      value: lastSeason.rushAtt,
-                    },
-                  ]}
-                  name='rushAtt'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
-                <LabeledSlider
-                  label={`Rush Yards: ${teamSeason.rushYds.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.rushYds}
+                <StatSlider
+                  label={'Rushing Yards'}
+                  path={'rushYds'}
                   min={1000}
                   max={5500}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.rushYds.toFixed(0)}`,
-                      value: lastSeason.rushYds,
-                    },
-                  ]}
-                  name='rushYds'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
-                <LabeledSlider
-                  label={`Rush Touchdowns: ${teamSeason.rushTds.toFixed(1)}`}
-                  onClick={onClick}
-                  value={teamSeason.rushTds}
+                <StatSlider
+                  label={'Rushing Touchdowns'}
+                  path={'rushTds'}
                   min={0}
                   max={70}
-                  step={0.1}
-                  marks={[
-                    {
-                      label: `${lastYear}: ${lastSeason.rushTds.toFixed(0)}`,
-                      value: lastSeason.rushTds,
-                    },
-                  ]}
-                  name='rushTds'
-                  onChange={handleInputChange}
-                  onChangeCommitted={persistTeamSeason}
-                  valueLabelFormat={valueLabelFormat}
+                  step={1}
+                  {...commonSliderProps}
                 />
               </>
             ),
