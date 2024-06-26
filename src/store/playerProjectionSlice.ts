@@ -85,6 +85,7 @@ export const persistPlayerProjections = createAsyncThunk(
         }
       }
     }
+    return update;
   }
 );
 

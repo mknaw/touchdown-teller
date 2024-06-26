@@ -71,6 +71,7 @@ export const persistTeamProjection = createAsyncThunk(
 
     // TODO why are these "out of line keys"? I would have expected teamName to work.
     thunkAPI.dispatch(setTeamProjection(projection));
-    return await db.team.put(projection, projection.teamName);
+    await db.team.put(projection, projection.teamName);
+    return projection;
   }
 );

@@ -4,6 +4,7 @@ import {
   Dispatch,
   Middleware,
   MiddlewareAPI,
+  PayloadAction,
 } from '@reduxjs/toolkit';
 import _ from 'lodash';
 
@@ -22,7 +23,14 @@ import {
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
 import { AppState } from '@/store';
+import { setTeamProjection } from '@/store/teamProjectionSlice';
 import { PlayerSeason } from '@/types';
+import {
+  addObjects,
+  nestedNumericAssociation,
+  nestedNumericMap,
+  subtractObjects,
+} from '@/utils';
 
 export type Projection = {
   teamSeason: TeamSeason;
@@ -32,9 +40,29 @@ export type Projection = {
 };
 
 type AggregatePlayerProjections = {
-  pass?: AnnualizedPassSeason;
-  recv?: AnnualizedRecvSeason;
-  rush?: AnnualizedRushSeason;
+  pass: AnnualizedPassSeason;
+  recv: AnnualizedRecvSeason;
+  rush: AnnualizedRushSeason;
+};
+
+const emptyPassSeason = {
+  att: 0,
+  cmp: 0,
+  yds: 0,
+  tds: 0,
+};
+
+const emptyRecvSeason = {
+  tgt: 0,
+  rec: 0,
+  yds: 0,
+  tds: 0,
+};
+
+const emptyRushSeason = {
+  att: 0,
+  ypc: 0,
+  tds: 0,
 };
 
 const annualizePlayerProjections = (
@@ -43,9 +71,9 @@ const annualizePlayerProjections = (
   _(projections)
     .values()
     .map((p) => ({
-      pass: p?.pass ? annualizePassSeason(p.pass, p.base.gp) : {},
-      recv: p?.recv ? annualizeRecvSeason(p.recv, p.base.gp) : {},
-      rush: p?.rush ? annualizeRushSeason(p.rush, p.base.gp) : {},
+      pass: p?.pass ? annualizePassSeason(p.pass, p.base.gp) : emptyPassSeason,
+      recv: p?.recv ? annualizeRecvSeason(p.recv, p.base.gp) : emptyRecvSeason,
+      rush: p?.rush ? annualizeRushSeason(p.rush, p.base.gp) : emptyRushSeason,
     }))
     .thru((arr) =>
       _.mergeWith({}, ...arr, (prev: Object, next: Object) =>
@@ -58,14 +86,19 @@ const annualizePlayerProjections = (
     )
     .value();
 
-const getNegativeStats = (season: { [key: string]: number }): string[] =>
-  _.keys(_.filter(season, (v) => v < 0));
+// Returns an array of keys where the value is negative.
+const getNegativeStats = (aggregate: { [key: string]: number }): string[] =>
+  _(aggregate)
+    .pickBy((v) => v < 0)
+    .keys()
+    .value();
 
 function getBudget(
   playerProjections: AggregatePlayerProjections,
   teamProjection: TeamSeason
 ): AggregatePlayerProjections {
   return {
+    // TODO could coerce TeamProjection into a nested thing so it looks like playerProjections.
     pass: {
       att: teamProjection.passAtt - (playerProjections.pass?.att || 0),
       cmp: teamProjection.passCmp - (playerProjections.pass?.cmp || 0),
@@ -235,77 +268,81 @@ export function clampPlayerSeason<T extends PlayerSeason>(
   return [season, valid];
 }
 
-export function clampTeamSeason(projection: Projection): [TeamSeason, boolean] {
-  const remainingPass = getPassBudget(projection);
-  const remainingRecv = getRecvBudget(projection);
-  const remainingRush = getRushBudget(projection);
+const clampNestedNumeric = _.partial(nestedNumericMap, (v) => Math.min(v, 0));
 
-  const { teamSeason } = projection;
-
-  if (
-    _.isEmpty(getNegativeStats(remainingPass)) &&
-    _.isEmpty(getNegativeStats(remainingRecv)) &&
-    _.isEmpty(getNegativeStats(remainingRush))
-  ) {
-    return [teamSeason, true];
-  }
-
-  teamSeason.passAtt -= Math.min(remainingPass.att, remainingRecv.tgt, 0);
-  teamSeason.passCmp -= Math.min(remainingPass.cmp, remainingRecv.rec, 0);
-  teamSeason.passYds -= Math.min(remainingPass.yds, remainingRecv.yds, 0);
-  teamSeason.passTds -= Math.min(remainingPass.tds, remainingRecv.tds, 0);
-  teamSeason.rushAtt -= Math.min(remainingRush.att, 0);
-  teamSeason.rushYds -= Math.min(remainingRush.yds, 0);
-  teamSeason.rushTds -= Math.min(remainingRush.tds, 0);
-
-  // TODO probably could have some more descriptive messaging.
-  return [teamSeason, false];
-}
+const asTeamSeasonDelta = (
+  budget: AggregatePlayerProjections
+): Pick<
+  TeamSeason,
+  | 'passAtt'
+  | 'passCmp'
+  | 'passYds'
+  | 'passTds'
+  | 'rushAtt'
+  | 'rushYds'
+  | 'rushTds'
+> => {
+  const pass = clampNestedNumeric(budget.pass) as AnnualizedPassSeason;
+  const recv = clampNestedNumeric(budget.recv) as AnnualizedRecvSeason;
+  const rush = clampNestedNumeric(budget.rush) as AnnualizedRushSeason;
+  return {
+    passAtt: Math.min(pass.att, recv.tgt),
+    passCmp: Math.min(pass.cmp, recv.rec),
+    passYds: Math.min(pass.yds, recv.yds),
+    passTds: Math.min(pass.tds, recv.yds),
+    rushAtt: rush.att,
+    rushYds: rush.yds,
+    rushTds: rush.tds,
+  };
+};
 
 export const validationMiddleware: Middleware =
   (store: MiddlewareAPI) => (next: Dispatch) => (action: AnyAction) => {
-    const state = store.getState() as AppState;
-
-    if (
-      state.playerProjections.status != 'succeeded' ||
-      state.teamProjection.status != 'succeeded'
-    ) {
+    if (!action.type.includes('persist/fulfilled')) {
+      // Only interested in actions that we think will finalize the state.
       return next(action);
     }
+
+    const state = store.getState() as AppState;
+
+    // TODO check for error statuses?
 
     const { projections: playerProjections } = state.playerProjections;
     const annualizedProjections = annualizePlayerProjections(playerProjections);
     const { projection: teamProjection } = state.teamProjection;
-    console.log(annualizedProjections);
+    if (!teamProjection) {
+      return next(action);
+    }
 
-    // // List of actions that should trigger validation
-    // const actionsToValidate = [
-    //   'UPDATE_PLAYER_STATS',
-    //   'UPDATE_TEAM_STATS',
-    //   'PERSIST_SLIDER_VALUE',
-    // ];
-    //
-    // if (actionsToValidate.includes(action.type)) {
-    //   // Run the action first
-    //   const result = next(action);
-    //
-    //   // Then validate the new state
-    //   const newState = store.getState();
-    //   const validationResult = validateGlobalState(newState);
-    //
-    //   if (!validationResult.isValid) {
-    //     // Dispatch an invalidation action
-    //     store.dispatch({
-    //       type: 'INVALIDATE_CHANGE',
-    //       payload: {
-    //         originalAction: action,
-    //         error: validationResult.error,
-    //       },
-    //     });
-    //   }
-    //
-    //   return result;
-    // }
+    const budget = getBudget(annualizedProjections, teamProjection);
+
+    switch (action.type) {
+      case 'playerProjections/persist/fulfilled':
+        console.log('its a player projection');
+        break;
+      case 'teamProjection/persist/fulfilled':
+        const delta = asTeamSeasonDelta(budget);
+
+        const clamped = {
+          ...teamProjection,
+          ...(subtractObjects(teamProjection, delta) as TeamSeason),
+        };
+
+        // TODO This is inefficient because we do the whole subtraction and equality
+        // thing here a second time, even though we already did it the first time around.
+        // It is just a quick hack, can fix it later.
+        if (!_.isEqual(clamped, teamProjection)) {
+          store.dispatch(setTeamProjection(clamped));
+
+          const prevAction = action as PayloadAction<TeamSeason>;
+          const newAction: PayloadAction<TeamSeason> = {
+            ...prevAction,
+            payload: clamped,
+          };
+          store.dispatch(newAction);
+          return newAction;
+        }
+    }
 
     return next(action);
   };

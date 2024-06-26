@@ -1,3 +1,5 @@
+import _ from 'lodash';
+
 import { TeamKey } from '@/constants';
 
 export function setOnClone<K, V>(map: Map<K, V>, key: K, value: V): Map<K, V> {
@@ -62,3 +64,40 @@ export function getTeamName(teamKey: TeamKey): string {
   };
   return teams[teamKey];
 }
+
+type NestedNumeric = { [key: string]: NestedNumeric | number | any };
+
+/// Like a functor map on arbitrarily nested objects.
+export function nestedNumericMap(
+  fn: (a: number) => number,
+  obj: NestedNumeric | number,
+): NestedNumeric | number {
+  if (_.isObject(obj)) {
+    return _.mapValues(obj, (value) => nestedNumericMap(fn, value));
+  }
+  if (_.isNumber(obj)) {
+    return fn(obj);
+  }
+  return obj;
+}
+
+/// Merge two arbitrarily nested objects, applying a function to numeric values.
+export function nestedNumericAssociation(
+  fn: (a: number, b: number) => number,
+  a: NestedNumeric | number,
+  b: NestedNumeric | number
+): NestedNumeric | number {
+  return _.mergeWith({}, a, b, (value1: any, value2: any) => {
+    if (_.isObject(value1) && _.isObject(value2)) {
+      return nestedNumericAssociation(fn, value1, value2);
+    }
+    if (_.isNumber(value1) && _.isNumber(value2)) {
+      return fn(value1, value2);
+    }
+    return;
+  });
+}
+
+export const addObjects = _.partial(nestedNumericAssociation, (a, b) => a + b);
+
+export const subtractObjects = _.partial(nestedNumericAssociation, (a, b) => a - b);
