@@ -68,24 +68,25 @@ export const loadPlayerProjections = createAsyncThunk<
   return await getPlayerProjections(team);
 });
 
-export const persistPlayerProjections = createAsyncThunk(
+export const persistPlayerProjection = createAsyncThunk(
   'playerProjections/persist',
-  async (update: PlayerProjections, thunkAPI) => {
-    for (const [playerId, projection] of Object.entries(update)) {
-      thunkAPI.dispatch(setPlayerProjections({ [playerId]: projection }));
+  async (
+    projection: PlayerProjection,
+    thunkAPI
+  ) => {
+      thunkAPI.dispatch(setPlayerProjections({ [projection.id]: projection }));
 
       const keys: (keyof SeasonTypeMap)[] = ['base', 'pass', 'recv', 'rush'];
       for (const key of keys) {
         if (projection[key]) {
           const stat = projection[key] as Object;
           await (tables[key] as Table).put(
-            { playerId: Number(playerId), ...stat },
-            Number(playerId)
+            { playerId: projection.id, ...stat },
+            projection.id
           );
         }
       }
-    }
-    return update;
+    return projection;
   }
 );
 

@@ -29,7 +29,7 @@ import {
 import { useAppDispatch } from '@/store';
 import {
   deletePlayerSeason,
-  persistPlayerProjections,
+  persistPlayerProjection,
 } from '@/store/playerProjectionSlice';
 import { setStatType } from '@/store/settingsSlice';
 import { PlayerSeason, TeamWithExtras } from '@/types';
@@ -166,11 +166,10 @@ export default function PlayerPanel({
     _.set(season, 'team', toEnumValue(TeamKey, player.teamName as string));
 
     dispatch(
-      persistPlayerProjections({
-        [player.id]: {
-          base,
-          [statType]: season,
-        },
+      persistPlayerProjection({
+        id: player.id,
+        base,
+        [statType]: season,
       })
     ).then(() => setSelectedPlayer(player));
   };

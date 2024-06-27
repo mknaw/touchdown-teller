@@ -6,11 +6,11 @@ import Stack from '@mui/material/Stack';
 
 import StatSlider from '@/components/StatSlider';
 import { StatType } from '@/constants';
-import { PlayerProjections } from '@/models/PlayerSeason';
+import { PlayerProjection, PlayerProjections } from '@/models/PlayerSeason';
 import { AppState, useAppDispatch } from '@/store';
 import {
   PlayerProjectionsStore,
-  persistPlayerProjections,
+  persistPlayerProjection,
   setPlayerProjections,
 } from '@/store/playerProjectionSlice';
 
@@ -29,13 +29,24 @@ export default function PlayerStatSliderPanel({
     (state) => state.playerProjections
   );
 
+  // TODO name this something better, but whatever
+  let p = projections[playerId];
+
+  if (!p) {
+    return null;
+  }
+
+  const projection = { id: playerId, ...p } as PlayerProjection;
+
+  const lastSeason = { id: playerId, ...lastSeasons[playerId] };
+
   // TODO should we assert that the `playerId` is in `projections`? & rescue if not?
 
   const commonSliderProps = {
-    current: projections,
-    persist: (v: PlayerProjections) => dispatch(persistPlayerProjections(v)),
-    set: (v: PlayerProjections) => dispatch(setPlayerProjections(v)),
-    previous: lastSeasons,
+    current: projection,
+    persist: (v: PlayerProjection) => dispatch(persistPlayerProjection(v)),
+    set: (v: PlayerProjection) => dispatch(setPlayerProjections({ [playerId]: v })),
+    previous: lastSeason,
   };
   // TODO these marks don't look good when they're on the far end -
   // like 0 tds, 17 games played ...
@@ -44,7 +55,7 @@ export default function PlayerStatSliderPanel({
       <>
         <StatSlider
           label={'Games Played'}
-          path={`${playerId}.base.gp`}
+          path={'base.gp'}
           min={0}
           max={17}
           step={0.1}
@@ -53,7 +64,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Attempts per Game'}
-          path={`${playerId}.pass.att`}
+          path={'pass.att'}
           min={15}
           max={50}
           step={0.1}
@@ -61,7 +72,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Completion Percentage'}
-          path={`${playerId}.pass.cmp`}
+          path={'pass.cmp'}
           min={20}
           max={75}
           step={0.1}
@@ -69,7 +80,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Yards per Attempt'}
-          path={`${playerId}.pass.ypa`}
+          path={'pass.ypa'}
           min={1}
           max={15}
           step={0.1}
@@ -77,7 +88,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Yards per Attempt'}
-          path={`${playerId}.pass.tdp`}
+          path={'pass.tdp'}
           min={0}
           max={20}
           step={0.1}
@@ -89,7 +100,7 @@ export default function PlayerStatSliderPanel({
       <>
         <StatSlider
           label={'Games Played'}
-          path={`${playerId}.base.gp`}
+          path={'base.gp'}
           min={1}
           max={17}
           step={0.1}
@@ -98,7 +109,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Targets per Game'}
-          path={`${playerId}.recv.tgt`}
+          path={'recv.tgt'}
           min={0}
           max={15}
           step={0.1}
@@ -106,7 +117,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Reception Percentage'}
-          path={`${playerId}.recv.rec`}
+          path={'recv.rec'}
           min={0}
           max={100}
           step={0.1}
@@ -114,7 +125,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Yards per Reception'}
-          path={`${playerId}.recv.ypr`}
+          path={'recv.ypr'}
           min={0}
           max={20}
           step={0.1}
@@ -122,7 +133,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Touchdown Percentage'}
-          path={`${playerId}.recv.tdp`}
+          path={'recv.tdp'}
           min={0}
           max={15}
           step={0.1}
@@ -134,7 +145,7 @@ export default function PlayerStatSliderPanel({
       <>
         <StatSlider
           label={'Games Played'}
-          path={`${playerId}.base.gp`}
+          path={'base.gp'}
           min={1}
           max={17}
           step={0.1}
@@ -143,7 +154,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Carries per Game'}
-          path={`${playerId}.rush.att`}
+          path={'rush.att'}
           min={0}
           max={25}
           step={0.1}
@@ -151,7 +162,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Yards per Carry'}
-          path={`${playerId}.rush.ypc`}
+          path={'rush.ypc'}
           min={1}
           max={7}
           step={0.1}
@@ -159,7 +170,7 @@ export default function PlayerStatSliderPanel({
         />
         <StatSlider
           label={'Touchdown Percentage'}
-          path={`${playerId}.rush.tdp`}
+          path={'rush.tdp'}
           min={0}
           max={20}
           step={0.1}

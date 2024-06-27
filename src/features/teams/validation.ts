@@ -14,6 +14,7 @@ import {
   AnnualizedRecvSeason,
   AnnualizedRushSeason,
   PassSeason,
+  PlayerProjection,
   PlayerProjections,
   RecvSeason,
   RushSeason,
@@ -23,14 +24,10 @@ import {
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
 import { AppState } from '@/store';
+import { setPlayerProjections } from '@/store/playerProjectionSlice';
 import { setTeamProjection } from '@/store/teamProjectionSlice';
 import { PlayerSeason } from '@/types';
-import {
-  addObjects,
-  nestedNumericAssociation,
-  nestedNumericMap,
-  subtractObjects,
-} from '@/utils';
+import { addObjects, nestedNumericMap, subtractObjects } from '@/utils';
 
 export type Projection = {
   teamSeason: TeamSeason;
@@ -268,9 +265,68 @@ export function clampPlayerSeason<T extends PlayerSeason>(
   return [season, valid];
 }
 
-const clampNestedNumeric = _.partial(nestedNumericMap, (v) => Math.min(v, 0));
+const clampPlayerProjection = (
+  budget: AggregatePlayerProjections,
+  projection: PlayerProjection
+): Omit<PlayerProjection, 'id'> => {
+  const remaining = nestedMin(budget) as AggregatePlayerProjections;
+  console.log('budget', budget);
+  console.log('remaining', remaining);
+  
+  const gp = projection.base.gp;
+  const deannaualized = {
+    pass: projection.pass
+      ? {
+          att: remaining.pass.att / gp,
+          cmp: (100 * remaining.pass.cmp) / (projection.pass.att * gp),
+          ypa:
+            remaining.pass.yds /
+            (projection.pass.att * gp + projection.pass.cmp / 100),
+          tdp: (100 * remaining.pass.tds) / (projection.pass.att * gp),
+        }
+      : {
+          att: 0,
+          cmp: 0,
+          ypa: 0,
+          tdp: 0,
+        },
+    recv: projection.recv
+      ? {
+          tgt: remaining.recv.tgt / gp,
+          rec: (100 * remaining.recv.rec) / (projection.recv.tgt * gp),
+          ypa:
+            remaining.recv.yds /
+            (projection.recv.tgt * gp + projection.recv.rec / 100),
+          tdp:
+            (100 * remaining.recv.tds) /
+            (projection.recv.tgt * gp + projection.recv.rec / 100),
+        }
+      : {
+          tgt: 0,
+          rec: 0,
+          ypa: 0,
+          tdp: 0,
+        },
+    rush: projection.rush
+      ? {
+          att: remaining.rush.att / gp,
+          ypc: remaining.rush.yds / (projection.rush.att * gp),
+          tdp: (100 * remaining.rush.tds) / (projection.rush.att * gp),
+        }
+      : {
+          att: 0,
+          ypc: 0,
+          tdp: 0,
+        },
+  };
+  return nestedMax(addObjects(projection, deannaualized)) as PlayerProjection;
+};
 
-const asTeamSeasonDelta = (
+const nestedMin = _.partial(nestedNumericMap, (v) => Math.min(v, 0));
+
+const nestedMax = _.partial(nestedNumericMap, (v) => Math.max(v, 0));
+
+const asTeamProjectionDelta = (
   budget: AggregatePlayerProjections
 ): Pick<
   TeamSeason,
@@ -282,9 +338,9 @@ const asTeamSeasonDelta = (
   | 'rushYds'
   | 'rushTds'
 > => {
-  const pass = clampNestedNumeric(budget.pass) as AnnualizedPassSeason;
-  const recv = clampNestedNumeric(budget.recv) as AnnualizedRecvSeason;
-  const rush = clampNestedNumeric(budget.rush) as AnnualizedRushSeason;
+  const pass = nestedMin(budget.pass) as AnnualizedPassSeason;
+  const recv = nestedMin(budget.recv) as AnnualizedRecvSeason;
+  const rush = nestedMin(budget.rush) as AnnualizedRushSeason;
   return {
     passAtt: Math.min(pass.att, recv.tgt),
     passCmp: Math.min(pass.cmp, recv.rec),
@@ -316,32 +372,44 @@ export const validationMiddleware: Middleware =
 
     const budget = getBudget(annualizedProjections, teamProjection);
 
-    switch (action.type) {
-      case 'playerProjections/persist/fulfilled':
-        console.log('its a player projection');
-        break;
-      case 'teamProjection/persist/fulfilled':
-        const delta = asTeamSeasonDelta(budget);
+    if (action.type == 'playerProjections/persist/fulfilled') {
+      const clamped = {
+        id: action.payload.id,
+        ...clampPlayerProjection(budget, action.payload),
+      };
+      console.log(clamped);
+      if (!_.isEqual(clamped, action.payload)) {
+        store.dispatch(setPlayerProjections({ [action.payload.id]: clamped }));
 
-        const clamped = {
-          ...teamProjection,
-          ...(subtractObjects(teamProjection, delta) as TeamSeason),
+        const newAction: PayloadAction<PlayerProjection> = {
+          ...action,
+          payload: clamped,
         };
+        store.dispatch(newAction);
+        return newAction;
+      }
+    } else if (action.type === 'teamProjection/persist/fulfilled') {
+      const delta = asTeamProjectionDelta(budget);
 
-        // TODO This is inefficient because we do the whole subtraction and equality
-        // thing here a second time, even though we already did it the first time around.
-        // It is just a quick hack, can fix it later.
-        if (!_.isEqual(clamped, teamProjection)) {
-          store.dispatch(setTeamProjection(clamped));
+      const clamped = {
+        ...teamProjection,
+        ...(subtractObjects(teamProjection, delta) as TeamSeason),
+      };
 
-          const prevAction = action as PayloadAction<TeamSeason>;
-          const newAction: PayloadAction<TeamSeason> = {
-            ...prevAction,
-            payload: clamped,
-          };
-          store.dispatch(newAction);
-          return newAction;
-        }
+      // TODO This is inefficient because we do the whole subtraction and equality
+      // thing here a second time, even though we already did it the first time around.
+      // It is just a quick hack, can fix it later.
+      if (!_.isEqual(clamped, teamProjection)) {
+        store.dispatch(setTeamProjection(clamped));
+
+        const prevAction = action as PayloadAction<TeamSeason>;
+        const newAction: PayloadAction<TeamSeason> = {
+          ...prevAction,
+          payload: clamped,
+        };
+        store.dispatch(newAction);
+        return newAction;
+      }
     }
 
     return next(action);
