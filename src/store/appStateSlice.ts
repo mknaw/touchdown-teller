@@ -16,12 +16,24 @@ const initialTeamSeasonsModalState = {
   year: null,
 } as TeamSeasonsModalState;
 
+export type ValidationErrors = {
+  player: string[];
+  team: string[];
+};
+
 type AppState = {
   teamSeasonsModalState: TeamSeasonsModalState;
+  validationErrors: ValidationErrors;
+};
+
+const initialValidationErrors = {
+  player: [],
+  team: [],
 };
 
 const initialAppState = {
   teamSeasonsModalState: initialTeamSeasonsModalState,
+  validationErrors: initialValidationErrors,
 } as AppState;
 
 const appStateSlice = createSlice({
@@ -39,6 +51,12 @@ const appStateSlice = createSlice({
       state.teamSeasonsModalState.open = true;
       state.teamSeasonsModalState.type = TeamSeasonsModalType.Rush;
     },
+    setValidationErrors(state, action) {
+      state.validationErrors = action.payload;
+    },
+    clearValidationErrors(state) {
+      state.validationErrors = initialValidationErrors;
+    },
     // TODO unused, but maybe I'll use it later to set past years..
     // toggleTeamSeasonsModalYear(state) {
     //   state.teamSeasonsModalState.year =
@@ -51,5 +69,7 @@ export const {
   toggleTeamPassSeasonsModal,
   toggleTeamRushSeasonsModal,
   toggleTeamSeasonsModal,
+  setValidationErrors,
+  clearValidationErrors,
 } = appStateSlice.actions;
 export default appStateSlice;

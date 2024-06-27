@@ -24,6 +24,7 @@ import {
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
 import { AppState } from '@/store';
+import { setValidationErrors } from '@/store/appStateSlice';
 import { setPlayerProjections } from '@/store/playerProjectionSlice';
 import { setTeamProjection } from '@/store/teamProjectionSlice';
 import { PlayerSeason } from '@/types';
@@ -272,52 +273,52 @@ const clampPlayerProjection = (
   const remaining = nestedMin(budget) as AggregatePlayerProjections;
   console.log('budget', budget);
   console.log('remaining', remaining);
-  
+
   const gp = projection.base.gp;
   const deannaualized = {
     pass: projection.pass
       ? {
-          att: remaining.pass.att / gp,
-          cmp: (100 * remaining.pass.cmp) / (projection.pass.att * gp),
-          ypa:
-            remaining.pass.yds /
-            (projection.pass.att * gp + projection.pass.cmp / 100),
-          tdp: (100 * remaining.pass.tds) / (projection.pass.att * gp),
-        }
+        att: remaining.pass.att / gp,
+        cmp: (100 * remaining.pass.cmp) / (projection.pass.att * gp),
+        ypa:
+          remaining.pass.yds /
+          (projection.pass.att * gp + projection.pass.cmp / 100),
+        tdp: (100 * remaining.pass.tds) / (projection.pass.att * gp),
+      }
       : {
-          att: 0,
-          cmp: 0,
-          ypa: 0,
-          tdp: 0,
-        },
+        att: 0,
+        cmp: 0,
+        ypa: 0,
+        tdp: 0,
+      },
     recv: projection.recv
       ? {
-          tgt: remaining.recv.tgt / gp,
-          rec: (100 * remaining.recv.rec) / (projection.recv.tgt * gp),
-          ypa:
-            remaining.recv.yds /
-            (projection.recv.tgt * gp + projection.recv.rec / 100),
-          tdp:
-            (100 * remaining.recv.tds) /
-            (projection.recv.tgt * gp + projection.recv.rec / 100),
-        }
+        tgt: remaining.recv.tgt / gp,
+        rec: (100 * remaining.recv.rec) / (projection.recv.tgt * gp),
+        ypa:
+          remaining.recv.yds /
+          (projection.recv.tgt * gp + projection.recv.rec / 100),
+        tdp:
+          (100 * remaining.recv.tds) /
+          (projection.recv.tgt * gp + projection.recv.rec / 100),
+      }
       : {
-          tgt: 0,
-          rec: 0,
-          ypa: 0,
-          tdp: 0,
-        },
+        tgt: 0,
+        rec: 0,
+        ypa: 0,
+        tdp: 0,
+      },
     rush: projection.rush
       ? {
-          att: remaining.rush.att / gp,
-          ypc: remaining.rush.yds / (projection.rush.att * gp),
-          tdp: (100 * remaining.rush.tds) / (projection.rush.att * gp),
-        }
+        att: remaining.rush.att / gp,
+        ypc: remaining.rush.yds / (projection.rush.att * gp),
+        tdp: (100 * remaining.rush.tds) / (projection.rush.att * gp),
+      }
       : {
-          att: 0,
-          ypc: 0,
-          tdp: 0,
-        },
+        att: 0,
+        ypc: 0,
+        tdp: 0,
+      },
   };
   return nestedMax(addObjects(projection, deannaualized)) as PlayerProjection;
 };
@@ -352,6 +353,21 @@ const asTeamProjectionDelta = (
   };
 };
 
+// Could do something more sophisticated here, but this gets the point across for now.
+const getPlayerValidationErrors = (
+  clamped: PlayerProjection,
+  original: PlayerProjection
+) =>
+  _.isEqual(clamped, original)
+    ? []
+    : ['Player projection limited in accordance with team total.'];
+
+// Could do something more sophisticated here, but this gets the point across for now.
+const getTeamValidationErrors = (clamped: TeamSeason, original: TeamSeason) =>
+  _.isEqual(clamped, original)
+    ? []
+    : ['Team total limited in accordance with player projection total.'];
+
 export const validationMiddleware: Middleware =
   (store: MiddlewareAPI) => (next: Dispatch) => (action: AnyAction) => {
     if (!action.type.includes('persist/fulfilled')) {
@@ -377,9 +393,15 @@ export const validationMiddleware: Middleware =
         id: action.payload.id,
         ...clampPlayerProjection(budget, action.payload),
       };
-      console.log(clamped);
-      if (!_.isEqual(clamped, action.payload)) {
+      const validationErrors = getPlayerValidationErrors(
+        clamped,
+        action.payload
+      );
+      if (validationErrors.length) {
         store.dispatch(setPlayerProjections({ [action.payload.id]: clamped }));
+        store.dispatch(
+          setValidationErrors({ player: validationErrors, team: [] })
+        );
 
         const newAction: PayloadAction<PlayerProjection> = {
           ...action,
@@ -399,8 +421,12 @@ export const validationMiddleware: Middleware =
       // TODO This is inefficient because we do the whole subtraction and equality
       // thing here a second time, even though we already did it the first time around.
       // It is just a quick hack, can fix it later.
-      if (!_.isEqual(clamped, teamProjection)) {
+      const validationErrors = getTeamValidationErrors(clamped, teamProjection);
+      if (validationErrors.length) {
         store.dispatch(setTeamProjection(clamped));
+        store.dispatch(
+          setValidationErrors({ player: [], team: validationErrors })
+        );
 
         const prevAction = action as PayloadAction<TeamSeason>;
         const newAction: PayloadAction<TeamSeason> = {

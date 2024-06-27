@@ -42,6 +42,7 @@ import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
 import { extractSeasons } from '@/models/PlayerSeason';
 import { AppState, useAppDispatch } from '@/store';
+import { ValidationErrors, clearValidationErrors } from '@/store/appStateSlice';
 import {
   PlayerProjectionsStore,
   loadPlayerProjections,
@@ -142,10 +143,9 @@ export default function Page({
     undefined
   );
 
-  const [playerSeasonValidationMessage, setPlayerSeasonValidationMessage] =
-    useState('');
-  const [teamSeasonValidationMessage, setTeamSeasonValidationMessage] =
-    useState('');
+  const validationErrors = useSelector<AppState, ValidationErrors>(
+    (state) => state.appState.validationErrors
+  );
 
   const lastSeasons = mergeStats(
     lastYearPassAggregates,
@@ -208,13 +208,7 @@ export default function Page({
         <div className={'h-full w-full lg:row-span-2'}>
           <Card className={'h-full flex-col justify-stretch relative'}>
             {playerPanel}
-            <Snackbar
-              sx={{ position: 'absolute' }}
-              open={!!playerSeasonValidationMessage}
-              autoHideDuration={3000}
-              message={playerSeasonValidationMessage}
-              onClose={() => setPlayerSeasonValidationMessage('')}
-            />
+            <ValidationErrorSnackbar errors={validationErrors.player} />
           </Card>
         </div>
         <Card className={'flex flex-col h-full relative'}>
@@ -240,13 +234,7 @@ export default function Page({
               )}
             />
           )}
-          <Snackbar
-            sx={{ position: 'absolute' }}
-            open={!!teamSeasonValidationMessage}
-            autoHideDuration={3000}
-            message={teamSeasonValidationMessage}
-            onClose={() => setTeamSeasonValidationMessage('')}
-          />
+          <ValidationErrorSnackbar errors={validationErrors.team} />
         </Card>
         <Card className={'h-full w-full'}>
           {games.length ? (
@@ -276,3 +264,17 @@ export default function Page({
     </div>
   );
 }
+
+const ValidationErrorSnackbar = ({ errors }: { errors: string[] }) => {
+  const dispatch = useAppDispatch();
+
+  return (
+    <Snackbar
+      sx={{ position: 'absolute' }}
+      open={errors.length > 0}
+      autoHideDuration={3000}
+      message={errors.join('\n')}
+      onClose={() => dispatch(clearValidationErrors())}
+    />
+  );
+};
