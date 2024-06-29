@@ -27,20 +27,13 @@ export const mkDefaultBase = (
 });
 
 export type PassSeason = {
-  playerId: number;
-  team: TeamKey;
   att: number;
   cmp: number;
   ypa: number;
   tdp: number;
 };
 
-export const mkDefaultPassSeason = (
-  player: Player,
-  team: TeamKey
-): PassSeason => ({
-  playerId: player.id,
-  team,
+export const mkDefaultPassSeason = (): PassSeason => ({
   att: 30,
   cmp: 75,
   ypa: 7.5,
@@ -48,16 +41,12 @@ export const mkDefaultPassSeason = (
 });
 
 export const passAggregateToSeason = ({
-  playerId,
-  team,
   gp,
   att,
   cmp,
   yds,
   tds,
 }: Omit<PassAggregate, 'name'>): PassSeason => ({
-  playerId,
-  team,
   att: att / gp,
   cmp: 100 * (cmp / att),
   ypa: yds / att,
@@ -72,33 +61,34 @@ export type AnnualizedPassSeason = {
   tds: number;
 };
 
-export function annualizePassSeason(
+export const annualizePassSeason = (
   season: Pick<PassSeason, 'att' | 'cmp' | 'ypa' | 'tdp'>,
   gp: number
-): AnnualizedPassSeason {
-  return {
-    att: season.att * gp,
-    cmp: (season.cmp / 100) * season.att * gp,
-    yds: season.ypa * season.att * (season.cmp / 100) * gp,
-    tds: (season.tdp / 100) * season.att * gp,
-  };
-}
+): AnnualizedPassSeason => ({
+  att: season.att * gp,
+  cmp: (season.cmp / 100) * season.att * gp,
+  yds: season.ypa * season.att * gp,
+  tds: (season.tdp / 100) * season.att * gp,
+});
+
+export const deannualizePassSeason = (
+  season: Pick<AnnualizedPassSeason, 'att' | 'cmp' | 'yds' | 'tds'>,
+  gp: number
+): PassSeason => ({
+  att: season.att / gp,
+  cmp: 100 * (season.cmp / season.att),
+  ypa: season.yds / season.att,
+  tdp: 100 * (season.tds / season.att),
+});
 
 export type RecvSeason = {
-  playerId: number;
-  team: TeamKey;
   tgt: number;
   rec: number;
   ypr: number;
   tdp: number;
 };
 
-export const mkDefaultRecvSeason = (
-  player: Player,
-  team: TeamKey
-): RecvSeason => ({
-  playerId: player.id,
-  team,
+export const mkDefaultRecvSeason = (): RecvSeason => ({
   tgt: 6,
   rec: 65,
   ypr: 9,
@@ -106,16 +96,12 @@ export const mkDefaultRecvSeason = (
 });
 
 export const recvAggregateToSeason = ({
-  playerId,
-  team,
   gp,
   tgt,
   rec,
   yds,
   tds,
 }: Omit<RecvAggregate, 'name'>): RecvSeason => ({
-  playerId,
-  team,
   tgt: tgt / gp,
   rec: 100 * (rec / tgt),
   ypr: yds / rec,
@@ -139,35 +125,34 @@ export const annualizeRecvSeason = (
   tds: season.tgt * (season.rec / 100) * (season.tdp / 100) * gp,
 });
 
+export const deannualizeRecvSeason = (
+  season: Pick<AnnualizedRecvSeason, 'tgt' | 'rec' | 'yds' | 'tds'>,
+  gp: number
+): RecvSeason => ({
+  tgt: season.tgt / gp,
+  rec: 100 * (season.rec / season.tgt),
+  ypr: season.yds / season.rec,
+  tdp: 100 * (season.tds / season.rec),
+});
+
 export type RushSeason = {
-  playerId: number;
-  team: TeamKey;
   att: number;
   ypc: number;
   tdp: number;
 };
 
-export const mkDefaultRushSeason = (
-  player: Player,
-  team: TeamKey
-): RushSeason => ({
-  playerId: player.id,
-  team,
+export const mkDefaultRushSeason = (): RushSeason => ({
   att: 20,
   ypc: 3.5,
   tdp: 5,
 });
 
 export const rushAggregateToSeason = ({
-  playerId,
-  team,
   gp,
   att,
   yds,
   tds,
 }: Omit<RushAggregate, 'name'>): RushSeason => ({
-  playerId,
-  team,
   att: att / gp,
   ypc: yds / att,
   tdp: 100 * (tds / att),
@@ -188,6 +173,15 @@ export const annualizeRushSeason = (
   tds: season.att * (season.tdp / 100) * gp,
 });
 
+export const deannualizeRushSeason = (
+  season: Pick<AnnualizedRushSeason, 'att' | 'yds' | 'tds'>,
+  gp: number
+): RushSeason => ({
+  att: season.att / gp,
+  ypc: season.yds / season.att,
+  tdp: 100 * (season.tds / season.att),
+});
+
 export const typeOfSeason = (season: PlayerSeason): StatType => {
   // TODO maybe try a tagged enum thing.
   if ('ypa' in season) {
@@ -201,17 +195,60 @@ export const typeOfSeason = (season: PlayerSeason): StatType => {
 
 export interface PlayerProjection {
   id: number;
-  // TODO tbh don't know if it's even worth normalizing so hard here, so what if we dupe it,
-  // easier to write that back straight to the IndexedDB without having to fuck with it.
   base: Omit<PlayerBaseProjection, 'playerId'>;
-  pass?: Omit<PassSeason, 'playerId'>;
-  recv?: Omit<RecvSeason, 'playerId'>;
-  rush?: Omit<RushSeason, 'playerId'>;
+  pass?: PassSeason;
+  recv?: RecvSeason;
+  rush?: RushSeason;
 }
 
 export type PlayerProjections = {
   [playerId: number]: Omit<PlayerProjection, 'id'>;
 };
+
+export type AggregatePlayerProjections = {
+  pass: AnnualizedPassSeason;
+  recv: AnnualizedRecvSeason;
+  rush: AnnualizedRushSeason;
+};
+
+// TODO not sure about prepopulating the empty seasons here.
+export const annualizePlayerProjection = (
+  projection: PlayerProjection
+): AggregatePlayerProjections => ({
+  pass: projection?.pass
+    ? annualizePassSeason(projection.pass, projection.base.gp)
+    : {
+      att: 0,
+      cmp: 0,
+      yds: 0,
+      tds: 0,
+    },
+  recv: projection?.recv
+    ? annualizeRecvSeason(projection.recv, projection.base.gp)
+    : {
+      tgt: 0,
+      rec: 0,
+      yds: 0,
+      tds: 0,
+    },
+  rush: projection?.rush
+    ? annualizeRushSeason(projection.rush, projection.base.gp)
+    : {
+      att: 0,
+      yds: 0,
+      tds: 0,
+    },
+});
+
+// TODO not sure about prepopulating the empty seasons here.
+export const deannualizeAggregateProjection = (
+  projection: AggregatePlayerProjections,
+  gp: number
+): Pick<PlayerProjection, 'pass' | 'recv' | 'rush'> => ({
+  pass: deannualizePassSeason(projection.pass, gp),
+  recv: deannualizeRecvSeason(projection.recv, gp),
+  rush: deannualizeRushSeason(projection.rush, gp),
+});
 
 export type SeasonTypeMap = {
   base: PlayerBaseProjection;

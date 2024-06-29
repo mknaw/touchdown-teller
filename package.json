@@ -54,7 +54,8 @@
     "prisma": "^5.0.0",
     "semver": ">=6.3.1",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.1.6"
+    "typescript": "^5.1.6",
+    "vitest": "^1.6.0"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --cache --fix",

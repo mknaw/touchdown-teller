@@ -6,8 +6,12 @@ import _ from 'lodash';
 import { StatType } from '@/constants';
 import { getPlayerProjections, tables } from '@/data/client';
 import {
+  PassSeason,
+  PlayerBaseProjection,
   PlayerProjection,
   PlayerProjections,
+  RecvSeason,
+  RushSeason,
   SeasonTypeMap,
 } from '@/models/PlayerSeason';
 
@@ -16,9 +20,52 @@ export type PlayerProjectionsStore = {
   projections: PlayerProjections;
 };
 
-export type UpdatePlayerProjection = {
-  playerId: number;
-  projection: Partial<PlayerProjection>;
+export type PlayerProjectionUpdate = {
+  id: number;
+  value: number;
+} & (
+  | {
+      statType: 'base';
+      stat: 'gp';
+    }
+  | {
+      statType: 'pass';
+      stat: keyof PassSeason;
+    }
+  | {
+      statType: 'recv';
+      stat: keyof RecvSeason;
+    }
+  | {
+      statType: 'rush';
+      stat: keyof RushSeason;
+    }
+);
+
+// Don't really ~love~ the WET nature of this type, but whatever, not the biggest issue rn.
+type PlayerProjectionUpdates = {
+  [id: number]: Partial<{
+    base: Partial<PlayerBaseProjection>;
+    pass: Partial<PassSeason>;
+    recv: Partial<RecvSeason>;
+    rush: Partial<RushSeason>;
+  }>;
+};
+
+// Convert between `PlayerProjectionUpdate` and `PlayerProjectionUpdates` types.
+export const pluralizeUpdate = ({
+  id,
+  statType,
+  stat,
+  value,
+}: PlayerProjectionUpdate): PlayerProjectionUpdates => {
+  return {
+    [id]: {
+      [statType]: {
+        [stat]: value,
+      },
+    },
+  };
 };
 
 const playerProjectionsSlice = createSlice({
@@ -28,7 +75,16 @@ const playerProjectionsSlice = createSlice({
     projections: {},
   } as PlayerProjectionsStore,
   reducers: {
-    setPlayerProjections(state, action: PayloadAction<PlayerProjections>) {
+    updateStat(state, action: PayloadAction<PlayerProjectionUpdate>) {
+      playerProjectionsSlice.caseReducers.setPlayerProjections(state, {
+        type: 'playerProjections/setPlayerProjections',
+        payload: pluralizeUpdate(action.payload),
+      });
+    },
+    setPlayerProjections(
+      state,
+      action: PayloadAction<PlayerProjectionUpdates>
+    ) {
       state.projections = _.merge(state.projections, action.payload);
     },
     removePlayerSeason(
@@ -57,7 +113,7 @@ const playerProjectionsSlice = createSlice({
   },
 });
 
-export const { setPlayerProjections, removePlayerSeason } =
+export const { updateStat, setPlayerProjections, removePlayerSeason } =
   playerProjectionsSlice.actions;
 export default playerProjectionsSlice;
 
@@ -68,24 +124,33 @@ export const loadPlayerProjections = createAsyncThunk<
   return await getPlayerProjections(team);
 });
 
+export const persistUpdate = createAsyncThunk(
+  'playerProjections/persistUpdate',
+  async (update: PlayerProjectionUpdate, thunkAPI) => {
+    const { id, statType, stat, value } = update;
+    thunkAPI.dispatch(setPlayerProjections(pluralizeUpdate(update)));
+    await (tables[statType] as Table).update(id, { [stat]: value });
+    return update;
+  }
+);
+
+// TODO given that now this is only used for creating new players, maybe can simplify it..
 export const persistPlayerProjection = createAsyncThunk(
   'playerProjections/persist',
-  async (
-    projection: PlayerProjection,
-    thunkAPI
-  ) => {
-      thunkAPI.dispatch(setPlayerProjections({ [projection.id]: projection }));
+  async (projection: PlayerProjection, thunkAPI) => {
+    thunkAPI.dispatch(setPlayerProjections({ [projection.id]: projection }));
 
-      const keys: (keyof SeasonTypeMap)[] = ['base', 'pass', 'recv', 'rush'];
-      for (const key of keys) {
-        if (projection[key]) {
-          const stat = projection[key] as Object;
-          await (tables[key] as Table).put(
-            { playerId: projection.id, ...stat },
-            projection.id
-          );
-        }
+    const team = projection.base.team;
+    const keys: (keyof SeasonTypeMap)[] = ['base', 'pass', 'recv', 'rush'];
+    for (const key of keys) {
+      if (projection[key]) {
+        const stat = projection[key];
+        await (tables[key] as Table).put(
+          { playerId: projection.id, team, ...stat },
+          projection.id
+        );
       }
+    }
     return projection;
   }
 );

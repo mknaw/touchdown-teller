@@ -8,16 +8,20 @@ import {
   PlayerProjections,
   RecvSeason,
   RushSeason,
-  SeasonTypeMap,
 } from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
+
+interface SeasonKeyData {
+  playerId: number;
+  team: TeamKey;
+}
 
 export class TouchdownTellerDatabase extends Dexie {
   public team!: Table<TeamSeason, TeamKey>;
   public player!: Table<PlayerBaseProjection, TeamKey>;
-  public pass!: Table<PassSeason, number>;
-  public recv!: Table<RecvSeason, number>;
-  public rush!: Table<RushSeason, number>;
+  public pass!: Table<PassSeason & SeasonKeyData, number>;
+  public recv!: Table<RecvSeason & SeasonKeyData, number>;
+  public rush!: Table<RushSeason & SeasonKeyData, number>;
 
   public constructor() {
     super('touchdown-teller');
@@ -38,6 +42,14 @@ export const tables: Record<keyof SeasonTypeMap, Table> = {
   pass: db.pass,
   recv: db.recv,
   rush: db.rush,
+};
+
+// TODO see if it makes sense to even have another one of these... kind of confusing
+type SeasonTypeMap = {
+  base: PlayerBaseProjection;
+  pass: PassSeason & SeasonKeyData;
+  recv: RecvSeason & SeasonKeyData;
+  rush: RushSeason & SeasonKeyData;
 };
 
 /// Assemble a `{id: {pass: ..., recv: ..., rush: ...}}` object from the IndexedDB.

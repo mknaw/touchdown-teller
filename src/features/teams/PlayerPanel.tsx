@@ -16,7 +16,10 @@ import { Position, StatType, TeamKey } from '@/constants';
 import AddPlayer from '@/features/teams/AddPlayer';
 import PlayerStatSliderPanel from '@/features/teams/PlayerStatSliderPanel';
 import {
+  PassSeason,
   PlayerProjections,
+  RecvSeason,
+  RushSeason,
   annualizePassSeason,
   annualizeRecvSeason,
   annualizeRushSeason,
@@ -35,18 +38,30 @@ import { setStatType } from '@/store/settingsSlice';
 import { PlayerSeason, TeamWithExtras } from '@/types';
 import { toEnumValue } from '@/utils';
 
-function SeasonSummary({ gp, season }: { gp: number; season: PlayerSeason }) {
+function SeasonSummary({
+  gp,
+  season,
+}: {
+  gp: number;
+  season: Omit<PlayerSeason, 'playerId' | 'team'>;
+}) {
   const labelledStats: string[] = [];
   // TODO maybe try a tagged enum thing.
   if ('ypa' in season) {
-    const annualized = annualizePassSeason(season, gp);
+    const annualized = annualizePassSeason(
+      season as Pick<PassSeason, 'att' | 'cmp' | 'ypa' | 'tdp'>,
+      gp
+    );
     labelledStats.push(
       `${annualized.att.toFixed(0)} attempts`,
       `${annualized.yds.toFixed(0)} yards`,
       `${annualized.tds.toFixed(0)} TDs`
     );
   } else if ('tgt' in season) {
-    const annualized = annualizeRecvSeason(season, gp);
+    const annualized = annualizeRecvSeason(
+      season as Pick<RecvSeason, 'tgt' | 'rec' | 'ypr' | 'tdp'>,
+      gp
+    );
     labelledStats.push(
       `${annualized.tgt.toFixed(0)} targets`,
       `${annualized.rec.toFixed(0)} receptions`,
@@ -54,7 +69,10 @@ function SeasonSummary({ gp, season }: { gp: number; season: PlayerSeason }) {
       `${annualized.tds.toFixed(0)} TDs`
     );
   } else {
-    const annualized = annualizeRushSeason(season, gp);
+    const annualized = annualizeRushSeason(
+      season as Pick<RushSeason, 'att' | 'ypc' | 'tdp'>,
+      gp
+    );
     labelledStats.push(
       `${annualized.att.toFixed(0)} carries`,
       `${annualized.yds.toFixed(0)} yards`,
@@ -157,7 +175,7 @@ export default function PlayerPanel({
     // TODO why did we even need `team.key` here...? Indexing I guess?
     let season =
       _.cloneDeep(lastSeason?.[statType]) ??
-      mkDefault(player, team.key as TeamKey);
+      mkDefault();
     // TODO !!!
     // season = ensureValid(season, projection);
     // Presumably could not have been null to get this far.
@@ -209,10 +227,7 @@ export default function PlayerPanel({
                 <div className={'flex w-full justify-center items-center pt-5'}>
                   {/* TODO kind of silly to pass it playerId given it's not really needed */}
                   {/* but was momentarily expedient from a TS perspective. */}
-                  <SeasonSummary
-                    gp={base.gp}
-                    season={{ playerId: selectedPlayer.id, ...season }}
-                  />
+                  <SeasonSummary gp={base.gp} season={season} />
                   <IconButton
                     onClick={onDeleteIconClick}
                     sx={{

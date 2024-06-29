@@ -6,13 +6,32 @@ import Stack from '@mui/material/Stack';
 
 import StatSlider from '@/components/StatSlider';
 import { StatType } from '@/constants';
-import { PlayerProjection, PlayerProjections } from '@/models/PlayerSeason';
+import {
+  PassSeason,
+  PlayerProjection,
+  PlayerProjections,
+  RecvSeason,
+  RushSeason,
+} from '@/models/PlayerSeason';
 import { AppState, useAppDispatch } from '@/store';
 import {
+  PlayerProjectionUpdate,
   PlayerProjectionsStore,
-  persistPlayerProjection,
+  persistUpdate,
   setPlayerProjections,
 } from '@/store/playerProjectionSlice';
+
+// TODO don't really need another implementation of this...
+type StatTypes = 'base' | 'pass' | 'recv' | 'rush';
+type StatForType<T extends StatTypes> = T extends 'base'
+  ? 'gp'
+  : T extends 'pass'
+  ? keyof PassSeason
+  : T extends 'recv'
+  ? keyof RecvSeason
+  : T extends 'rush'
+  ? keyof RushSeason
+  : never;
 
 export default function PlayerStatSliderPanel({
   statType,
@@ -44,10 +63,31 @@ export default function PlayerStatSliderPanel({
 
   const commonSliderProps = {
     current: projection,
-    persist: (v: PlayerProjection) => dispatch(persistPlayerProjection(v)),
-    set: (v: PlayerProjection) => dispatch(setPlayerProjections({ [playerId]: v })),
+    set: (v: PlayerProjection) =>
+      dispatch(setPlayerProjections({ [playerId]: v })),
     previous: lastSeason,
   };
+
+  // It was clean just a moment ago... and now I've made it nasty again...
+  function persist<T extends StatTypes>(
+    statType: T,
+    stat: StatForType<T>
+  ): (p: PlayerProjection) => void {
+    const fn = (v: PlayerProjection) => {
+      const value = _.get(v, `${statType}.${stat}`);
+      if (value === undefined) return;
+      dispatch(
+        persistUpdate({
+          id: v.id,
+          value,
+          statType,
+          stat,
+        } as PlayerProjectionUpdate)
+      );
+    };
+    return fn;
+  }
+
   // TODO these marks don't look good when they're on the far end -
   // like 0 tds, 17 games played ...
   const sliders = {
@@ -60,6 +100,7 @@ export default function PlayerStatSliderPanel({
           max={17}
           step={0.1}
           decimalPlacesMark={0}
+          persist={persist('base', 'gp')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -68,6 +109,7 @@ export default function PlayerStatSliderPanel({
           min={15}
           max={50}
           step={0.1}
+          persist={persist('pass', 'att')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -76,6 +118,7 @@ export default function PlayerStatSliderPanel({
           min={20}
           max={75}
           step={0.1}
+          persist={persist('pass', 'cmp')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -84,14 +127,16 @@ export default function PlayerStatSliderPanel({
           min={1}
           max={15}
           step={0.1}
+          persist={persist('pass', 'ypa')}
           {...commonSliderProps}
         />
         <StatSlider
-          label={'Yards per Attempt'}
+          label={'Touchdowns per Attempt'}
           path={'pass.tdp'}
           min={0}
           max={20}
           step={0.1}
+          persist={persist('pass', 'tdp')}
           {...commonSliderProps}
         />
       </>
@@ -105,6 +150,7 @@ export default function PlayerStatSliderPanel({
           max={17}
           step={0.1}
           decimalPlacesMark={0}
+          persist={persist('base', 'gp')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -113,6 +159,7 @@ export default function PlayerStatSliderPanel({
           min={0}
           max={15}
           step={0.1}
+          persist={persist('recv', 'tgt')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -121,6 +168,7 @@ export default function PlayerStatSliderPanel({
           min={0}
           max={100}
           step={0.1}
+          persist={persist('recv', 'rec')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -129,6 +177,7 @@ export default function PlayerStatSliderPanel({
           min={0}
           max={20}
           step={0.1}
+          persist={persist('recv', 'ypr')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -137,6 +186,7 @@ export default function PlayerStatSliderPanel({
           min={0}
           max={15}
           step={0.1}
+          persist={persist('recv', 'tdp')}
           {...commonSliderProps}
         />
       </>
@@ -150,6 +200,7 @@ export default function PlayerStatSliderPanel({
           max={17}
           step={0.1}
           decimalPlacesMark={0}
+          persist={persist('base', 'gp')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -158,6 +209,7 @@ export default function PlayerStatSliderPanel({
           min={0}
           max={25}
           step={0.1}
+          persist={persist('rush', 'att')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -166,6 +218,7 @@ export default function PlayerStatSliderPanel({
           min={1}
           max={7}
           step={0.1}
+          persist={persist('rush', 'ypc')}
           {...commonSliderProps}
         />
         <StatSlider
@@ -174,6 +227,7 @@ export default function PlayerStatSliderPanel({
           min={0}
           max={20}
           step={0.1}
+          persist={persist('rush', 'tdp')}
           {...commonSliderProps}
         />
       </>
