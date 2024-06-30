@@ -40,7 +40,12 @@ import TeamSeasonsModal from '@/features/TeamSeasonsModal';
 import PlayerGameLog from '@/features/teams/PlayerGameLog';
 import PlayerPanel from '@/features/teams/PlayerPanel';
 import TeamPanel from '@/features/teams/TeamPanel';
-import { extractSeasons } from '@/models/PlayerSeason';
+import {
+  AnnualizedPassSeason,
+  AnnualizedRecvSeason,
+  AnnualizedRushSeason,
+  annualizePlayerProjection,
+} from '@/models/PlayerSeason';
 import { AppState, useAppDispatch } from '@/store';
 import { ValidationErrors, clearValidationErrors } from '@/store/appStateSlice';
 import {
@@ -197,6 +202,11 @@ export default function Page({
       }[statType]
     : [];
 
+  const annualizedProjections = _.mapValues(
+    playerProjections,
+    annualizePlayerProjection
+  );
+
   return (
     <div className={'flex h-full pb-5'}>
       <TeamSeasonsModal />
@@ -217,9 +227,21 @@ export default function Page({
               teamKey={team.key as TeamKey}
               statType={statType}
               lastSeason={lastSeason}
-              passSeasons={extractSeasons('pass', playerProjections)}
-              recvSeasons={extractSeasons('recv', playerProjections)}
-              rushSeasons={extractSeasons('rush', playerProjections)}
+              passSeasons={
+                _(annualizedProjections).mapValues('pass').pickBy().value() as {
+                  [id: number]: AnnualizedPassSeason;
+                }
+              }
+              recvSeasons={
+                _(annualizedProjections).mapValues('recv').pickBy().value() as {
+                  [id: number]: AnnualizedRecvSeason;
+                }
+              }
+              rushSeasons={
+                _(annualizedProjections).mapValues('rush').pickBy().value() as {
+                  [id: number]: AnnualizedRushSeason;
+                }
+              }
               passAggregates={_.filter(
                 lastYearPassAggregates,
                 (agg) => agg.team == team.key
@@ -231,6 +253,22 @@ export default function Page({
               rushAggregates={_.filter(
                 lastYearRushAggregates,
                 (agg) => agg.team == team.key
+              )}
+              names={_.merge(
+                _(team.players).keyBy('id').mapValues('name').value(),
+                // TODO kinda clunky to redo here considering all the shit we already did above for mergeStats
+                _(lastYearPassAggregates)
+                  .keyBy('playerId')
+                  .mapValues('name')
+                  .value(),
+                _(lastYearRecvAggregates)
+                  .keyBy('playerId')
+                  .mapValues('name')
+                  .value(),
+                _(lastYearRushAggregates)
+                  .keyBy('playerId')
+                  .mapValues('name')
+                  .value()
               )}
             />
           )}

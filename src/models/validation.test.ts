@@ -8,7 +8,7 @@ import {
 import { TeamSeason } from '@/models/TeamSeason';
 import {
   InequalityCtx,
-  annualizePlayerProjections,
+  aggregatePlayerProjections,
   getBudget,
   passInequalities,
   solveInequalities,
@@ -53,17 +53,21 @@ describe('solveEquation', () => {
 describe('solveInequalities', () => {
   it('should correctly solve for att given specific parameters', () => {
     const context: InequalityCtx = {
-      gp: 16,
-      cmp: 50,
-      ypa: 10,
-      tdp: 5,
-      attTot: 500,
-      cmpTot: 300,
-      ydsTot: 4000,
-      tdsTot: 30,
+      base: {
+        gp: 16,
+      },
+      pass: {
+        cmp: 50,
+        ypa: 10,
+        tdp: 5,
+      },
+      passAtt: 500,
+      passCmp: 300,
+      passYds: 4000,
+      passTds: 30,
     };
 
-    const result = solveInequalities(passInequalities, context);
+    const result = solveInequalities(passInequalities, context, 'pass.att');
 
     // Let's break down the expected results for each inequality:
     // 1. att * 16 <= 500         ==> att <= 31.25
@@ -110,7 +114,7 @@ const budget = {
 
 describe('annualizePlayerProjections', () => {
   it('should correctly annualize player projections', () => {
-    const result = annualizePlayerProjections(playerProjections);
+    const result = aggregatePlayerProjections(playerProjections);
     expect(result).toEqual(annualizedProjection);
   });
 });

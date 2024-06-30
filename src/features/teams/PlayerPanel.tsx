@@ -152,7 +152,7 @@ export default function PlayerPanel({
   const [stattedPlayers, nonStattedPlayers]: [
     stattedPlayers: Player[],
     nonStattedPlayers: Player[]
-  ] = _.partition(relevantPlayers, (player: Player) => seasons.has(player.id));
+  ] = _.partition(relevantPlayers, (player: Player) => player.id in seasons);
 
   // TODO this is broken now
   // Initialize `select` value.
@@ -168,14 +168,12 @@ export default function PlayerPanel({
     let base =
       projections[player.id]?.base ??
       lastSeason?.base ??
-      mkDefaultBase(player, team.key as TeamKey);
+      mkDefaultBase(team.key as TeamKey);
     // TODO this is not very elegant...
     _.set(base, 'team', toEnumValue(TeamKey, player.teamName as string));
     //  TOOD would be better to explicitly `pick` the keys of `season`.
     // TODO why did we even need `team.key` here...? Indexing I guess?
-    let season =
-      _.cloneDeep(lastSeason?.[statType]) ??
-      mkDefault();
+    let season = _.cloneDeep(lastSeason?.[statType]) ?? mkDefault();
     // TODO !!!
     // season = ensureValid(season, projection);
     // Presumably could not have been null to get this far.

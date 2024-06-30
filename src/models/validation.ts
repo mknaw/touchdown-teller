@@ -121,7 +121,7 @@ export const allInequalities = [
   ...rushInequalities,
 ];
 
-export const annualizePlayerProjections = (
+export const aggregatePlayerProjections = (
   projections: PlayerProjections
 ): AggregatePlayerProjections =>
   _(projections)
@@ -171,11 +171,13 @@ export const clampPlayerProjectionUpdate = (
 ): PlayerProjectionUpdate => {
   const ctx = {
     ...projection,
-    // TODO probably want some more elegant way here
     passAtt: budget.pass.att,
     passCmp: budget.pass.cmp,
     passYds: budget.pass.yds,
     passTds: budget.pass.tds,
+    rushAtt: budget.rush.att,
+    rushYds: budget.rush.yds,
+    rushTds: budget.rush.tds,
   };
 
   const inequalities = {
@@ -228,7 +230,7 @@ export const playerValidationMiddleware: Middleware =
     }
 
     const budget = getBudget(
-      annualizePlayerProjections(_.omit(playerProjections, action.payload.id)),
+      aggregatePlayerProjections(_.omit(playerProjections, action.payload.id)),
       teamProjection
     );
 
@@ -265,17 +267,23 @@ export const asTeamProjectionDelta = (
   | 'rushYds'
   | 'rushTds'
 > => {
-  const pass = nestedMin(budget.pass) as AnnualizedPassSeason;
-  const recv = nestedMin(budget.recv) as AnnualizedRecvSeason;
-  const rush = nestedMin(budget.rush) as AnnualizedRushSeason;
+  const pass = budget?.pass
+    ? (nestedMin(budget.pass) as AnnualizedPassSeason)
+    : undefined;
+  const recv = budget?.recv
+    ? (nestedMin(budget.recv) as AnnualizedRecvSeason)
+    : undefined;
+  const rush = budget?.rush
+    ? (nestedMin(budget.rush) as AnnualizedRushSeason)
+    : undefined;
   return {
-    passAtt: Math.min(pass.att, recv.tgt),
-    passCmp: Math.min(pass.cmp, recv.rec),
-    passYds: Math.min(pass.yds, recv.yds),
-    passTds: Math.min(pass.tds, recv.yds),
-    rushAtt: rush.att,
-    rushYds: rush.yds,
-    rushTds: rush.tds,
+    passAtt: Math.min(pass?.att || 0, recv?.tgt || 0),
+    passCmp: Math.min(pass?.cmp || 0, recv?.rec || 0),
+    passYds: Math.min(pass?.yds || 0, recv?.yds || 0),
+    passTds: Math.min(pass?.tds || 0, recv?.yds || 0),
+    rushAtt: rush?.att || 0,
+    rushYds: rush?.yds || 0,
+    rushTds: rush?.tds || 0,
   };
 };
 
@@ -330,7 +338,7 @@ export const validationMiddleware: Middleware =
       return next(action);
     }
 
-    const annualizedProjections = annualizePlayerProjections(playerProjections);
+    const annualizedProjections = aggregatePlayerProjections(playerProjections);
     const budget = getBudget(annualizedProjections, teamProjection);
 
     let result: PayloadAction<PlayerProjection | TeamSeason> | null = null;
