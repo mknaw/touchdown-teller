@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from 'chart.js';
 
-import { REMAINING_LABEL } from '@/constants';
+import { REMAINING_LABEL, currentYear, lastYear } from '@/constants';
 
 ChartJS.register(
   CategoryScale,
@@ -88,7 +88,7 @@ export default function HorizontalChart({ data }: { data: ChartData[] }) {
     <Bar
       options={options}
       data={{
-        labels: ['2022', '2023'],
+        labels: [lastYear, currentYear],
         datasets: data.map((s, i) => ({
           label: s.name,
           data: s.stat, // TODO should have some sort of color cyclic iterable

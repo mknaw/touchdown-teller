@@ -1,27 +1,21 @@
 import _ from 'lodash';
 
-import { Player } from '@prisma/client';
 import { Omit } from '@prisma/client/runtime/library';
 
 import { StatType, TeamKey } from '@/constants';
 import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
-import { IdMap, PlayerSeason } from '@/types';
+import { PlayerSeason } from '@/types';
 
 // TODO all of these have `team` to use in a indexed + filtered IndexedDB query,
 // but tbh it literally doesn't even matter, we could load all the players, or,
 // if we really care, do a "fetch players with id in ..."
 
 export type PlayerBaseProjection = {
-  playerId: number;
   team: TeamKey;
   gp: number;
 };
 
-export const mkDefaultBase = (
-  player: Player,
-  team: TeamKey
-): PlayerBaseProjection => ({
-  playerId: player.id,
+export const mkDefaultBase = (team: TeamKey): PlayerBaseProjection => ({
   team,
   gp: 17,
 });
@@ -71,6 +65,7 @@ export const annualizePassSeason = (
   tds: (season.tdp / 100) * season.att * gp,
 });
 
+// Not actually used for anything right now, but could be useful.
 export const deannualizePassSeason = (
   season: Pick<AnnualizedPassSeason, 'att' | 'cmp' | 'yds' | 'tds'>,
   gp: number
@@ -205,49 +200,33 @@ export type PlayerProjections = {
   [playerId: number]: Omit<PlayerProjection, 'id'>;
 };
 
+export type AnnualizedSeason =
+  | AnnualizedPassSeason
+  | AnnualizedRecvSeason
+  | AnnualizedRushSeason;
+
 export type AggregatePlayerProjections = {
-  pass: AnnualizedPassSeason;
+  pass: AnnualizedPassSeason & { gp: number };
   recv: AnnualizedRecvSeason;
   rush: AnnualizedRushSeason;
 };
 
 // TODO not sure about prepopulating the empty seasons here.
 export const annualizePlayerProjection = (
-  projection: PlayerProjection
-): AggregatePlayerProjections => ({
-  pass: projection?.pass
-    ? annualizePassSeason(projection.pass, projection.base.gp)
-    : {
-      att: 0,
-      cmp: 0,
-      yds: 0,
-      tds: 0,
+  projection: Omit<PlayerProjection, 'id'>
+): Partial<AggregatePlayerProjections> => ({
+  ...(projection?.pass && {
+    pass: {
+      ...annualizePassSeason(projection.pass, projection.base.gp),
+      gp: projection.base.gp,
     },
-  recv: projection?.recv
-    ? annualizeRecvSeason(projection.recv, projection.base.gp)
-    : {
-      tgt: 0,
-      rec: 0,
-      yds: 0,
-      tds: 0,
-    },
-  rush: projection?.rush
-    ? annualizeRushSeason(projection.rush, projection.base.gp)
-    : {
-      att: 0,
-      yds: 0,
-      tds: 0,
-    },
-});
-
-// TODO not sure about prepopulating the empty seasons here.
-export const deannualizeAggregateProjection = (
-  projection: AggregatePlayerProjections,
-  gp: number
-): Pick<PlayerProjection, 'pass' | 'recv' | 'rush'> => ({
-  pass: deannualizePassSeason(projection.pass, gp),
-  recv: deannualizeRecvSeason(projection.recv, gp),
-  rush: deannualizeRushSeason(projection.rush, gp),
+  }),
+  ...(projection?.recv && {
+    recv: annualizeRecvSeason(projection.recv, projection.base.gp),
+  }),
+  ...(projection?.rush && {
+    rush: annualizeRushSeason(projection.rush, projection.base.gp),
+  }),
 });
 
 export type SeasonTypeMap = {
@@ -260,19 +239,9 @@ export type SeasonTypeMap = {
 export function extractSeasons<T extends keyof SeasonTypeMap>(
   type: T,
   projections: PlayerProjections
-): IdMap<SeasonTypeMap[T]> {
-  const entries = Object.entries(projections)
-    .map(([playerId, projection]) => {
-      const season = projection[type];
-      if (season) {
-        return [
-          Number(playerId),
-          { ...season, playerId: Number(playerId) },
-        ] as [number, SeasonTypeMap[T]];
-      }
-      return null;
-    })
-    .filter((entry): entry is [number, SeasonTypeMap[T]] => entry !== null);
-
-  return new Map(entries);
+): { [id: number]: SeasonTypeMap[T] } {
+  return _(projections)
+    .mapValues((v) => v[type])
+    .pickBy(_.identity)
+    .value() as { [id: number]: SeasonTypeMap[T] };
 }

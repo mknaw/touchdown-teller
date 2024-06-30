@@ -46,7 +46,7 @@ export const tables: Record<keyof SeasonTypeMap, Table> = {
 
 // TODO see if it makes sense to even have another one of these... kind of confusing
 type SeasonTypeMap = {
-  base: PlayerBaseProjection;
+  base: PlayerBaseProjection & SeasonKeyData;
   pass: PassSeason & SeasonKeyData;
   recv: RecvSeason & SeasonKeyData;
   rush: RushSeason & SeasonKeyData;
@@ -65,8 +65,8 @@ export const getPlayerProjections = async (
     } =>
       _(data)
         .keyBy('playerId')
-        .mapValues((v) => {
-          const { playerId, ...rest } = v;
+        .mapValues((season) => {
+          const { playerId, ...rest } = season;
           return { [type]: rest } as {
             [K in T]: Omit<SeasonTypeMap[T], 'playerId'>;
           };

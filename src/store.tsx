@@ -14,11 +14,14 @@ import {
 import { persistCombineReducers } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
+import {
+  playerValidationMiddleware,
+  teamValidationMiddleware,
+} from '@/models/validation';
 import appStateSlice from '@/store/appStateSlice';
 import playerProjectionsSlice from '@/store/playerProjectionSlice';
 import settingsSlice from '@/store/settingsSlice';
 import teamProjectionSlice from '@/store/teamProjectionSlice';
-import { playerValidationMiddleware } from '@/models/validation';
 
 const makeStore = () => {
   const persistConfig = {
@@ -41,7 +44,9 @@ const makeStore = () => {
         serializableCheck: {
           ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         },
-      }).concat(playerValidationMiddleware),
+      })
+        .concat(playerValidationMiddleware)
+        .concat(teamValidationMiddleware),
     devTools: true,
   });
 

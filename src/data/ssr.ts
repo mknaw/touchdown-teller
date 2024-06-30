@@ -12,11 +12,10 @@ import {
 
 import { TeamKey } from '@/constants';
 import {
-  PassSeason,
-  PlayerBaseProjection,
+  AnnualizedPassSeason,
+  AnnualizedRecvSeason,
+  AnnualizedRushSeason,
   PlayerProjections,
-  RecvSeason,
-  RushSeason,
   passAggregateToSeason,
   recvAggregateToSeason,
   rushAggregateToSeason,
@@ -120,11 +119,7 @@ export type PassAggregate = {
   name: string;
   team: TeamKey;
   gp: number;
-  att: number;
-  cmp: number;
-  yds: number;
-  tds: number;
-};
+} & AnnualizedPassSeason;
 
 export async function getPlayerPassAggregates(
   prisma: PrismaClient,
@@ -163,11 +158,7 @@ export type RecvAggregate = {
   name: string;
   team: TeamKey;
   gp: number;
-  tgt: number;
-  rec: number;
-  yds: number;
-  tds: number;
-};
+} & AnnualizedRecvSeason;
 
 export async function getPlayerRecvAggregates(
   prisma: PrismaClient,
@@ -206,10 +197,7 @@ export type RushAggregate = {
   name: string;
   team: TeamKey;
   gp: number;
-  att: number;
-  yds: number;
-  tds: number;
-};
+} & AnnualizedRushSeason;
 
 export async function getPlayerRushAggregates(
   prisma: PrismaClient,

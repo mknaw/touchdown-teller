@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 
 import _ from 'lodash';
 import type { GetStaticProps, InferGetStaticPropsType } from 'next';
+import Link from 'next/link';
 
 import { Player, PrismaClient } from '@prisma/client';
 
 import { DataGrid } from '@mui/x-data-grid';
 
-import { db, getPlayerProjections } from '@/data/client';
+import { getPlayerProjections } from '@/data/client';
 import { getAllPlayers } from '@/data/ssr';
 import { PlayerProjection } from '@/models/PlayerSeason';
 
@@ -21,6 +22,15 @@ export const getStaticProps = (async () => {
 }) satisfies GetStaticProps<{
   players: Player[];
 }>;
+
+// TODO I did neglect that this makes it very difficult to project free agents...
+const TeamLink = (params: { value?: string; row: { teamName?: string | null } }) => {
+  return params.row.teamName ? (
+    <Link href={`/teams/${params.row.teamName}`}>{params.value}</Link>
+  ) : (
+    params.value
+  );
+};
 
 export default function Home({
   players,
@@ -52,9 +62,15 @@ export default function Home({
         rows={rows}
         columns={[
           { field: 'adp', headerName: 'ADP', flex: 1 },
-          { field: 'name', headerName: 'Name', flex: 3 },
+          // TODO for this one would be cool to preselect the player upon redirect
+          { field: 'name', headerName: 'Name', flex: 3, renderCell: TeamLink },
           { field: 'position', headerName: 'Position', flex: 1 },
-          { field: 'teamName', headerName: 'Team', flex: 1 },
+          {
+            field: 'teamName',
+            headerName: 'Team',
+            flex: 1,
+            renderCell: TeamLink,
+          },
           // TODO replace with a projected points, just trying to prove it out
           {
             field: 'passAtt',

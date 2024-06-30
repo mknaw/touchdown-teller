@@ -10,13 +10,20 @@ import Typography from '@mui/material/Typography';
 
 import StatSlider from '@/components/StatSlider';
 import { StatType, TeamKey } from '@/constants';
-import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
 import {
   PassChartGroup,
   RecvChartGroup,
   RushChartGroup,
 } from '@/features/teams/ChartGroup';
-import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
+import {
+  AnnualizedPassSeason,
+  AnnualizedRecvSeason,
+  AnnualizedRushSeason,
+  PassSeason,
+  RecvSeason,
+  RushSeason,
+  annualizePassSeason,
+} from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
 import { teamSeasonFromPrisma } from '@/models/TeamSeason';
 import { AppState, useAppDispatch } from '@/store';
@@ -30,17 +37,18 @@ import {
   persistTeamProjection,
   setTeamProjection,
 } from '@/store/teamProjectionSlice';
-import { IdMap } from '@/types';
-import { makeIdMap } from '@/utils';
 
-const filterHistoricalPassAggregates = (seasons: PassAggregate[]) =>
-  seasons.filter((s) => s.att > 100);
+const filterHistoricalPassAggregates = (seasons: {
+  [id: number]: AnnualizedPassSeason;
+}) => _.pickBy(seasons, (s) => s.att > 100);
 
-const filterHistoricalRecvAggregates = (seasons: RecvAggregate[]) =>
-  seasons.filter((s) => s.tgt > 50);
+const filterHistoricalRecvAggregates = (seasons: {
+  [id: number]: AnnualizedRecvSeason;
+}) => _.pickBy(seasons, (s) => s.tgt > 25);
 
-const filterHistoricalRushAggregates = (seasons: RushAggregate[]) =>
-  seasons.filter((s) => s.att > 50);
+const filterHistoricalRushAggregates = (seasons: {
+  [id: number]: AnnualizedRushSeason;
+}) => _.pickBy(seasons, (s) => s.att > 50);
 
 export default function TeamPanel({
   teamKey,
@@ -52,17 +60,18 @@ export default function TeamPanel({
   passAggregates,
   recvAggregates,
   rushAggregates,
+  names,
 }: {
   teamKey: TeamKey;
   statType: StatType;
   lastSeason: PrismaTeamSeason;
-  // TODO don't really love taking all this stuff here
-  passSeasons: IdMap<PassSeason>;
-  recvSeasons: IdMap<RecvSeason>;
-  rushSeasons: IdMap<RushSeason>;
-  passAggregates: PassAggregate[];
-  recvAggregates: RecvAggregate[];
-  rushAggregates: RushAggregate[];
+  passSeasons: { [id: number]: AnnualizedPassSeason };
+  recvSeasons: { [id: number]: AnnualizedRecvSeason };
+  rushSeasons: { [id: number]: AnnualizedRushSeason };
+  passAggregates: { [id: number]: AnnualizedPassSeason };
+  recvAggregates: { [id: number]: AnnualizedRecvSeason };
+  rushAggregates: { [id: number]: AnnualizedRushSeason };
+  names: { [id: number]: string };
 }) {
   const dispatch = useAppDispatch();
 
@@ -102,34 +111,28 @@ export default function TeamPanel({
     [StatType.PASS]: (
       <PassChartGroup
         seasons={passSeasons}
-        lastSeasons={makeIdMap(
-          filterHistoricalPassAggregates(passAggregates),
-          'playerId'
-        )}
+        lastSeasons={filterHistoricalPassAggregates(passAggregates)}
         teamSeason={teamProjection}
         lastSeason={lastSeason}
+        names={names}
       />
     ),
     [StatType.RECV]: (
       <RecvChartGroup
         seasons={recvSeasons}
-        lastSeasons={makeIdMap(
-          filterHistoricalRecvAggregates(recvAggregates),
-          'playerId'
-        )}
+        lastSeasons={filterHistoricalRecvAggregates(recvAggregates)}
         teamSeason={teamProjection}
         lastSeason={lastSeason}
+        names={names}
       />
     ),
     [StatType.RUSH]: (
       <RushChartGroup
         seasons={rushSeasons}
-        lastSeasons={makeIdMap(
-          filterHistoricalRushAggregates(rushAggregates),
-          'playerId'
-        )}
+        lastSeasons={filterHistoricalRushAggregates(rushAggregates)}
         teamSeason={teamProjection}
         lastSeason={lastSeason}
+        names={names}
       />
     ),
   }[statType];
@@ -242,12 +245,9 @@ export default function TeamPanel({
           }[statType]
         }
       </Stack>
-      <div className={'bg-red-500 p-16'}>CHART GOES HERE</div>
-      {/*
       <div className={'grid grid-flow-row grid-rows-4 h-full overflow-hidden'}>
         {chartGroup}
       </div>
-      */}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useDispatch } from 'react-redux';
 
-import _ from 'lodash';
+import _, { parseInt } from 'lodash';
 
 import { TeamSeason as PrismaTeamSeason } from '@prisma/client';
 
@@ -8,15 +8,17 @@ import Typography from '@mui/material/Typography';
 
 import HorizontalChart, { ChartData } from '@/components/HorizontalChart';
 import { REMAINING_LABEL } from '@/constants';
-import { PassAggregate, RecvAggregate, RushAggregate } from '@/data/ssr';
-import { PassSeason, RecvSeason, RushSeason } from '@/models/PlayerSeason';
+import {
+  AnnualizedPassSeason,
+  AnnualizedRecvSeason,
+  AnnualizedRushSeason,
+  AnnualizedSeason,
+} from '@/models/PlayerSeason';
 import { TeamSeason } from '@/models/TeamSeason';
 import {
   toggleTeamPassSeasonsModal,
   toggleTeamRushSeasonsModal,
 } from '@/store/appStateSlice';
-import { IdMap } from '@/types';
-import { mapMap } from '@/utils';
 
 const HzChart = ({
   label,
@@ -37,27 +39,23 @@ const HzChart = ({
   </div>
 );
 
-const makeChartData = <
-  LS extends { name: string },
-  S extends { name: string; annualize: () => { [K in keyof LS]?: number } }
->(
-  seasons: IdMap<S>,
-  lastSeasons: IdMap<LS>,
-  stats: Array<keyof LS>,
-  teamSeason: { [K in keyof LS]?: number },
-  lastSeason: { [K in keyof LS]?: number }
+const makeChartData = <S extends AnnualizedSeason>(
+  seasons: { [id: number]: S },
+  lastSeasons: { [id: number]: S },
+  stats: Array<keyof S>,
+  teamSeason: { [K in keyof S]?: number },
+  lastSeason: { [K in keyof S]?: number },
+  names: { [id: number]: string }
 ) => {
-  const allPlayerIds = _.uniq([...seasons.keys(), ...lastSeasons.keys()]);
-  _.toArray(seasons.entries());
-  const annualizedSeasons = mapMap(seasons, (s) => ({
-    name: s.name,
-    ...s.annualize(),
-  }));
+  const playerIds = _.uniq([..._.keys(seasons), ..._.keys(lastSeasons)]).map(
+    parseInt
+  );
+
   const chartData = [];
-  for (const playerId of allPlayerIds) {
-    const season = annualizedSeasons.get(playerId);
-    const lastSeason = lastSeasons.get(playerId);
-    const name = season ? season.name : lastSeason ? lastSeason.name : null;
+  for (const playerId of playerIds) {
+    const season = seasons[playerId];
+    const lastSeason = lastSeasons[playerId];
+    const name = names[playerId];
     if (!name) {
       continue;
     }
@@ -74,8 +72,6 @@ const makeChartData = <
     );
   }
 
-  const lastSeasonTotals = [...lastSeasons.values()];
-  const seasonTotals = [...annualizedSeasons.values()];
   // TODO wonder if this wasn't supposed to be a single obj with all stats.
   chartData.push(
     // TODO fix the typing here
@@ -83,11 +79,17 @@ const makeChartData = <
       (acc, stat) => {
         const lastRemaining = Math.max(
           // Really shouldn't ever be < 0... but whatever
-          (lastSeason[stat] || 0) - _.sumBy(lastSeasonTotals, stat as string),
+          (lastSeason[stat] || 0) -
+            _(lastSeasons)
+              .values()
+              .sumBy(stat as string),
           0
         );
         const remaining = Math.max(
-          (teamSeason[stat] || 0) - _.sumBy(seasonTotals, stat as string),
+          (teamSeason[stat] || 0) -
+            _(seasons)
+              .values()
+              .sumBy(stat as string),
           0
         );
         acc[stat] = [lastRemaining, remaining];
@@ -104,11 +106,14 @@ export const PassChartGroup = ({
   lastSeasons,
   teamSeason,
   lastSeason,
+  names,
 }: {
-  seasons: IdMap<PassSeason>;
-  lastSeasons: IdMap<PassAggregate>;
+  seasons: { [id: string]: AnnualizedPassSeason };
+  lastSeasons: { [id: string]: AnnualizedPassSeason };
   teamSeason: TeamSeason;
+  // TODO kind of stupid that it's not the same as `TeamSeason` ...
   lastSeason: PrismaTeamSeason;
+  names: { [id: number]: string };
 }) => {
   const chartData = makeChartData(
     seasons,
@@ -125,7 +130,8 @@ export const PassChartGroup = ({
       cmp: lastSeason.passCmp,
       yds: lastSeason.passYds,
       tds: lastSeason.passTds,
-    }
+    },
+    names
   );
 
   const dispatch = useDispatch();
@@ -162,11 +168,13 @@ export const RecvChartGroup = ({
   lastSeasons,
   teamSeason,
   lastSeason,
+  names,
 }: {
-  seasons: IdMap<RecvSeason>;
-  lastSeasons: IdMap<RecvAggregate>;
+  seasons: { [id: string]: AnnualizedRecvSeason };
+  lastSeasons: { [id: string]: AnnualizedRecvSeason };
   teamSeason: TeamSeason;
   lastSeason: PrismaTeamSeason;
+  names: { [id: number]: string };
 }) => {
   const chartData = makeChartData(
     seasons,
@@ -183,7 +191,8 @@ export const RecvChartGroup = ({
       rec: lastSeason.passCmp,
       yds: lastSeason.passYds,
       tds: lastSeason.passTds,
-    }
+    },
+    names
   );
 
   const dispatch = useDispatch();
@@ -220,11 +229,13 @@ export const RushChartGroup = ({
   lastSeasons,
   teamSeason,
   lastSeason,
+  names,
 }: {
-  seasons: IdMap<RushSeason>;
-  lastSeasons: IdMap<RushAggregate>;
+  seasons: { [id: string]: AnnualizedRushSeason };
+  lastSeasons: { [id: string]: AnnualizedRushSeason };
   teamSeason: TeamSeason;
   lastSeason: PrismaTeamSeason;
+  names: { [id: number]: string };
 }) => {
   const chartData = makeChartData(
     seasons,
@@ -239,7 +250,8 @@ export const RushChartGroup = ({
       att: lastSeason.rushAtt,
       yds: lastSeason.rushYds,
       tds: lastSeason.rushTds,
-    }
+    },
+    names
   );
 
   const dispatch = useDispatch();
