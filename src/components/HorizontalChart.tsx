@@ -58,6 +58,7 @@ export const options: ChartOptions<'bar'> = {
   layout: {
     padding: 0,
   },
+  // onResize: () => console.log('resized'),
 };
 
 // TODO should be something cyclic

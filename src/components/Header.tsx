@@ -11,7 +11,7 @@ import { getTeamName } from '@/utils';
 
 export default function Header({ team }: { team: TeamKey }) {
   const className = classNames(
-    'h-header w-full flex justify-center align-center text-5xl font-semibold relative',
+    'w-full flex justify-center align-center text-5xl font-semibold relative',
     titleFont.className
   );
   return (

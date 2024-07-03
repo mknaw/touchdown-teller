@@ -34,7 +34,7 @@ function HeaderBar({
   header,
 }: DrawerProps & HeaderProps) {
   return (
-    <Box className={'h-header grow relative flex items-center'}>
+    <Box className={'flex-none flex items-center p-4'}>
       <AppBar position='static' color='transparent' className={'shadow-none'}>
         <Toolbar className={'p-0'}>
           <IconButton
@@ -152,14 +152,14 @@ export default function Nav({
   return (
     <>
       <SideDrawer isDrawerOpen={isDrawerOpen} setDrawerOpen={setDrawerOpen} />
-      <main className='w-full flex h-screen flex-col justify-stretch px-5'>
+      <div className='w-full flex h-screen flex-col justify-stretch px-5'>
         <HeaderBar
           isDrawerOpen={isDrawerOpen}
           setDrawerOpen={setDrawerOpen}
           header={header}
         />
-        <div className={'h-body'}>{children}</div>
-      </main>
+        <main className={'flex-grow overflow-auto'}>{children}</main>
+      </div>
     </>
   );
 }

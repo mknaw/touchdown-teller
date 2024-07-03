@@ -33,7 +33,7 @@ const HzChart = ({
     <Typography onClick={onClick} className={'w-1/4 cursor-pointer'}>
       {label}
     </Typography>
-    <div className={'w-full overflow-hidden h-full max-h-full'}>
+    <div className={'w-full overflow-hidden h-full max-h-full relative'}>
       <HorizontalChart data={data} />
     </div>
   </div>

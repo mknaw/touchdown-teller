@@ -282,7 +282,7 @@ export default function Page({
                   2022 Gamelog
                 </Typography>
                 <div className={'flex w-full h-full'}>
-                  <PlayerGameLog className={'h-full w-full'} games={games} />
+                  <PlayerGameLog className={'h-full w-full relative'} games={games} />
                 </div>
               </div>
             </>
