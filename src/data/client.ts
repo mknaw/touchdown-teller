@@ -9,6 +9,10 @@ import {
   RecvSeason,
   RushSeason,
 } from '@/models/PlayerSeason';
+import {
+  ScoringSettings,
+  mkDefaultScoringSettings,
+} from '@/models/ScoringSettings';
 import { TeamSeason } from '@/models/TeamSeason';
 
 interface SeasonKeyData {
@@ -23,6 +27,8 @@ export class TouchdownTellerDatabase extends Dexie {
   public recv!: Table<RecvSeason & SeasonKeyData, number>;
   public rush!: Table<RushSeason & SeasonKeyData, number>;
 
+  public scoringSettings!: Table<ScoringSettings, number>;
+
   public constructor() {
     super('touchdown-teller');
     this.version(1).stores({
@@ -31,6 +37,7 @@ export class TouchdownTellerDatabase extends Dexie {
       pass: ',team',
       recv: ',team',
       rush: ',team',
+      scoringSettings: '',
     });
   }
 }
@@ -90,3 +97,22 @@ export const getPlayerProjections = async (
 export const getTeamProjection = async (
   team: TeamKey
 ): Promise<TeamSeason | undefined> => db.team.get(team);
+
+/// Fetch the scoring settings from the DB.
+export const getScoringSettings = async (): Promise<ScoringSettings> => {
+  let scoringSettings = await db.scoringSettings.get(1);
+  if (scoringSettings) {
+    return scoringSettings;
+  }
+
+  scoringSettings = mkDefaultScoringSettings();
+  await db.scoringSettings.add(scoringSettings, 1);
+  return scoringSettings;
+};
+
+/// Update the scoring settings in the DB.
+export const updateScoringSettings = async (
+  scoringSettings: ScoringSettings
+): Promise<void> => {
+  await db.scoringSettings.update(1, scoringSettings);
+};
