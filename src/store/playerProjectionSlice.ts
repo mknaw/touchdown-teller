@@ -24,23 +24,23 @@ export type PlayerProjectionUpdate = {
   id: number;
   value: number;
 } & (
-  | {
+    | {
       statType: 'base';
       stat: 'gp';
     }
-  | {
+    | {
       statType: 'pass';
       stat: keyof PassSeason;
     }
-  | {
+    | {
       statType: 'recv';
       stat: keyof RecvSeason;
     }
-  | {
+    | {
       statType: 'rush';
       stat: keyof RushSeason;
     }
-);
+  );
 
 // Don't really ~love~ the WET nature of this type, but whatever, not the biggest issue rn.
 type PlayerProjectionUpdates = {

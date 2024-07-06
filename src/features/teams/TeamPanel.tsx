@@ -142,7 +142,7 @@ export default function TeamPanel({
   };
 
   return (
-    <div className={'flex flex-col w-full h-full'}>
+    <div className={'flex flex-col w-full h-60vh'}>
       {/* TODO ought to do a better job of vertical alignment with LHS */}
       <Typography
         className={'text-2xl w-full text-center cursor-pointer py-4'}

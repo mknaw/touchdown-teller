@@ -6,5 +6,16 @@ export const content = [
 ];
 export const plugins = [];
 export const theme = {
-  extend: {},
+  extend: {
+    spacing: {
+      header: '10vh',
+      '90vh': '90vh',
+      // TODO have to rename
+      '10vh': '10vh',
+      '50vh': '50vh',
+      '50vw': '50vw',
+      '60vh': '55vh',
+      '30vh': '25vh',
+    },
+  },
 };

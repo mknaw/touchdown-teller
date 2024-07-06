@@ -208,96 +208,114 @@ export default function Page({
   );
 
   return (
-    <div className={'flex h-full pb-5'}>
+    <div className={'flex flex-row justify-stretch w-full h-full'}>
       <TeamSeasonsModal />
-      <div
-        className={
-          'flex gap-8 h-full w-full flex-col lg:grid lg:grid-cols-2 lg:grid-flow-col'
-        }
-      >
-        <div className={'h-full w-full lg:row-span-2'}>
-          <Card className={'h-full flex-col justify-stretch relative'}>
-            {playerPanel}
-            <ValidationErrorSnackbar errors={validationErrors.player} />
+      <div className={'h-full w-full flex-1 pr-3'}>
+        <Card
+          className={
+            'h-full w-full flex-col justify-stretch relative lg:row-span-2'
+          }
+        >
+          {playerPanel}
+          <ValidationErrorSnackbar errors={validationErrors.player} />
+        </Card>
+      </div>
+      <div className={'h-full w-full flex flex-1 flex-col justify-stretch pl-3'}>
+        <div className={'h-2/3 pb-3'}>
+          <Card className={'h-full flex flex-col'}>
+            {team.seasons[0] && (
+              <TeamPanel
+                teamKey={team.key as TeamKey}
+                statType={statType}
+                lastSeason={lastSeason}
+                passSeasons={
+                  _(annualizedProjections)
+                    .mapValues('pass')
+                    .pickBy()
+                    .value() as {
+                    [id: number]: AnnualizedPassSeason;
+                  }
+                }
+                recvSeasons={
+                  _(annualizedProjections)
+                    .mapValues('recv')
+                    .pickBy()
+                    .value() as {
+                    [id: number]: AnnualizedRecvSeason;
+                  }
+                }
+                rushSeasons={
+                  _(annualizedProjections)
+                    .mapValues('rush')
+                    .pickBy()
+                    .value() as {
+                    [id: number]: AnnualizedRushSeason;
+                  }
+                }
+                passAggregates={_(lastYearPassAggregates)
+                  .filter((agg) => agg.team == team.key)
+                  .keyBy('playerId')
+                  .value()}
+                recvAggregates={_(lastYearRecvAggregates)
+                  .filter((agg) => agg.team == team.key)
+                  .keyBy('playerId')
+                  .value()}
+                rushAggregates={_(lastYearRushAggregates)
+                  .filter((agg) => agg.team == team.key)
+                  .keyBy('playerId')
+                  .value()}
+                names={_.merge(
+                  _(team.players).keyBy('id').mapValues('name').value(),
+                  // TODO kinda clunky to redo here considering all the shit we already did above for mergeStats
+                  _(lastYearPassAggregates)
+                    .keyBy('playerId')
+                    .mapValues('name')
+                    .value(),
+                  _(lastYearRecvAggregates)
+                    .keyBy('playerId')
+                    .mapValues('name')
+                    .value(),
+                  _(lastYearRushAggregates)
+                    .keyBy('playerId')
+                    .mapValues('name')
+                    .value()
+                )}
+              />
+            )}
+            <ValidationErrorSnackbar errors={validationErrors.team} />
           </Card>
         </div>
-        <Card className={'flex flex-col h-full relative'}>
-          {team.seasons[0] && (
-            <TeamPanel
-              teamKey={team.key as TeamKey}
-              statType={statType}
-              lastSeason={lastSeason}
-              passSeasons={
-                _(annualizedProjections).mapValues('pass').pickBy().value() as {
-                  [id: number]: AnnualizedPassSeason;
-                }
-              }
-              recvSeasons={
-                _(annualizedProjections).mapValues('recv').pickBy().value() as {
-                  [id: number]: AnnualizedRecvSeason;
-                }
-              }
-              rushSeasons={
-                _(annualizedProjections).mapValues('rush').pickBy().value() as {
-                  [id: number]: AnnualizedRushSeason;
-                }
-              }
-              passAggregates={_(lastYearPassAggregates)
-                .filter((agg) => agg.team == team.key)
-                .keyBy('playerId')
-                .value()}
-              recvAggregates={_(lastYearRecvAggregates)
-                .filter((agg) => agg.team == team.key)
-                .keyBy('playerId')
-                .value()}
-              rushAggregates={_(lastYearRushAggregates)
-                .filter((agg) => agg.team == team.key)
-                .keyBy('playerId')
-                .value()}
-              names={_.merge(
-                _(team.players).keyBy('id').mapValues('name').value(),
-                // TODO kinda clunky to redo here considering all the shit we already did above for mergeStats
-                _(lastYearPassAggregates)
-                  .keyBy('playerId')
-                  .mapValues('name')
-                  .value(),
-                _(lastYearRecvAggregates)
-                  .keyBy('playerId')
-                  .mapValues('name')
-                  .value(),
-                _(lastYearRushAggregates)
-                  .keyBy('playerId')
-                  .mapValues('name')
-                  .value()
-              )}
-            />
-          )}
-          <ValidationErrorSnackbar errors={validationErrors.team} />
-        </Card>
-        <Card className={'h-full w-full'}>
-          {games.length ? (
-            <>
-              <div className={'flex flex-col h-full'}>
-                <Typography className={'text-center text-2xl'}>
-                  2022 Gamelog
-                </Typography>
-                <div className={'flex w-full h-full'}>
-                  <PlayerGameLog className={'h-full w-full relative'} games={games} />
+        <div className={'w-full h-1/3 pt-3'}>
+          <Card className={'w-full h-full'}>
+            {games.length ? (
+              <>
+                <div className={'flex flex-col h-full'}>
+                  <Typography className={'text-center text-2xl'}>
+                    {`${lastYear} Gamelog`}
+                  </Typography>
+                  {/*
+                  <div className={'flex w-full h-full'}>
+                    <PlayerGameLog
+                      className={'h-full w-full relative'}
+                      games={games}
+                    />
+                  </div>
+                  */}
                 </div>
+              </>
+            ) : (
+              <div className={'flex flex-col'}>
+                <Typography className={'text-center text-2xl mb-5'}>
+                  {`${currentYear} Schedule`}
+                </Typography>
+                <Schedule
+                  teamKey={team.key as TeamKey}
+                  games={[...team.awayGames, ...team.homeGames]}
+                />
               </div>
-            </>
-          ) : (
-            <div className={'flex flex-col h-full'}>
-              <Typography className={'text-center text-2xl mb-5'}>
-                {`${currentYear} Schedule`}
-              </Typography>
-              <Schedule
-                teamKey={team.key as TeamKey}
-                games={[...team.awayGames, ...team.homeGames]}
-              />
-            </div>
-          )}
-        </Card>
+            )}
+          </Card>
+        </div>
       </div>
     </div>
   );
