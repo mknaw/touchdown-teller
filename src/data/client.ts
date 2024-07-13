@@ -9,6 +9,7 @@ import {
   RecvSeason,
   RushSeason,
 } from '@/models/PlayerSeason';
+import { Ranking } from '@/models/Ranking';
 import {
   ScoringSettings,
   mkDefaultScoringSettings,
@@ -26,6 +27,7 @@ export class TouchdownTellerDatabase extends Dexie {
   public pass!: Table<PassSeason & SeasonKeyData, number>;
   public recv!: Table<RecvSeason & SeasonKeyData, number>;
   public rush!: Table<RushSeason & SeasonKeyData, number>;
+  public ranking!: Table<Ranking, number>;
 
   public scoringSettings!: Table<ScoringSettings, number>;
 
@@ -37,6 +39,7 @@ export class TouchdownTellerDatabase extends Dexie {
       pass: ',team',
       recv: ',team',
       rush: ',team',
+      ranking: 'playerId,rank',
       scoringSettings: '',
     });
   }

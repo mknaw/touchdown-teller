@@ -5,41 +5,130 @@ import Link from 'next/link';
 
 import { Player } from '@prisma/client';
 
-import { Button } from '@mui/material';
-import {
-  DataGrid,
-  GridToolbarContainer,
-  GridToolbarFilterButton,
-} from '@mui/x-data-grid';
-
-import { getPlayerProjections } from '@/data/client';
+import DndTable from '@/components/DndTable';
+import { TableRow } from '@/components/DndTable';
+import { getPlayerProjections, getScoringSettings } from '@/data/client';
 import { PlayerProjection } from '@/models/PlayerSeason';
+import {
+  Ranking,
+  getRankings,
+  initializeRankings,
+  updateRankings,
+} from '@/models/Ranking';
+import { ScoringSettings, scoreProjection } from '@/models/ScoringSettings';
 
-function CustomToolbar({
-  setIsScoringModalOpen,
-}: {
-  setIsScoringModalOpen: (open: boolean) => void;
-}) {
+type PlayerRow = Player & {
+  rank: number;
+  positionRank: number;
+  projection: number | null;
+};
+
+const isDragAllowed = (
+  sortConfig: { key: string; direction: string } | undefined
+) => {
+  return sortConfig?.key === 'rank';
+};
+
+const RankCell = (row: TableRow) => {
+  const diff = row.adp - row.rank;
   return (
-    <GridToolbarContainer>
-      <GridToolbarFilterButton />
-      <Button onClick={() => setIsScoringModalOpen(true)}>
-        Scoring Settings
-      </Button>
-    </GridToolbarContainer>
+    <>
+      <span className='mr-1'>{row.rank}</span>
+      <span className='text-gray-400'>{`(${diff > 0 ? '+' : ''}${diff})`}</span>
+    </>
   );
+};
+
+const PlayerCell = (row: TableRow) => {
+  // Do it like this so tailwind knows it's part of our shit.
+  const color =
+    {
+      RB: 'bg-red-100 text-red-800',
+      WR: 'bg-green-100 text-green-800',
+      TE: 'bg-orange-100 text-orange-800',
+      QB: 'bg-purple-100 text-purple-800',
+    }[row.position as string] || '';
+
+  return (
+    // {row.teamName ? (
+    //   <Link href={`/teams/${row.teamName}`}>{row.name}</Link>
+    // ) : (
+    //   row.name
+    // )}
+    <span>
+      <span
+        className={`px-2 py-1 mr-2 text-xs font-medium rounded-full w-14 inline-block text-center ${color}`}
+      >
+        {row.position}
+        {row.positionRank}
+      </span>
+      {row.name}
+    </span>
+  );
+};
+
+async function getOrInitRankings(players: Player[]): Promise<Ranking[]> {
+  let rankings = await getRankings();
+
+  // TODO here we probably ought to do some self-healing, corrective checks...
+  if (rankings.length === 0) {
+    await initializeRankings(players);
+    rankings = await getRankings();
+  }
+  return rankings;
 }
 
-// TODO I did neglect that this makes it very difficult to project free agents...
-const TeamLink = (params: {
-  value?: string;
-  row: { teamName?: string | null };
-}) => {
-  return params.row.teamName ? (
-    <Link href={`/teams/${params.row.teamName}`}>{params.value}</Link>
-  ) : (
-    params.value
+const setRankEnumerated = (players: PlayerRow[]) => {
+  let rank = 0;
+  const positionRanks: Record<string, number> = {};
+
+  return _.map(players, (player) => {
+    rank++;
+    positionRanks[player.position] = (positionRanks[player.position] || 0) + 1;
+    return {
+      ...player,
+      rank,
+      positionRank: positionRanks[player.position],
+    };
+  });
+};
+
+const getRows = async (
+  players: Player[],
+  scoringSettings: ScoringSettings
+): Promise<PlayerRow[]> => {
+  const [projections, rankings] = await Promise.all([
+    getPlayerProjections(),
+    getOrInitRankings(players).then((rankings) =>
+      _.keyBy(rankings, 'playerId')
+    ),
+  ]);
+
+  console.log(projections[367]);
+  console.log(
+    scoreProjection({ id: 367, ...projections[367] }, scoringSettings)
   );
+
+  const enriched = _(players)
+    .map((player) => ({
+      ...player,
+      rank: rankings[player.id].rank,
+      projection:
+        scoreProjection(
+          { id: player.id, ...projections[player.id] },
+          scoringSettings
+        ) || null,
+    }))
+    .sortBy('rank')
+    .value() as PlayerRow[];
+
+  return setRankEnumerated(enriched);
+};
+
+const onRowsChange = async (players: PlayerRow[]) => {
+  const updated = setRankEnumerated(players);
+  await updateRankings(updated);
+  return updated;
 };
 
 export default function ADPTable({
@@ -49,89 +138,63 @@ export default function ADPTable({
   players: Player[];
   setIsScoringModalOpen: (open: boolean) => void;
 }) {
-  const [rows, setRows] =
-    useState<(Player & Partial<PlayerProjection>)[]>(players);
+  // TODO prolly can get this from elsewhere, like redux or parent
+  const [scoringSettings, setScoringSettings] =
+    useState<ScoringSettings | null>(null);
 
   useEffect(() => {
-    // TODO replace with the thing from `@/data/client`.
-    const fetch = async () => {
-      const projections = await getPlayerProjections();
-
-      // TODO have to put this through a scoring fn to just get a number
-
-      setRows(
-        players.map((player) => ({
-          ...player,
-          ...projections[player.id],
-        }))
-      );
-    };
-
+    async function fetch() {
+      const fetchedSettings = await getScoringSettings();
+      setScoringSettings(fetchedSettings);
+    }
     fetch();
-  }, [players]);
+  }, []);
+
+  const [rows, setRows] = useState<PlayerRow[]>([]);
+
+  useEffect(() => {
+    if (!!scoringSettings) {
+      getRows(players, scoringSettings).then(setRows);
+    }
+  }, [players, scoringSettings]);
+
+  if (rows.length === 0) {
+    return null;
+  }
 
   return (
-    <div className={'text-white'}>
-      <DataGrid
-        rows={rows}
-        slots={{
-          toolbar: () => (
-            <CustomToolbar setIsScoringModalOpen={setIsScoringModalOpen} />
-          ),
-        }}
-        columns={[
-          {
-            field: 'adp',
-            headerName: 'ADP',
-            flex: 1,
-            type: 'number',
-            sortable: true,
-          },
-          // TODO for this one would be cool to preselect the player upon redirect
-          {
-            field: 'name',
-            headerName: 'Name',
-            flex: 3,
-            renderCell: TeamLink,
-            sortable: false,
-          },
-          {
-            field: 'position',
-            headerName: 'Position',
-            flex: 1,
-            sortable: false,
-            type: 'singleSelect',
-            valueOptions: ['QB', 'RB', 'WR', 'TE'],
-          },
-          {
-            field: 'teamName',
-            headerName: 'Team',
-            flex: 1,
-            renderCell: TeamLink,
-            sortable: true,
-          },
-          // TODO replace with a projected points, just trying to prove it out
-          {
-            field: 'passAtt',
-            headerName: 'Pass Attempts',
-            flex: 1,
-            valueGetter: (_value, row) => row.pass?.att,
-            sortable: false,
-          },
-        ]}
-        initialState={{
-          density: 'compact',
-          pagination: {
-            // TODO for sure prefer inifinite scroll for this, but that's paid MUI only
-            // maybe I'll find a different free thing that supports it
-            // for now it's fine like this.
-            paginationModel: { page: 0, pageSize: 100 },
-          },
-          sorting: {
-            sortModel: [{ field: 'adp', sort: 'asc' }],
-          },
-        }}
-      />
+    <div className={'flex w-full justify-center text-white'}>
+      <div className={'w-4/5'}>
+        <DndTable
+          // TODO I guess sorting needs to happen outside of the DndTable ...
+          data={rows}
+          columns={[
+            { key: 'id', label: 'ID', sortable: 'asc' },
+            { key: 'adp', label: 'ADP', sortable: 'asc' },
+            {
+              key: 'rank',
+              label: 'Ranking',
+              sortable: 'asc',
+              renderCell: RankCell,
+            },
+            {
+              key: 'name',
+              label: 'Name',
+              sortable: false,
+              renderCell: PlayerCell,
+            },
+            { key: 'teamName', label: 'Team', sortable: false },
+            { key: 'projection', label: 'Projected Points', sortable: 'asc' },
+          ]}
+          defaultSortConfig={{ key: 'rank', direction: 'asc' }}
+          styleOptions={{
+            tbody: 'divide-y divide-gray-700',
+            row: 'hover:bg-gray-800',
+          }}
+          isDragAllowed={isDragAllowed}
+          onRowsChange={onRowsChange}
+        />
+      </div>
     </div>
   );
 }
